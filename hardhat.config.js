@@ -2,8 +2,6 @@ require('dotenv').config();
 require("hardhat-deploy");
 // require("@nomiclabs/hardhat-waffle");
 
-console.log(process.env.PRIVATE_KEY);
-
 module.exports = {
 	solidity: "0.8.20",
 	networks: {
