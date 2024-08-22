@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import "./ParticipantManager.sol";
 import "./NuvoLockUpgradeable.sol";
 import "./DepositManager.sol";
@@ -34,8 +34,8 @@ contract VotingManager is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         _;
     }
 
-    function initialize(address _participantManager, address _nuvoLock, address _depositManager) initializer public {
-        __Ownable_init();
+    function initialize(address _participantManager, address _nuvoLock, address _depositManager, address _initialOwner) initializer public {
+        __Ownable_init(_initialOwner);
         __ReentrancyGuard_init();
         participantManager = ParticipantManager(_participantManager);
         nuvoLock = NuvoLockUpgradeable(_nuvoLock);
@@ -108,7 +108,7 @@ contract VotingManager is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         require(participants.length > 0, "No participants available");
 
         uint256 randomIndex = uint256(keccak256(abi.encodePacked(
-            block.difficulty,
+            block.prevrandao, // instead of difficulty in PoS
             block.timestamp,
             blockhash(block.number - 1),
             lastSubmitterIndex
