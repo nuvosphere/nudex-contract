@@ -15,8 +15,8 @@ contract ParticipantManager is OwnableUpgradeable {
     event ParticipantAdded(address indexed participant);
     event ParticipantRemoved(address indexed participant);
 
-    function initialize(address _nuvoLock, uint256 _minLockAmount, uint256 _minLockPeriod) initializer public {
-        __Ownable_init();
+    function initialize(address _nuvoLock, uint256 _minLockAmount, uint256 _minLockPeriod, address _initialOwner) initializer public {
+        __Ownable_init(_initialOwner);
         nuvoLock = NuvoLockUpgradeable(_nuvoLock);
         minLockAmount = _minLockAmount;
         minLockPeriod = _minLockPeriod;
@@ -48,7 +48,7 @@ contract ParticipantManager is OwnableUpgradeable {
     }
 
     function isEligible(address participant) public view returns (bool) {
-        (uint256 amount, uint256 unlockTime, , ) = nuvoLock.getLockInfo(participant);
+        (uint256 amount, uint256 unlockTime, , , , ,) = nuvoLock.getLockInfo(participant);
         return amount >= minLockAmount && unlockTime > block.timestamp + minLockPeriod;
     }
 

@@ -46,8 +46,8 @@ contract NuvoLockUpgradeable is Initializable, UUPSUpgradeable, OwnableUpgradeab
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() initializer {}
 
-    function initialize(address _nuvoToken, address _rewardSource) initializer public {
-        __Ownable_init();
+    function initialize(address _nuvoToken, address _rewardSource, address _initialOwner) initializer public {
+        __Ownable_init(_initialOwner);
         __UUPSUpgradeable_init();
 
         nuvoToken = INuvoToken(_nuvoToken);
@@ -167,6 +167,33 @@ contract NuvoLockUpgradeable is Initializable, UUPSUpgradeable, OwnableUpgradeab
 
     function getCurrentPeriod() public view returns (uint256) {
         return (block.timestamp - currentPeriodStart) / 1 weeks;
+    }
+
+    function getLockInfo(
+        address participant
+    ) 
+        public 
+        view 
+        returns (
+            uint256 amount, 
+            uint256 unlockTime, 
+            uint256 originalLockTime, 
+            uint256 startTime,
+            uint256 bonusPoints,
+            uint256 accumulatedRewards,
+            uint256 lastClaimedPeriod
+        ) 
+    {
+        LockInfo storage lockInfo = locks[participant];
+        return (
+            lockInfo.amount,
+            lockInfo.unlockTime,
+            lockInfo.originalLockTime,
+            lockInfo.startTime,
+            lockInfo.bonusPoints,
+            lockInfo.accumulatedRewards,
+            lockInfo.lastClaimedPeriod
+        );
     }
 
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
