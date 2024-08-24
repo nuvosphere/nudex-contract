@@ -6,6 +6,7 @@ import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol
 import "./ParticipantManager.sol";
 import "./NuvoLockUpgradeable.sol";
 import "./DepositManager.sol";
+import "./AssetManager.sol";
 
 contract VotingManager is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     ParticipantManager public participantManager;
@@ -22,6 +23,9 @@ contract VotingManager is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     event ParticipantAdded(address indexed newParticipant);
     event ParticipantRemoved(address indexed participant);
     event SubmitterRotationRequested(address indexed requester, address indexed currentSubmitter);
+    event AssetListed(bytes32 indexed assetId);
+    event AssetDelisted(bytes32 indexed assetId);
+
 
     modifier onlyParticipant() {
         require(participantManager.isParticipant(msg.sender), "Not a participant");
@@ -101,6 +105,44 @@ contract VotingManager is OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
         nuvoLock.accumulateBonusPoints(msg.sender);
         rotateSubmitter();
+    }
+
+    function listAsset(
+        string memory name,
+        string memory nuDexName,
+        AssetManager.AssetType assetType,
+        address contractAddress,
+        uint256 chainId,
+        bytes memory signature
+    ) external onlyCurrentSubmitter nonReentrant {
+        bytes memory encodedParams = abi.encodePacked(name, nuDexName, assetType, contractAddress, chainId);
+        require(verifySignature(encodedParams, signature), "Invalid signature");
+
+        assetManager.listAsset(name, nuDexName, assetType, contractAddress, chainId);
+        bytes32 assetId = assetManager.getAssetIdentifier(assetType, contractAddress, chainId);
+
+        nuvoLock.accumulateBonusPoints(msg.sender);
+        rotateSubmitter();
+
+        emit AssetListed(assetId);
+    }
+
+    function delistAsset(
+        AssetManager.AssetType assetType,
+        address contractAddress,
+        uint256 chainId,
+        bytes memory signature
+    ) external onlyCurrentSubmitter nonReentrant {
+        bytes memory encodedParams = abi.encodePacked(assetType, contractAddress, chainId);
+        require(verifySignature(encodedParams, signature), "Invalid signature");
+
+        assetManager.delistAsset(assetType, contractAddress, chainId);
+        bytes32 assetId = assetManager.getAssetIdentifier(assetType, contractAddress, chainId);
+
+        nuvoLock.accumulateBonusPoints(msg.sender);
+        rotateSubmitter();
+
+        emit AssetDelisted(assetId);
     }
 
     function rotateSubmitter() internal {
