@@ -151,7 +151,7 @@ contract VotingManager is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         bytes memory encodedParams = abi.encodePacked(taskId, result);
         require(verifySignature(encodedParams, signature), "Invalid signature");
 
-        nuDexOperations.markTaskCompleted(taskId);
+        nuDexOperations.markTaskCompleted(taskId, result);
 
         emit TaskCompleted(taskId, msg.sender, block.timestamp, result);
 

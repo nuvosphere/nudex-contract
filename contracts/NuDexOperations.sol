@@ -12,6 +12,7 @@ contract NuDexOperations is OwnableUpgradeable {
         bool isCompleted;
         uint256 createdAt;
         uint256 completedAt;
+        bytes result;
     }
 
     uint256 public nextTaskId;
@@ -50,10 +51,32 @@ contract NuDexOperations is OwnableUpgradeable {
         return tasks[nextTaskId - 1];
     }
 
-    function markTaskCompleted(uint256 taskId) external onlyOwner {
+    function markTaskCompleted(uint256 taskId, bytes result) external onlyOwner {
         Task storage task = tasks[taskId];
         task.isCompleted = true;
         task.completedAt = block.timestamp;
+        task.result = result;
         emit TaskCompleted(taskId, task.submitter, task.completedAt);
     }
+
+    function getUncompletedTasks() external view returns (Task[] memory) {
+        Task[] memory tempTasks = new Task[](nextTaskId);
+        uint256 count = 0;
+
+        for (uint256 i = 0; i < nextTaskId; i++) {
+            if (!tasks[i].isCompleted) {
+                tempTasks[count] = tasks[i];
+                count++;
+            }
+        }
+
+        // Allocate exact size array and copy
+        Task[] memory uncompletedTasks = new Task[](count);
+        for (uint256 i = 0; i < count; i++) {
+            uncompletedTasks[i] = tempTasks[i];
+        }
+
+        return uncompletedTasks;
+    }
+
 }
