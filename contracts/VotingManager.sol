@@ -25,7 +25,7 @@ contract VotingManager is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     event SubmitterRotationRequested(address indexed requester, address indexed currentSubmitter);
     event AssetListed(bytes32 indexed assetId);
     event AssetDelisted(bytes32 indexed assetId);
-
+    event TaskCompleted(uint256 indexed taskId, address indexed submitter, uint256 completedAt, bytes taskResult);
 
     modifier onlyParticipant() {
         require(participantManager.isParticipant(msg.sender), "Not a participant");
@@ -143,6 +143,20 @@ contract VotingManager is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         rotateSubmitter();
 
         emit AssetDelisted(assetId);
+    }
+
+    function submitTaskReceipt(uint256 taskId, bytes memory result, bytes memory signature) external onlyCurrentSubmitter nonReentrant {
+        
+        require(!nuDexOperations.tasks(taskId).isCompleted, "Task already completed");
+        bytes memory encodedParams = abi.encodePacked(taskId, result);
+        require(verifySignature(encodedParams, signature), "Invalid signature");
+
+        nuDexOperations.markTaskCompleted(taskId);
+
+        emit TaskCompleted(taskId, msg.sender, block.timestamp, result);
+
+        // Rotate the submitter
+        rotateSubmitter();
     }
 
     function rotateSubmitter() internal {
