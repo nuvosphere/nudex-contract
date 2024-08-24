@@ -16,6 +16,7 @@ contract VotingManager is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     uint256 public lastSubmitterIndex;
     uint256 public lastSubmissionTime;
     uint256 public constant forcedRotationWindow = 1 minutes;
+    uint256 public constant taskCompletionThreshold = 1 hours;
 
     event SubmitterChosen(address indexed newSubmitter);
     event DepositInfoSubmitted(address indexed targetAddress, uint256 amount, bytes txInfo, uint256 chainId, bytes extraInfo);
@@ -71,6 +72,14 @@ contract VotingManager is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         require(currentSubmitter == getCurrentSubmitter(), "Incorrect current submitter");
         require(block.timestamp >= lastSubmissionTime + forcedRotationWindow, "Submitter rotation not allowed yet");
 
+        // Check for uncompleted tasks and apply demerit points if needed
+        Task[] memory uncompletedTasks = nuDexOperations.getUncompletedTasks();
+        for (uint256 i = 0; i < uncompletedTasks.length; i++) {
+            if (block.timestamp > uncompletedTasks[i].createdAt + taskCompletionThreshold) {
+                //uncompleted tasks
+                nuvoLock.accumulateDemeritPoints(currentSubmitter);
+            }
+        }
         rotateSubmitter();
 
         emit SubmitterRotationRequested(msg.sender, currentSubmitter);

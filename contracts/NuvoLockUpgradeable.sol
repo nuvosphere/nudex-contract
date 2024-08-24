@@ -26,6 +26,7 @@ contract NuvoLockUpgradeable is Initializable, UUPSUpgradeable, OwnableUpgradeab
         uint256 bonusPoints;
         uint256 accumulatedRewards;
         uint256 lastClaimedPeriod;
+        uint256 demeritPoints;
     }
 
     mapping(address => LockInfo) public locks;
@@ -37,6 +38,7 @@ contract NuvoLockUpgradeable is Initializable, UUPSUpgradeable, OwnableUpgradeab
     event RewardsAccumulated(address indexed user, uint256 rewards);
     event RewardsClaimed(address indexed user, uint256 rewards);
     event RewardPerPeriodUpdated(uint256 newRewardPerPeriod, uint256 period);
+    event DemeritPointsIncreased(address indexed submitter, uint256 points);
 
     modifier onlyParticipant() {
         require(locks[msg.sender].amount > 0, "Not a participant");
@@ -111,6 +113,19 @@ contract NuvoLockUpgradeable is Initializable, UUPSUpgradeable, OwnableUpgradeab
         totalBonusPoints++;
     }
 
+    function accumulateDemeritPoints(address participant) external onlyOwner {
+        require(locks[participant].amount > 0, "Not a participant");
+
+        // Check if the reward period has ended and accumulate rewards if necessary
+        uint256 currentPeriodNumber = getCurrentPeriod();
+        if (currentPeriodNumber > currentPeriod) {
+            accumulateRewards();
+        }
+
+        // Accumulate points
+        locks[participant].demeritPoints++;
+    }
+
     function setRewardPerPeriod(uint256 newRewardPerPeriod) external onlyOwner {
         // Accumulate rewards for all previous periods before updating the reward per period
         accumulateRewards();
@@ -129,7 +144,10 @@ contract NuvoLockUpgradeable is Initializable, UUPSUpgradeable, OwnableUpgradeab
                 for (uint256 i = 0; i < participants.length; i++) {
                     address participant = participants[i];
                     LockInfo storage lockInfo = locks[participant];
-                    uint256 participantBonusPoints = lockInfo.bonusPoints;
+                    uint256 participantBonusPoints = (lockInfo.bonusPoints > lockInfo.demeritPoints)?lockInfo.bonusPoints - lockInfo.demeritPoints:0;
+                    if (lockInfo.demeritPoints > 0) {
+                        lockInfo.demeritPoints--;
+                    }
 
                     if (participantBonusPoints > 0) {
                         uint256 participantReward = (rewardPerPeriod[currentPeriod] * participantBonusPoints) / totalBonusPoints;
