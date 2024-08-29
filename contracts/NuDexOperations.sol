@@ -27,8 +27,8 @@ contract NuDexOperations is OwnableUpgradeable {
         _;
     }
 
-    function initialize(address _participantManager) public initializer {
-        __Ownable_init(msg.sender);
+    function initialize(address _participantManager, address _initialOwner) public initializer {
+        __Ownable_init(_initialOwner);
         participantManager = ParticipantManager(_participantManager);
     }
 
@@ -78,6 +78,10 @@ contract NuDexOperations is OwnableUpgradeable {
         }
 
         return uncompletedTasks;
+    }
+
+    function isTaskCompleted(uint256 taskId) external view returns (bool) {
+        return tasks[taskId].isCompleted;
     }
 
 }
