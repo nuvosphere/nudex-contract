@@ -3,15 +3,11 @@ pragma solidity ^0.8.0;
 
 import "./NuvoLockUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
 contract NuvoDAOLogic is Ownable {
-    using Counters for Counters.Counter;
-    using SafeMath for uint256;
-    
-    Counters.Counter private _proposalIds;
+
+    uint256 private _proposalIds;
     address public proxyAdmin;
     address public proxyAddress;
 
@@ -137,14 +133,14 @@ contract NuvoDAOLogic is Ownable {
 
     function getVotingPower(address _member) public view returns (uint256) {
         uint256 timeWeightedPower = nuvoLock.lockedBalanceOf(_member) * (block.timestamp - nuvoLock.lockedTime(_member));
-        uint256 reputationBonus = reputationScore[_member].mul(1e18); // Apply a multiplier to the reputation score
-        return timeWeightedPower.add(delegatedVotes[_member]).add(activityScore[_member]).add(reputationBonus);
+        uint256 reputationBonus = reputationScore[_member] * 1e18; // Apply a multiplier to the reputation score
+        return timeWeightedPower + delegatedVotes[_member] + activityScore[_member] + reputationBonus;
     }
 
     function decayReputation(address _member) public {
         uint256 lastActiveTime = lastActive[_member];
         uint256 timeInactive = block.timestamp.sub(lastActiveTime);
-        uint256 decayAmount = timeInactive.mul(reputationDecayRate);
+        uint256 decayAmount = timeInactive * reputationDecayRate;
 
         if (reputationScore[_member] > decayAmount) {
             reputationScore[_member] = reputationScore[_member].sub(decayAmount);
@@ -171,8 +167,8 @@ contract NuvoDAOLogic is Ownable {
             description: _description,
             voteCount: 0,
             startTime: block.timestamp,
-            endTime: block.timestamp.add(_votingPeriod),
-            executionTime: block.timestamp.add(_votingPeriod).add(executionDelay),
+            endTime: block.timestamp + _votingPeriod,
+            executionTime: block.timestamp + _votingPeriod + executionDelay,
             executed: false,
             proposalType: _proposalType,
             proposalCategory: _proposalCategory,
@@ -206,20 +202,20 @@ contract NuvoDAOLogic is Ownable {
         require(_voteCount <= votingPower, "Insufficient voting power");
 
         // Quadratic Voting: Square the number of votes cast to calculate the cost
-        uint256 quadraticVotes = _voteCount.mul(_voteCount);
+        uint256 quadraticVotes = _voteCount * _voteCount;
         require(quadraticVotes <= votingPower, "Quadratic vote exceeds voting power");
 
-        proposal.voteCount = proposal.voteCount.add(quadraticVotes);
+        proposal.voteCount = proposal.voteCount + quadraticVotes;
         votes[_proposalId][msg.sender] = quadraticVotes;
 
         // Increase activity score based on participation
-        activityScore[msg.sender] = activityScore[msg.sender].add(1);
+        activityScore[msg.sender] = activityScore[msg.sender] + 1;
 
         // Reward participation
-        participationRewards[msg.sender] = participationRewards[msg.sender].add(quadraticVotes);
+        participationRewards[msg.sender] = participationRewards[msg.sender] + quadraticVotes;
 
         // Increase reputation score
-        reputationScore[msg.sender] = reputationScore[msg.sender].add(1);
+        reputationScore[msg.sender] = reputationScore[msg.sender] + 1;
 
         lastActive[msg.sender] = block.timestamp;
 
@@ -234,9 +230,9 @@ contract NuvoDAOLogic is Ownable {
         require(!proposal.executed, "Proposal already executed");
 
         uint256 totalLockedTokens = nuvoLock.totalLocked();
-        uint256 quorum = (totalLockedTokens.mul(quorumPercentage)).div(100);
+        uint256 quorum = totalLockedTokens * quorumPercentage / 100;
 
-        bool passed = proposal.voteCount > totalLockedTokens.div(2) && proposal.voteCount >= quorum;
+        bool passed = proposal.voteCount > (totalLockedTokens / 2) && proposal.voteCount >= quorum;
 
         if (passed) {
             if (proposal.proposalType == ProposalType.Funding) {
@@ -367,12 +363,12 @@ contract NuvoDAOLogic is Ownable {
 
         for (uint256 i = 1; i <= _proposalIds.current(); i++) {
             Proposal memory proposal = proposals[i];
-            totalVotes = totalVotes.add(proposal.voteCount);
+            totalVotes = totalVotes + proposal.voteCount;
         }
 
         for (uint256 i = 1; i <= _proposalIds.current(); i++) {
             Proposal memory proposal = proposals[i];
-            totalReputation = totalReputation.add(reputationScore[proposal.proposer]);
+            totalReputation = totalReputation + reputationScore[proposal.proposer];
         }
     }
 
