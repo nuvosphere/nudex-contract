@@ -75,6 +75,7 @@ contract NuvoDAOLogic is Ownable {
     event RewardClaimed(address claimer, uint256 amount);
 
     constructor(
+        address _owner,
         NuvoLockUpgradeable _nuvoLock,
         address _multisigWallet,
         uint256 _quorumPercentage,
@@ -84,7 +85,7 @@ contract NuvoDAOLogic is Ownable {
         uint256 _reputationDecayRate,
         address _proxyAddress,
         address _proxyAdmin
-    ) Ownable(msg.sender) {
+    ) Ownable(_owner) {
         nuvoLock = _nuvoLock;
         multisigWallet = _multisigWallet;
         quorumPercentage = _quorumPercentage;
