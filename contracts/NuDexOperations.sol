@@ -28,7 +28,7 @@ contract NuDexOperations is OwnableUpgradeable {
     }
 
     function initialize(address _participantManager) public initializer {
-        __Ownable_init();
+        __Ownable_init(msg.sender);
         participantManager = ParticipantManager(_participantManager);
     }
 
@@ -40,7 +40,8 @@ contract NuDexOperations is OwnableUpgradeable {
             submitter: msg.sender,
             isCompleted: false,
             createdAt: block.timestamp,
-            completedAt: 0
+            completedAt: 0,
+            result: ""
         });
 
         emit TaskSubmitted(taskId, description, msg.sender);
@@ -51,7 +52,7 @@ contract NuDexOperations is OwnableUpgradeable {
         return tasks[nextTaskId - 1];
     }
 
-    function markTaskCompleted(uint256 taskId, bytes result) external onlyOwner {
+    function markTaskCompleted(uint256 taskId, bytes calldata result) external onlyOwner {
         Task storage task = tasks[taskId];
         task.isCompleted = true;
         task.completedAt = block.timestamp;

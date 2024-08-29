@@ -16,6 +16,7 @@ contract NuvoLockUpgradeable is Initializable, UUPSUpgradeable, OwnableUpgradeab
     uint256 public minLockPeriod;
     uint256 public currentPeriodStart;
     uint256 public totalBonusPoints;
+    uint256 public totalLocked;
     uint256 public currentPeriod; // Tracks the current reward period
 
     struct LockInfo {
@@ -79,6 +80,8 @@ contract NuvoLockUpgradeable is Initializable, UUPSUpgradeable, OwnableUpgradeab
         lockInfo.accumulatedRewards = 0;
         lockInfo.lastClaimedPeriod = currentPeriod;
 
+        totalLocked += amount;
+
         participants.push(msg.sender);
 
         emit Locked(msg.sender, amount, unlockTime);
@@ -90,6 +93,7 @@ contract NuvoLockUpgradeable is Initializable, UUPSUpgradeable, OwnableUpgradeab
 
         uint256 amount = lockInfo.amount;
         lockInfo.amount = 0;
+        totalLocked -= amount;
 
         // Accumulate rewards for all unaccounted periods before unlocking
         accumulateRewards();
@@ -212,6 +216,14 @@ contract NuvoLockUpgradeable is Initializable, UUPSUpgradeable, OwnableUpgradeab
             lockInfo.accumulatedRewards,
             lockInfo.lastClaimedPeriod
         );
+    }
+
+    function lockedBalanceOf(address participant) external view returns(uint256) {
+        return locks[participant].amount;
+    }
+
+    function lockedTime(address participant) external view returns(uint256) {
+        return block.timestamp - locks[participant].startTime;
     }
 
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}

@@ -2,6 +2,7 @@
 pragma solidity ^0.8.0;
 
 import "./NuvoLockUpgradeable.sol";
+import "./interfaces/iProxy.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
@@ -71,6 +72,7 @@ contract NuvoDAOLogic is Ownable {
     event FundingProposalExecuted(uint256 id, address recipient, uint256 amount, address token, string purpose);
     event BundleProposalExecuted(uint256 id, uint256[] executedProposalIds);
     event Upgraded(address newImplementation);
+    event RewardClaimed(address claimer, uint256 amount);
 
     constructor(
         NuvoLockUpgradeable _nuvoLock,
@@ -82,7 +84,7 @@ contract NuvoDAOLogic is Ownable {
         uint256 _reputationDecayRate,
         address _proxyAddress,
         address _proxyAdmin
-    ) {
+    ) Ownable(msg.sender) {
         nuvoLock = _nuvoLock;
         multisigWallet = _multisigWallet;
         quorumPercentage = _quorumPercentage;
@@ -139,11 +141,11 @@ contract NuvoDAOLogic is Ownable {
 
     function decayReputation(address _member) public {
         uint256 lastActiveTime = lastActive[_member];
-        uint256 timeInactive = block.timestamp.sub(lastActiveTime);
+        uint256 timeInactive = block.timestamp - lastActiveTime;
         uint256 decayAmount = timeInactive * reputationDecayRate;
 
         if (reputationScore[_member] > decayAmount) {
-            reputationScore[_member] = reputationScore[_member].sub(decayAmount);
+            reputationScore[_member] = reputationScore[_member] - decayAmount;
         } else {
             reputationScore[_member] = 0;
         }
@@ -158,8 +160,7 @@ contract NuvoDAOLogic is Ownable {
         ProposalCategory _proposalCategory,
         bytes memory _parameters
     ) external payable onlyMember proposalFeePaid {
-        _proposalIds.increment();
-        uint256 newProposalId = _proposalIds.current();
+        uint256 newProposalId = ++_proposalIds;
 
         proposals[newProposalId] = Proposal({
             id: newProposalId,
@@ -222,7 +223,7 @@ contract NuvoDAOLogic is Ownable {
         emit Voted(_proposalId, msg.sender, votingPower, quadraticVotes);
     }
 
-    function executeProposal(uint256 _proposalId) external onlyOwner {
+    function executeProposal(uint256 _proposalId) public onlyOwner {
         Proposal storage proposal = proposals[_proposalId];
 
         require(block.timestamp > proposal.endTime, "Voting period is not over yet");
@@ -327,7 +328,7 @@ contract NuvoDAOLogic is Ownable {
 
     function _executeUpgradeProposal(uint256 _proposalId) internal {
         UpgradeProposalParameters memory params = upgradeProposals[_proposalId];
-        Proxy(proxyAddress).upgrade(params.newImplementation);
+        iProxy(proxyAddress).upgrade(params.newImplementation);
         emit Upgraded(params.newImplementation);
     }
 
@@ -355,18 +356,18 @@ contract NuvoDAOLogic is Ownable {
 
     // Automated Reporting and Visualization
 
-    function generateParticipationReport() external view returns (uint256 totalMembers, uint256 totalProposals, uint256 totalVotes, uint256 totalReputation) {
-        totalMembers = _proposalIds.current(); // Number of members who have created proposals
-        totalProposals = _proposalIds.current();
+    function generateParticipationReport() public view returns (uint256 totalMembers, uint256 totalProposals, uint256 totalVotes, uint256 totalReputation) {
+        totalMembers = _proposalIds; // Number of members who have created proposals
+        totalProposals = _proposalIds;
         totalVotes = 0;
         totalReputation = 0;
 
-        for (uint256 i = 1; i <= _proposalIds.current(); i++) {
+        for (uint256 i = 1; i <= _proposalIds; i++) {
             Proposal memory proposal = proposals[i];
             totalVotes = totalVotes + proposal.voteCount;
         }
 
-        for (uint256 i = 1; i <= _proposalIds.current(); i++) {
+        for (uint256 i = 1; i <= _proposalIds; i++) {
             Proposal memory proposal = proposals[i];
             totalReputation = totalReputation + reputationScore[proposal.proposer];
         }
