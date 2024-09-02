@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "./NuvoLockUpgradeable.sol";
-import "./interfaces/iProxy.sol";
+import "./interfaces/INuvoLock.sol";
+import "./interfaces/IProxy.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
@@ -12,7 +12,7 @@ contract NuvoDAOLogic is Ownable {
     address public proxyAdmin;
     address public proxyAddress;
 
-    NuvoLockUpgradeable public nuvoLock;
+    INuvoLock public nuvoLock;
     address public multisigWallet;
     uint256 public constant MIN_LOCK_AMOUNT = 10000 * 10 ** 18; // 10,000 Nuvo tokens
     uint256 public constant MIN_LOCK_DURATION = 3 days;
@@ -76,7 +76,7 @@ contract NuvoDAOLogic is Ownable {
 
     constructor(
         address _owner,
-        NuvoLockUpgradeable _nuvoLock,
+        INuvoLock _nuvoLock,
         address _multisigWallet,
         uint256 _quorumPercentage,
         uint256 _proposalFee,
@@ -329,7 +329,7 @@ contract NuvoDAOLogic is Ownable {
 
     function _executeUpgradeProposal(uint256 _proposalId) internal {
         UpgradeProposalParameters memory params = upgradeProposals[_proposalId];
-        iProxy(proxyAddress).upgrade(params.newImplementation);
+        IProxy(proxyAddress).upgrade(params.newImplementation);
         emit Upgraded(params.newImplementation);
     }
 

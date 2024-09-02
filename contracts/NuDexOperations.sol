@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "./ParticipantManager.sol";
+import "./interfaces/IParticipantManager.sol";
 
 contract NuDexOperations is OwnableUpgradeable {
     struct Task {
@@ -17,7 +17,7 @@ contract NuDexOperations is OwnableUpgradeable {
 
     uint256 public nextTaskId;
     mapping(uint256 => Task) public tasks;
-    ParticipantManager public participantManager;
+    IParticipantManager public participantManager;
 
     event TaskSubmitted(uint256 indexed taskId, string description, address indexed submitter);
     event TaskCompleted(uint256 indexed taskId, address indexed submitter, uint256 completedAt);
@@ -29,7 +29,7 @@ contract NuDexOperations is OwnableUpgradeable {
 
     function initialize(address _participantManager, address _initialOwner) public initializer {
         __Ownable_init(_initialOwner);
-        participantManager = ParticipantManager(_participantManager);
+        participantManager = IParticipantManager(_participantManager);
     }
 
     function submitTask(string memory description) external onlyParticipant {

@@ -4,13 +4,9 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "./interfaces/INuvoLock.sol";
 
-interface INuvoToken {
-    function transferFrom(address sender, address recipient, uint256 amount) external returns (bool);
-    function transfer(address recipient, uint256 amount) external returns (bool);
-}
-
-contract NuvoLockUpgradeable is Initializable, UUPSUpgradeable, OwnableUpgradeable {
+contract NuvoLockUpgradeable is INuvoLock, Initializable, UUPSUpgradeable, OwnableUpgradeable {
     INuvoToken public nuvoToken;
     address public rewardSource;
     uint256 public minLockPeriod;
@@ -19,27 +15,9 @@ contract NuvoLockUpgradeable is Initializable, UUPSUpgradeable, OwnableUpgradeab
     uint256 public totalLocked;
     uint256 public currentPeriod; // Tracks the current reward period
 
-    struct LockInfo {
-        uint256 amount;
-        uint256 unlockTime;
-        uint256 originalLockTime;
-        uint256 startTime;
-        uint256 bonusPoints;
-        uint256 accumulatedRewards;
-        uint256 lastClaimedPeriod;
-        uint256 demeritPoints;
-    }
-
     mapping(address => LockInfo) public locks;
     mapping(uint256 => uint256) public rewardPerPeriod; // Maps period number to its reward amount
     address[] public participants;
-
-    event Locked(address indexed user, uint256 amount, uint256 unlockTime);
-    event Unlocked(address indexed user, uint256 amount);
-    event RewardsAccumulated(address indexed user, uint256 rewards);
-    event RewardsClaimed(address indexed user, uint256 rewards);
-    event RewardPerPeriodUpdated(uint256 newRewardPerPeriod, uint256 period);
-    event DemeritPointsIncreased(address indexed submitter, uint256 points);
 
     modifier onlyParticipant() {
         require(locks[msg.sender].amount > 0, "Not a participant");
