@@ -1,24 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-contract DepositManager {
-    struct DepositInfo {
-        address targetAddress;
-        uint256 amount;
-        bytes txInfo;
-        uint256 chainId;
-        bytes extraInfo;
-    }
+import "./interfaces/IDepositManager.sol";
+
+contract DepositManager is IDepositManager {
 
     mapping(address => DepositInfo[]) public deposits;
-
-    event DepositRecorded(
-        address indexed targetAddress,
-        uint256 amount,
-        bytes txInfo,
-        uint256 chainId,
-        bytes extraInfo
-    );
 
     function recordDeposit(
         address targetAddress,

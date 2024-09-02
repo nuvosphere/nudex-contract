@@ -7,11 +7,14 @@ import "./ParticipantManager.sol";
 import "./NuvoLockUpgradeable.sol";
 import "./DepositManager.sol";
 import "./AssetManager.sol";
+import "./NuDexOperations.sol";
 
 contract VotingManager is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     ParticipantManager public participantManager;
     NuvoLockUpgradeable public nuvoLock;
+    AssetManager public assetManager;
     DepositManager public depositManager;
+    NuDexOperations public nuDexOperations;
 
     uint256 public lastSubmitterIndex;
     uint256 public lastSubmissionTime;
@@ -39,12 +42,14 @@ contract VotingManager is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         _;
     }
 
-    function initialize(address _participantManager, address _nuvoLock, address _depositManager, address _initialOwner) initializer public {
+    function initialize(address _participantManager, address _nuvoLock, address _assetManager, address _depositManager, address _nuDexOperations, address _initialOwner) initializer public {
         __Ownable_init(_initialOwner);
         __ReentrancyGuard_init();
         participantManager = ParticipantManager(_participantManager);
         nuvoLock = NuvoLockUpgradeable(_nuvoLock);
         depositManager = DepositManager(_depositManager);
+        nuDexOperations = NuDexOperations(_nuDexOperations);
+        assetManager = AssetManager(_assetManager);
     }
 
     function addParticipant(address newParticipant, bytes memory params, bytes memory signature) external onlyCurrentSubmitter nonReentrant {
@@ -73,7 +78,7 @@ contract VotingManager is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         require(block.timestamp >= lastSubmissionTime + forcedRotationWindow, "Submitter rotation not allowed yet");
 
         // Check for uncompleted tasks and apply demerit points if needed
-        Task[] memory uncompletedTasks = nuDexOperations.getUncompletedTasks();
+        NuDexOperations.Task[] memory uncompletedTasks = nuDexOperations.getUncompletedTasks();
         for (uint256 i = 0; i < uncompletedTasks.length; i++) {
             if (block.timestamp > uncompletedTasks[i].createdAt + taskCompletionThreshold) {
                 //uncompleted tasks
@@ -96,7 +101,7 @@ contract VotingManager is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         bytes memory encodedParams = abi.encodePacked(targetAddress, amount, txInfo, chainId, extraInfo);
         require(verifySignature(encodedParams, signature), "Invalid signature");
 
-        depositManager.recordDeposit(targetAddress, amount, txInfo, chainId);
+        depositManager.recordDeposit(targetAddress, amount, txInfo, chainId, extraInfo);
         lastSubmissionTime = block.timestamp;
 
         nuvoLock.accumulateBonusPoints(msg.sender);
@@ -156,7 +161,7 @@ contract VotingManager is OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
     function submitTaskReceipt(uint256 taskId, bytes memory result, bytes memory signature) external onlyCurrentSubmitter nonReentrant {
         
-        require(!nuDexOperations.tasks(taskId).isCompleted, "Task already completed");
+        require(!nuDexOperations.isTaskCompleted(taskId), "Task already completed");
         bytes memory encodedParams = abi.encodePacked(taskId, result);
         require(verifySignature(encodedParams, signature), "Invalid signature");
 

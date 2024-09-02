@@ -2,22 +2,20 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "./NuvoLockUpgradeable.sol"; // Assume this is the upgradable contract for locking tokens
+import "./interfaces/IParticipantManager.sol";
+import "./interfaces/INuvoLock.sol"; // Assume this is the upgradable contract for locking tokens
 
-contract ParticipantManager is OwnableUpgradeable {
-    NuvoLockUpgradeable public nuvoLock;
+contract ParticipantManager is IParticipantManager, OwnableUpgradeable {
+    INuvoLock public nuvoLock;
     uint256 public minLockAmount;
     uint256 public minLockPeriod;
 
     address[] public participants;
     mapping(address => bool) public isParticipant;
 
-    event ParticipantAdded(address indexed participant);
-    event ParticipantRemoved(address indexed participant);
-
     function initialize(address _nuvoLock, uint256 _minLockAmount, uint256 _minLockPeriod, address _initialOwner) initializer public {
         __Ownable_init(_initialOwner);
-        nuvoLock = NuvoLockUpgradeable(_nuvoLock);
+        nuvoLock = INuvoLock(_nuvoLock);
         minLockAmount = _minLockAmount;
         minLockPeriod = _minLockPeriod;
     }

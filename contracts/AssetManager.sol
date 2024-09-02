@@ -1,25 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-contract AssetManager {
-    enum AssetType { BTC, Ordinal, ERC20, Inscription }
+import "./interfaces/IAssetManager.sol";
 
-    struct Asset {
-        string name;          // Common name of the asset
-        string nuDexName;     // Name of the asset within nuDex
-        AssetType assetType;  // Type of the asset (BTC, Ordinal, ERC20, Inscription)
-        address contractAddress; // Address for ERC20, Inscription, or 0x0 for BTC/Ordinal
-        uint256 chainId;      // Chain ID for EVM-based assets, or specific IDs for BTC/Ordinal
-        bool isListed;        // Whether the asset is listed
-    }
-
+contract AssetManager is IAssetManager {
+    
     // Mapping from asset identifiers to their details
     mapping(bytes32 => Asset) public assets;
     // Array of asset identifiers
     bytes32[] public assetList;
-
-    event AssetListed(bytes32 indexed assetId, string name, string nuDexName, AssetType assetType, address contractAddress, uint256 chainId);
-    event AssetDelisted(bytes32 indexed assetId);
 
     // Create a unique identifier for an asset based on its type, address, and chain ID
     function getAssetIdentifier(AssetType assetType, address contractAddress, uint256 chainId) public pure returns (bytes32) {

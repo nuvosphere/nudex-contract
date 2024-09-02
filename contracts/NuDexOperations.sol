@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "./ParticipantManager.sol";
+import "./interfaces/IParticipantManager.sol";
 
 contract NuDexOperations is OwnableUpgradeable {
     struct Task {
@@ -17,7 +17,7 @@ contract NuDexOperations is OwnableUpgradeable {
 
     uint256 public nextTaskId;
     mapping(uint256 => Task) public tasks;
-    ParticipantManager public participantManager;
+    IParticipantManager public participantManager;
 
     event TaskSubmitted(uint256 indexed taskId, string description, address indexed submitter);
     event TaskCompleted(uint256 indexed taskId, address indexed submitter, uint256 completedAt);
@@ -27,9 +27,9 @@ contract NuDexOperations is OwnableUpgradeable {
         _;
     }
 
-    function initialize(address _participantManager) public initializer {
-        __Ownable_init();
-        participantManager = ParticipantManager(_participantManager);
+    function initialize(address _participantManager, address _initialOwner) public initializer {
+        __Ownable_init(_initialOwner);
+        participantManager = IParticipantManager(_participantManager);
     }
 
     function submitTask(string memory description) external onlyParticipant {
@@ -40,7 +40,8 @@ contract NuDexOperations is OwnableUpgradeable {
             submitter: msg.sender,
             isCompleted: false,
             createdAt: block.timestamp,
-            completedAt: 0
+            completedAt: 0,
+            result: ""
         });
 
         emit TaskSubmitted(taskId, description, msg.sender);
@@ -51,7 +52,7 @@ contract NuDexOperations is OwnableUpgradeable {
         return tasks[nextTaskId - 1];
     }
 
-    function markTaskCompleted(uint256 taskId, bytes result) external onlyOwner {
+    function markTaskCompleted(uint256 taskId, bytes calldata result) external onlyOwner {
         Task storage task = tasks[taskId];
         task.isCompleted = true;
         task.completedAt = block.timestamp;
@@ -77,6 +78,10 @@ contract NuDexOperations is OwnableUpgradeable {
         }
 
         return uncompletedTasks;
+    }
+
+    function isTaskCompleted(uint256 taskId) external view returns (bool) {
+        return tasks[taskId].isCompleted;
     }
 
 }
