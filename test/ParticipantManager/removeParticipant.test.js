@@ -10,12 +10,16 @@ describe("ParticipantManager - Removing Participants", function () {
     // Deploy mock NuvoLockUpgradeable
     const MockNuvoLockUpgradeable = await ethers.getContractFactory("MockNuvoLockUpgradeable");
     nuvoLock = await MockNuvoLockUpgradeable.deploy();
-    await nuvoLock.deployed();
+    await nuvoLock.waitForDeployment();
 
     // Deploy ParticipantManager
     const ParticipantManager = await ethers.getContractFactory("ParticipantManager");
-    participantManager = await upgrades.deployProxy(ParticipantManager, [nuvoLock.address, 100, 7 * 24 * 60 * 60, owner.address], { initializer: "initialize" });
-    await participantManager.deployed();
+    participantManager = await upgrades.deployProxy(
+      ParticipantManager,
+      [await nuvoLock.getAddress(), 100, 7 * 24 * 60 * 60, await owner.getAddress()],
+      { initializer: "initialize" }
+    );
+    await participantManager.waitForDeployment();
 
     // Add participants
     await participantManager.addParticipant(addr1.address);
@@ -32,7 +36,9 @@ describe("ParticipantManager - Removing Participants", function () {
 
   it("Should revert if trying to remove a non-participant", async function () {
     await participantManager.removeParticipant(addr1.address); // Removing addr1 first
-    await expect(participantManager.removeParticipant(addr1.address)).to.be.revertedWith("Not a participant");
+    await expect(participantManager.removeParticipant(addr1.address)).to.be.revertedWith(
+      "Not a participant"
+    );
   });
 
   it("Should correctly handle removing the last participant", async function () {

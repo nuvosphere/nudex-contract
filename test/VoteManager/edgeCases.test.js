@@ -10,20 +10,29 @@ describe("VotingManager - Edge Cases and Advanced Scenarios", function () {
     // Deploy enhanced mock contracts
     const MockParticipantManager = await ethers.getContractFactory("MockParticipantManager");
     participantManager = await MockParticipantManager.deploy();
-    await participantManager.deployed();
+    await participantManager.waitForDeployment();
 
     const MockNuvoLockUpgradeable = await ethers.getContractFactory("MockNuvoLockUpgradeable");
     nuvoLock = await MockNuvoLockUpgradeable.deploy();
-    await nuvoLock.deployed();
+    await nuvoLock.waitForDeployment();
 
     const MockDepositManager = await ethers.getContractFactory("MockDepositManager");
     depositManager = await MockDepositManager.deploy();
-    await depositManager.deployed();
+    await depositManager.waitForDeployment();
 
     // Deploy VotingManager
     const VotingManager = await ethers.getContractFactory("VotingManager");
-    votingManager = await upgrades.deployProxy(VotingManager, [participantManager.address, nuvoLock.address, depositManager.address, owner.address], { initializer: "initialize" });
-    await votingManager.deployed();
+    votingManager = await upgrades.deployProxy(
+      VotingManager,
+      [
+        participantManager.address,
+        await nuvoLock.getAddress(),
+        depositManager.address,
+        await owner.getAddress(),
+      ],
+      { initializer: "initialize" }
+    );
+    await votingManager.waitForDeployment();
 
     // Simulate adding participants
     await participantManager.mockSetParticipant(addr1.address, true);
@@ -31,8 +40,9 @@ describe("VotingManager - Edge Cases and Advanced Scenarios", function () {
   });
 
   it("Should revert if a non-participant tries to rotate submitter", async function () {
-    await expect(votingManager.connect(addr3).chooseNewSubmitter(addr1.address, "0x", "0x"))
-      .to.be.revertedWith("Not a participant");
+    await expect(
+      votingManager.connect(addr3).chooseNewSubmitter(addr1.address, "0x", "0x")
+    ).to.be.revertedWith("Not a participant");
   });
 
   it("Should correctly handle submitter rotation when no tasks have been completed", async function () {
@@ -64,8 +74,9 @@ describe("VotingManager - Edge Cases and Advanced Scenarios", function () {
   });
 
   it("Should revert if trying to add a participant when the same address is already a participant", async function () {
-    await expect(votingManager.addParticipant(addr1.address, "0x", "0x"))
-      .to.be.revertedWith("Already a participant");
+    await expect(votingManager.addParticipant(addr1.address, "0x", "0x")).to.be.revertedWith(
+      "Already a participant"
+    );
   });
 
   it("Should correctly reset and re-add a participant after removal", async function () {
@@ -91,7 +102,8 @@ describe("VotingManager - Edge Cases and Advanced Scenarios", function () {
   it("Should not allow submitter rotation before the forced rotation window", async function () {
     const initialSubmitter = await votingManager.getCurrentSubmitter();
 
-    await expect(votingManager.chooseNewSubmitter(initialSubmitter, "0x", "0x"))
-      .to.be.revertedWith("Submitter rotation not allowed yet");
+    await expect(votingManager.chooseNewSubmitter(initialSubmitter, "0x", "0x")).to.be.revertedWith(
+      "Submitter rotation not allowed yet"
+    );
   });
 });

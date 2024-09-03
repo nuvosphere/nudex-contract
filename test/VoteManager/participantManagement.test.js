@@ -10,16 +10,25 @@ describe("VotingManager - Participant Management", function () {
     // Deploy mock contracts
     const MockParticipantManager = await ethers.getContractFactory("MockParticipantManager");
     participantManager = await MockParticipantManager.deploy();
-    await participantManager.deployed();
+    await participantManager.waitForDeployment();
 
     const MockNuvoLockUpgradeable = await ethers.getContractFactory("MockNuvoLockUpgradeable");
     nuvoLock = await MockNuvoLockUpgradeable.deploy();
-    await nuvoLock.deployed();
+    await nuvoLock.waitForDeployment();
 
     // Deploy VotingManager
     const VotingManager = await ethers.getContractFactory("VotingManager");
-    votingManager = await upgrades.deployProxy(VotingManager, [participantManager.address, nuvoLock.address, ethers.constants.AddressZero, owner.address], { initializer: "initialize" });
-    await votingManager.deployed();
+    votingManager = await upgrades.deployProxy(
+      VotingManager,
+      [
+        participantManager.address,
+        await nuvoLock.getAddress(),
+        ethers.constants.AddressZero,
+        await owner.getAddress(),
+      ],
+      { initializer: "initialize" }
+    );
+    await votingManager.waitForDeployment();
   });
 
   it("Should allow the current submitter to add a new participant", async function () {
@@ -31,7 +40,9 @@ describe("VotingManager - Participant Management", function () {
 
   it("Should revert if non-current submitter tries to add a participant", async function () {
     // Trying to add a participant from a non-current submitter
-    await expect(votingManager.connect(addr2).addParticipant(addr1.address, "0x", "0x")).to.be.revertedWith("Not the current submitter");
+    await expect(
+      votingManager.connect(addr2).addParticipant(addr1.address, "0x", "0x")
+    ).to.be.revertedWith("Not the current submitter");
   });
 
   it("Should allow the current submitter to remove a participant", async function () {
@@ -47,6 +58,8 @@ describe("VotingManager - Participant Management", function () {
     await votingManager.addParticipant(addr1.address, "0x", "0x");
 
     // Trying to remove the participant from a non-current submitter
-    await expect(votingManager.connect(addr2).removeParticipant(addr1.address, "0x", "0x")).to.be.revertedWith("Not the current submitter");
+    await expect(
+      votingManager.connect(addr2).removeParticipant(addr1.address, "0x", "0x")
+    ).to.be.revertedWith("Not the current submitter");
   });
 });

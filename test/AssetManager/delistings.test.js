@@ -2,21 +2,22 @@ const { expect } = require("chai");
 const { ethers } = require("hardhat");
 
 describe("AssetManager - Delisting Assets", function () {
-  let assetManager, owner, addr1;
+  let assetManager, owner, addr1, address1;
 
   beforeEach(async function () {
     [owner, addr1] = await ethers.getSigners();
+    address1 = await addr1.getAddress();
 
     // Deploy AssetManager
     const AssetManager = await ethers.getContractFactory("AssetManager");
     assetManager = await AssetManager.deploy();
-    await assetManager.deployed();
+    await assetManager.waitForDeployment();
 
     // List an asset to be delisted later
     const assetType = 2; // ERC20
     const assetName = "TestAsset";
     const nuDexName = "TST";
-    const contractAddress = addr1.address;
+    const contractAddress = address1;
     const chainId = 1;
 
     await assetManager.listAsset(assetName, nuDexName, assetType, contractAddress, chainId);
@@ -24,38 +25,39 @@ describe("AssetManager - Delisting Assets", function () {
 
   it("Should allow delisting an asset", async function () {
     const assetType = 2; // ERC20
-    const contractAddress = addr1.address;
+    const contractAddress = address1;
     const chainId = 1;
 
-    await expect(assetManager.delistAsset(assetType, contractAddress, chainId))
-      .to.emit(assetManager, "AssetDelisted");
+    await expect(assetManager.delistAsset(assetType, contractAddress, chainId)).to.emit(
+      assetManager,
+      "AssetDelisted"
+    );
 
     const assetId = await assetManager.getAssetIdentifier(assetType, contractAddress, chainId);
-    const assetDetails = await assetManager.getAssetDetails(assetId);
-
-    expect(assetDetails.isListed).to.be.false;
+    await expect(assetManager.getAssetDetails(assetId)).to.be.rejectedWith("Asset not listed");
   });
 
   it("Should revert if trying to delist an asset that is not listed", async function () {
     const assetType = 2; // ERC20
-    const contractAddress = addr1.address;
+    const contractAddress = address1;
     const chainId = 1;
 
     // Delist the asset first
     await assetManager.delistAsset(assetType, contractAddress, chainId);
 
     // Attempt to delist the same asset again
-    await expect(assetManager.delistAsset(assetType, contractAddress, chainId))
-      .to.be.revertedWith("Asset not listed");
+    await expect(assetManager.delistAsset(assetType, contractAddress, chainId)).to.be.revertedWith(
+      "Asset not listed"
+    );
   });
 
   it("Should correctly handle multiple assets being delisted", async function () {
     const assetType1 = 2; // ERC20
-    const contractAddress1 = addr1.address;
+    const contractAddress1 = address1;
     const chainId1 = 1;
 
     const assetType2 = 3; // Another type (e.g., Ordinals)
-    const contractAddress2 = owner.address;
+    const contractAddress2 = await owner.getAddress();
     const chainId2 = 1;
 
     // List a second asset
@@ -68,10 +70,7 @@ describe("AssetManager - Delisting Assets", function () {
     const assetId1 = await assetManager.getAssetIdentifier(assetType1, contractAddress1, chainId1);
     const assetId2 = await assetManager.getAssetIdentifier(assetType2, contractAddress2, chainId2);
 
-    const assetDetails1 = await assetManager.getAssetDetails(assetId1);
-    const assetDetails2 = await assetManager.getAssetDetails(assetId2);
-
-    expect(assetDetails1.isListed).to.be.false;
-    expect(assetDetails2.isListed).to.be.false;
+    await expect(assetManager.getAssetDetails(assetId1)).to.be.rejectedWith("Asset not listed");
+    await expect(assetManager.getAssetDetails(assetId2)).to.be.rejectedWith("Asset not listed");
   });
 });

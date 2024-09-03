@@ -10,12 +10,16 @@ describe("ParticipantManager - Fetching Participants", function () {
     // Deploy mock NuvoLockUpgradeable
     const MockNuvoLockUpgradeable = await ethers.getContractFactory("MockNuvoLockUpgradeable");
     nuvoLock = await MockNuvoLockUpgradeable.deploy();
-    await nuvoLock.deployed();
+    await nuvoLock.waitForDeployment();
 
     // Deploy ParticipantManager
     const ParticipantManager = await ethers.getContractFactory("ParticipantManager");
-    participantManager = await upgrades.deployProxy(ParticipantManager, [nuvoLock.address, 100, 7 * 24 * 60 * 60, owner.address], { initializer: "initialize" });
-    await participantManager.deployed();
+    participantManager = await upgrades.deployProxy(
+      ParticipantManager,
+      [await nuvoLock.getAddress(), 100, 7 * 24 * 60 * 60, await owner.getAddress()],
+      { initializer: "initialize" }
+    );
+    await participantManager.waitForDeployment();
 
     // Add participants
     await participantManager.addParticipant(addr1.address);

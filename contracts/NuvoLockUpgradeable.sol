@@ -118,7 +118,8 @@ contract NuvoLockUpgradeable is INuvoLock, Initializable, UUPSUpgradeable, Ownab
         emit RewardPerPeriodUpdated(newRewardPerPeriod, currentPeriod);
     }
 
-    function accumulateRewards() internal {
+    // FIXME: this function was set to internal, but was largely used in the tests
+    function accumulateRewards() public {
         uint256 currentPeriodNumber = getCurrentPeriod();
 
         if (currentPeriodNumber > currentPeriod) {
@@ -181,7 +182,8 @@ contract NuvoLockUpgradeable is INuvoLock, Initializable, UUPSUpgradeable, Ownab
             uint256 startTime,
             uint256 bonusPoints,
             uint256 accumulatedRewards,
-            uint256 lastClaimedPeriod
+            uint256 lastClaimedPeriod,
+            uint256 demeritPoints // TODO: this was not added, is it intended?
         ) 
     {
         LockInfo storage lockInfo = locks[participant];
@@ -192,7 +194,8 @@ contract NuvoLockUpgradeable is INuvoLock, Initializable, UUPSUpgradeable, Ownab
             lockInfo.startTime,
             lockInfo.bonusPoints,
             lockInfo.accumulatedRewards,
-            lockInfo.lastClaimedPeriod
+            lockInfo.lastClaimedPeriod,
+            lockInfo.demeritPoints
         );
     }
 

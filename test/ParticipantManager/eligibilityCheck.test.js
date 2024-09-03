@@ -10,12 +10,16 @@ describe("ParticipantManager - Eligibility Check", function () {
     // Deploy mock NuvoLockUpgradeable
     const MockNuvoLockUpgradeable = await ethers.getContractFactory("MockNuvoLockUpgradeable");
     nuvoLock = await MockNuvoLockUpgradeable.deploy();
-    await nuvoLock.deployed();
+    await nuvoLock.waitForDeployment();
 
     // Deploy ParticipantManager
     const ParticipantManager = await ethers.getContractFactory("ParticipantManager");
-    participantManager = await upgrades.deployProxy(ParticipantManager, [nuvoLock.address, 100, 7 * 24 * 60 * 60, owner.address], { initializer: "initialize" });
-    await participantManager.deployed();
+    participantManager = await upgrades.deployProxy(
+      ParticipantManager,
+      [await nuvoLock.getAddress(), 100, 7 * 24 * 60 * 60, await owner.getAddress()],
+      { initializer: "initialize" }
+    );
+    await participantManager.waitForDeployment();
   });
 
   it("Should return true for eligible participant", async function () {
@@ -25,13 +29,19 @@ describe("ParticipantManager - Eligibility Check", function () {
 
   it("Should return false for ineligible participant", async function () {
     // Override the mock to return a non-eligible lock info
-    const MockNuvoLockUpgradeableIneligible = await ethers.getContractFactory("MockNuvoLockUpgradeableIneligible");
+    const MockNuvoLockUpgradeableIneligible = await ethers.getContractFactory(
+      "MockNuvoLockUpgradeableIneligible"
+    );
     nuvoLock = await MockNuvoLockUpgradeableIneligible.deploy();
-    await nuvoLock.deployed();
+    await nuvoLock.waitForDeployment();
 
     const ParticipantManager = await ethers.getContractFactory("ParticipantManager");
-    participantManager = await upgrades.deployProxy(ParticipantManager, [nuvoLock.address, 100, 7 * 24 * 60 * 60, owner.address], { initializer: "initialize" });
-    await participantManager.deployed();
+    participantManager = await upgrades.deployProxy(
+      ParticipantManager,
+      [await nuvoLock.getAddress(), 100, 7 * 24 * 60 * 60, await owner.getAddress()],
+      { initializer: "initialize" }
+    );
+    await participantManager.waitForDeployment();
 
     const isEligible = await participantManager.isEligible(addr2.address);
     expect(isEligible).to.be.false;

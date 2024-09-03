@@ -54,7 +54,8 @@ interface INuvoLock {
             uint256 startTime,
             uint256 bonusPoints,
             uint256 accumulatedRewards,
-            uint256 lastClaimedPeriod
+            uint256 lastClaimedPeriod,
+            uint256 demeritPoints
         ) 
    ;
 

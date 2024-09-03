@@ -10,20 +10,29 @@ describe("VotingManager - Submitter Management", function () {
     // Deploy mock contracts
     const MockParticipantManager = await ethers.getContractFactory("MockParticipantManager");
     participantManager = await MockParticipantManager.deploy();
-    await participantManager.deployed();
+    await participantManager.waitForDeployment();
 
     const MockNuvoLockUpgradeable = await ethers.getContractFactory("MockNuvoLockUpgradeable");
     nuvoLock = await MockNuvoLockUpgradeable.deploy();
-    await nuvoLock.deployed();
+    await nuvoLock.waitForDeployment();
 
     const MockDepositManager = await ethers.getContractFactory("MockDepositManager");
     depositManager = await MockDepositManager.deploy();
-    await depositManager.deployed();
+    await depositManager.waitForDeployment();
 
     // Deploy VotingManager
     const VotingManager = await ethers.getContractFactory("VotingManager");
-    votingManager = await upgrades.deployProxy(VotingManager, [participantManager.address, nuvoLock.address, depositManager.address, owner.address], { initializer: "initialize" });
-    await votingManager.deployed();
+    votingManager = await upgrades.deployProxy(
+      VotingManager,
+      [
+        participantManager.address,
+        await nuvoLock.getAddress(),
+        depositManager.address,
+        await owner.getAddress(),
+      ],
+      { initializer: "initialize" }
+    );
+    await votingManager.waitForDeployment();
   });
 
   it("Should correctly rotate submitter after each operation", async function () {
@@ -42,7 +51,9 @@ describe("VotingManager - Submitter Management", function () {
   });
 
   it("Should revert if non-participant tries to rotate submitter", async function () {
-    await expect(votingManager.connect(addr3).chooseNewSubmitter(addr1.address, "0x", "0x")).to.be.revertedWith("Not a participant");
+    await expect(
+      votingManager.connect(addr3).chooseNewSubmitter(addr1.address, "0x", "0x")
+    ).to.be.revertedWith("Not a participant");
   });
 
   it("Should allow only the current submitter to perform actions", async function () {
@@ -52,9 +63,13 @@ describe("VotingManager - Submitter Management", function () {
     const currentSubmitter = await votingManager.getCurrentSubmitter();
 
     if (currentSubmitter === addr1.address) {
-      await expect(votingManager.connect(addr2).submitDepositInfo(addr1.address, 100, "0x", 1, "0x", "0x")).to.be.revertedWith("Not the current submitter");
+      await expect(
+        votingManager.connect(addr2).submitDepositInfo(addr1.address, 100, "0x", 1, "0x", "0x")
+      ).to.be.revertedWith("Not the current submitter");
     } else {
-      await expect(votingManager.connect(addr1).submitDepositInfo(addr1.address, 100, "0x", 1, "0x", "0x")).to.be.revertedWith("Not the current submitter");
+      await expect(
+        votingManager.connect(addr1).submitDepositInfo(addr1.address, 100, "0x", 1, "0x", "0x")
+      ).to.be.revertedWith("Not the current submitter");
     }
   });
 

@@ -2,25 +2,26 @@ const { expect } = require("chai");
 const { ethers } = require("hardhat");
 
 describe("DepositManager - Edge Cases", function () {
-  let depositManager, addr1, addr2;
+  let depositManager, addr1, address1;
 
   beforeEach(async function () {
-    [addr1, addr2] = await ethers.getSigners();
+    [addr1] = await ethers.getSigners();
+    address1 = await addr1.getAddress();
 
     // Deploy DepositManager
     const DepositManager = await ethers.getContractFactory("DepositManager");
     depositManager = await DepositManager.deploy();
-    await depositManager.deployed();
+    await depositManager.waitForDeployment();
   });
 
   it("Should return an empty array if no deposits exist for an address", async function () {
-    const deposits = await depositManager.getDeposits(addr1.address);
+    const deposits = await depositManager.getDeposits(address1);
     expect(deposits.length).to.equal(0);
   });
 
   it("Should correctly store and retrieve a deposit with minimal data", async function () {
-    const targetAddress = addr1.address;
-    const amount = ethers.utils.parseUnits("1", 18);
+    const targetAddress = address1;
+    const amount = ethers.parseUnits("1", 18);
     const txInfo = "0x"; // Minimal transaction info
     const chainId = 0; // Edge case chain ID
     const extraInfo = "0x"; // Minimal extra info
@@ -36,9 +37,9 @@ describe("DepositManager - Edge Cases", function () {
   });
 
   it("Should correctly handle multiple deposits with the same transaction info", async function () {
-    const targetAddress = addr1.address;
-    const amount1 = ethers.utils.parseUnits("100", 18);
-    const amount2 = ethers.utils.parseUnits("200", 18);
+    const targetAddress = address1;
+    const amount1 = ethers.parseUnits("100", 18);
+    const amount2 = ethers.parseUnits("200", 18);
     const txInfo = "0x1234"; // Same transaction info for both deposits
     const chainId = 1;
     const extraInfo1 = "0x5678";

@@ -56,7 +56,7 @@ contract NuvoDAOLogic is Ownable {
 
     mapping(uint256 => Proposal) public proposals;
     mapping(uint256 => FundingProposalParameters) public fundingProposals;
-    mapping(uint256 => BundleProposalParameters) public bundleProposals;
+    mapping(uint256 => BundleProposalParameters) private bundleProposals; // FIXME: public mapping to struct of array not allowed
     mapping(uint256 => UpgradeProposalParameters) public upgradeProposals;
     mapping(uint256 => mapping(address => uint256)) public votes;
     mapping(address => address) public delegation;

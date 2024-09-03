@@ -2,20 +2,21 @@ const { expect } = require("chai");
 const { ethers } = require("hardhat");
 
 describe("DepositManager - Recording Deposits", function () {
-  let depositManager, addr1, addr2;
+  let depositManager, addr1, address1;
 
   beforeEach(async function () {
-    [addr1, addr2] = await ethers.getSigners();
+    [addr1] = await ethers.getSigners();
+    address1 = await addr1.getAddress();
 
     // Deploy DepositManager
     const DepositManager = await ethers.getContractFactory("DepositManager");
     depositManager = await DepositManager.deploy();
-    await depositManager.deployed();
+    await depositManager.waitForDeployment();
   });
 
   it("Should allow recording a deposit", async function () {
-    const targetAddress = addr1.address;
-    const amount = ethers.utils.parseUnits("100", 18);
+    const targetAddress = address1;
+    const amount = ethers.parseUnits("100", 18);
     const txInfo = "0x1234";
     const chainId = 1;
     const extraInfo = "0x5678";
@@ -33,13 +34,13 @@ describe("DepositManager - Recording Deposits", function () {
   });
 
   it("Should allow multiple deposits for the same address", async function () {
-    const targetAddress = addr1.address;
-    const amount1 = ethers.utils.parseUnits("100", 18);
+    const targetAddress = address1;
+    const amount1 = ethers.parseUnits("100", 18);
     const txInfo1 = "0x1234";
     const chainId1 = 1;
     const extraInfo1 = "0x5678";
 
-    const amount2 = ethers.utils.parseUnits("200", 18);
+    const amount2 = ethers.parseUnits("200", 18);
     const txInfo2 = "0x9876";
     const chainId2 = 2;
     const extraInfo2 = "0x5432";
