@@ -37,6 +37,10 @@ contract NuvoLockUpgradeable is INuvoLock, Initializable, UUPSUpgradeable, Ownab
         currentPeriod = 0;
     }
 
+    function setMinLockPeriod(uint256 _minLockPeriod) public onlyOwner {
+        minLockPeriod = _minLockPeriod;
+    }
+
     function lock(uint256 amount, uint256 period) external {
         require(period >= minLockPeriod, "Lock period is too short");
         require(amount > 0, "Amount must be greater than 0");
@@ -127,7 +131,7 @@ contract NuvoLockUpgradeable is INuvoLock, Initializable, UUPSUpgradeable, Ownab
                 for (uint256 i = 0; i < participants.length; i++) {
                     address participant = participants[i];
                     LockInfo storage lockInfo = locks[participant];
-                    uint256 participantBonusPoints = (lockInfo.bonusPoints > lockInfo.demeritPoints)?lockInfo.bonusPoints - lockInfo.demeritPoints:0;
+                    uint256 participantBonusPoints = (lockInfo.bonusPoints > lockInfo.demeritPoints) ? lockInfo.bonusPoints - lockInfo.demeritPoints : 0;
                     if (lockInfo.demeritPoints > 0) {
                         lockInfo.demeritPoints--;
                     }
@@ -142,14 +146,14 @@ contract NuvoLockUpgradeable is INuvoLock, Initializable, UUPSUpgradeable, Ownab
                     // Reset bonus points for the participant during the same loop
                     lockInfo.bonusPoints = 0;
                 }
-            }
 
+            // FIXME: the following code should be placed inside the if statement?
             // Reset the total bonus points for the next period
             totalBonusPoints = 0;
-
             // Update the current period and its start time
             currentPeriod = currentPeriodNumber;
             currentPeriodStart += (currentPeriodNumber - currentPeriod) * 1 weeks;
+            } 
         }
     }
 
@@ -160,7 +164,6 @@ contract NuvoLockUpgradeable is INuvoLock, Initializable, UUPSUpgradeable, Ownab
         require(rewards > 0, "No rewards to claim");
 
         lockInfo.accumulatedRewards = 0;
-
         require(nuvoToken.transferFrom(rewardSource, msg.sender, rewards), "Reward transfer failed");
 
         emit RewardsClaimed(msg.sender, rewards);

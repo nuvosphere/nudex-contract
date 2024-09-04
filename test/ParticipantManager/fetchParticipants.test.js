@@ -6,6 +6,8 @@ describe("ParticipantManager - Fetching Participants", function () {
 
   beforeEach(async function () {
     [owner, addr1, addr2, addr3] = await ethers.getSigners();
+    address1 = await addr1.getAddress();
+    address2 = await addr2.getAddress();
 
     // Deploy mock NuvoLockUpgradeable
     const MockNuvoLockUpgradeable = await ethers.getContractFactory("MockNuvoLockUpgradeable");
@@ -22,21 +24,21 @@ describe("ParticipantManager - Fetching Participants", function () {
     await participantManager.waitForDeployment();
 
     // Add participants
-    await participantManager.addParticipant(addr1.address);
-    await participantManager.addParticipant(addr2.address);
+    await participantManager.addParticipant(address1);
+    await participantManager.addParticipant(address2);
     await participantManager.addParticipant(addr3.address);
   });
 
   it("Should return the correct list of participants", async function () {
     const participants = await participantManager.getParticipants();
     expect(participants.length).to.equal(3);
-    expect(participants).to.include.members([addr1.address, addr2.address, addr3.address]);
+    expect(participants).to.include.members([address1, address2, addr3.address]);
   });
 
   it("Should return an empty list when no participants are present", async function () {
     // Remove all participants
-    await participantManager.removeParticipant(addr1.address);
-    await participantManager.removeParticipant(addr2.address);
+    await participantManager.removeParticipant(address1);
+    await participantManager.removeParticipant(address2);
     await participantManager.removeParticipant(addr3.address);
 
     const participants = await participantManager.getParticipants();

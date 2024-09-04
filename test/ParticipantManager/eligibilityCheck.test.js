@@ -2,10 +2,12 @@ const { expect } = require("chai");
 const { ethers } = require("hardhat");
 
 describe("ParticipantManager - Eligibility Check", function () {
-  let participantManager, nuvoLock, owner, addr1, addr2;
+  let participantManager, nuvoLock, owner, addr1, addr2, address1, address2;
 
   beforeEach(async function () {
     [owner, addr1, addr2] = await ethers.getSigners();
+    address1 = await addr1.getAddress();
+    address2 = await addr2.getAddress();
 
     // Deploy mock NuvoLockUpgradeable
     const MockNuvoLockUpgradeable = await ethers.getContractFactory("MockNuvoLockUpgradeable");
@@ -23,7 +25,7 @@ describe("ParticipantManager - Eligibility Check", function () {
   });
 
   it("Should return true for eligible participant", async function () {
-    const isEligible = await participantManager.isEligible(addr1.address);
+    const isEligible = await participantManager.isEligible(address1);
     expect(isEligible).to.be.true;
   });
 
@@ -43,7 +45,7 @@ describe("ParticipantManager - Eligibility Check", function () {
     );
     await participantManager.waitForDeployment();
 
-    const isEligible = await participantManager.isEligible(addr2.address);
+    const isEligible = await participantManager.isEligible(address2);
     expect(isEligible).to.be.false;
   });
 });

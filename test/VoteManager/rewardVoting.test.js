@@ -6,13 +6,14 @@ describe("VotingManager - Reward Voting", function () {
 
   beforeEach(async function () {
     [owner, addr1] = await ethers.getSigners();
+    address1 = await addr1.getAddress();
 
     // Deploy mock contracts
     const MockParticipantManager = await ethers.getContractFactory("MockParticipantManager");
     participantManager = await MockParticipantManager.deploy();
     await participantManager.waitForDeployment();
     // Set addr1 participants
-    await participantManager.mockSetParticipant(addr1.address, true);
+    await participantManager.mockSetParticipant(address1, true);
 
     const MockNuvoLockUpgradeable = await ethers.getContractFactory("MockNuvoLockUpgradeable");
     nuvoLock = await MockNuvoLockUpgradeable.deploy();
@@ -33,7 +34,7 @@ describe("VotingManager - Reward Voting", function () {
     await votingManager.waitForDeployment();
 
     // Add addr1 as a participant
-    await votingManager.addParticipant(addr1.address, "0x", "0x");
+    await votingManager.addParticipant(address1, "0x", "0x");
   });
 
   it("Should allow the current submitter to set reward per period", async function () {

@@ -2,12 +2,14 @@ const { expect } = require("chai");
 const { ethers } = require("hardhat");
 
 describe("NuvoLockUpgradeable - Unlocking", function () {
-  let nuvoLock, nuvoToken, rewardSource, owner, addr1, addr2;
+  let nuvoLock, nuvoToken, rewardSource, owner, addr1, addr2, address1, address2;
   const lockAmount = ethers.parseUnits("100", 18);
   const lockPeriod = 7 * 24 * 60 * 60; // 1 week
 
   beforeEach(async function () {
     [owner, addr1, addr2, rewardSource] = await ethers.getSigners();
+    address1 = await addr1.getAddress();
+    address2 = await addr2.getAddress();
 
     // Deploy mock NuvoToken
     const MockNuvoToken = await ethers.getContractFactory("MockNuvoToken");
@@ -24,7 +26,7 @@ describe("NuvoLockUpgradeable - Unlocking", function () {
     await nuvoLock.waitForDeployment();
 
     // Mint tokens to addr1 for testing
-    await nuvoToken.mint(addr1.address, ethers.parseUnits("1000", 18));
+    await nuvoToken.mint(address1, ethers.parseUnits("1000", 18));
 
     // Lock tokens for addr1
     await nuvoToken.connect(addr1).approve(await nuvoLock.getAddress(), lockAmount);
@@ -38,9 +40,9 @@ describe("NuvoLockUpgradeable - Unlocking", function () {
 
     await expect(nuvoLock.connect(addr1).unlock())
       .to.emit(nuvoLock, "Unlocked")
-      .withArgs(addr1.address, lockAmount);
+      .withArgs(address1, lockAmount);
 
-    const lockInfo = await nuvoLock.getLockInfo(addr1.address);
+    const lockInfo = await nuvoLock.getLockInfo(address1);
     expect(lockInfo.amount).to.equal(0);
   });
 

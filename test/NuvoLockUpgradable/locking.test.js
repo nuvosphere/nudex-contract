@@ -2,7 +2,7 @@ const { expect } = require("chai");
 const { ethers } = require("hardhat");
 
 describe("NuvoLockUpgradeable - Locking", function () {
-  let nuvoLock, nuvoToken, rewardSource, owner, addr1, addr2;
+  let nuvoLock, nuvoToken, rewardSource, owner, addr1, addr2, address1, address2;
   const lockAmount = ethers.parseUnits("100", 18);
   const lockPeriod = 7 * 24 * 60 * 60; // 1 week
 
@@ -24,7 +24,7 @@ describe("NuvoLockUpgradeable - Locking", function () {
     await nuvoLock.waitForDeployment();
 
     // Mint tokens to addr1 for testing
-    await nuvoToken.mint(addr1.address, ethers.parseUnits("1000", 18));
+    await nuvoToken.mint(address1, ethers.parseUnits("1000", 18));
   });
 
   it("Should allow a user to lock tokens", async function () {
@@ -32,12 +32,12 @@ describe("NuvoLockUpgradeable - Locking", function () {
     await expect(nuvoLock.connect(addr1).lock(lockAmount, lockPeriod))
       .to.emit(nuvoLock, "Locked")
       .withArgs(
-        addr1.address,
+        address1,
         lockAmount,
         (await ethers.provider.getBlock("latest")).timestamp + lockPeriod
       );
 
-    const lockInfo = await nuvoLock.getLockInfo(addr1.address);
+    const lockInfo = await nuvoLock.getLockInfo(address1);
     expect(lockInfo.amount).to.equal(lockAmount);
     expect(lockInfo.unlockTime).to.be.gt(0);
     expect(lockInfo.bonusPoints).to.equal(0);
@@ -45,6 +45,7 @@ describe("NuvoLockUpgradeable - Locking", function () {
   });
 
   it("Should revert if lock period is too short", async function () {
+    await nuvoLock.setMinLockPeriod(7 * 24 * 60 * 60); // one week
     const shortPeriod = 1 * 24 * 60 * 60; // 1 day
     await nuvoToken.connect(addr1).approve(await nuvoLock.getAddress(), lockAmount);
     await expect(nuvoLock.connect(addr1).lock(lockAmount, shortPeriod)).to.be.revertedWith(

@@ -9,6 +9,7 @@ describe("NuvoLockUpgradeable - Reward Setting", function () {
 
   beforeEach(async function () {
     [owner, addr1, rewardSource] = await ethers.getSigners();
+    address1 = await addr1.getAddress();
 
     // Deploy mock NuvoToken
     const MockNuvoToken = await ethers.getContractFactory("MockNuvoToken");
@@ -25,7 +26,7 @@ describe("NuvoLockUpgradeable - Reward Setting", function () {
     await nuvoLock.waitForDeployment();
 
     // Mint tokens to addr1 for testing
-    await nuvoToken.mint(addr1.address, ethers.parseUnits("1000", 18));
+    await nuvoToken.mint(address1, ethers.parseUnits("1000", 18));
 
     // Lock tokens for addr1
     await nuvoToken.connect(addr1).approve(await nuvoLock.getAddress(), lockAmount);
@@ -49,15 +50,18 @@ describe("NuvoLockUpgradeable - Reward Setting", function () {
     const newRewardPerPeriod = ethers.parseUnits("20", 18);
     await nuvoLock.connect(owner).setRewardPerPeriod(newRewardPerPeriod);
 
+    await nuvoLock.connect(owner).accumulateBonusPoints(address1);
+    await nuvoLock.accumulateRewards();
+
     // Check that rewards for previous periods were correctly accumulated
-    const lockInfo = await nuvoLock.getLockInfo(addr1.address);
-    expect(lockInfo.accumulatedRewards).to.equal(rewardPerPeriod);
-    expect(await nuvoLock.rewardPerPeriod(1)).to.equal(newRewardPerPeriod);
+    const lockInfo = await nuvoLock.getLockInfo(address1);
+    expect(lockInfo.accumulatedRewards).to.equal(newRewardPerPeriod);
+    expect(await nuvoLock.rewardPerPeriod(0)).to.equal(newRewardPerPeriod);
   });
 
   it("Should revert if non-owner tries to set reward per period", async function () {
-    await expect(nuvoLock.connect(addr1).setRewardPerPeriod(rewardPerPeriod)).to.be.revertedWith(
-      "Ownable: caller is not the owner"
-    );
+    await expect(
+      nuvoLock.connect(addr1).setRewardPerPeriod(rewardPerPeriod)
+    ).to.be.revertedWithCustomError(nuvoLock, "OwnableUnauthorizedAccount");
   });
 });

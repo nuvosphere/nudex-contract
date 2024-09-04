@@ -2,10 +2,12 @@ const { expect } = require("chai");
 const { ethers } = require("hardhat");
 
 describe("ParticipantManager - Adding Participants", function () {
-  let participantManager, nuvoLock, owner, addr1, addr2;
+  let participantManager, nuvoLock, owner, addr1, addr2, address1, address2;
 
   beforeEach(async function () {
     [owner, addr1, addr2] = await ethers.getSigners();
+    address1 = await addr1.getAddress();
+    address2 = await addr2.getAddress();
 
     // Deploy mock NuvoLockUpgradeable
     const MockNuvoLockUpgradeable = await ethers.getContractFactory("MockNuvoLockUpgradeable");
@@ -23,16 +25,16 @@ describe("ParticipantManager - Adding Participants", function () {
   });
 
   it("Should allow the owner to add a new participant if eligible", async function () {
-    await expect(participantManager.addParticipant(addr1.address))
+    await expect(participantManager.addParticipant(address1))
       .to.emit(participantManager, "ParticipantAdded")
-      .withArgs(addr1.address);
+      .withArgs(address1);
 
-    expect(await participantManager.isParticipant(addr1.address)).to.be.true;
+    expect(await participantManager.isParticipant(address1)).to.be.true;
   });
 
   it("Should revert if trying to add a participant that is already a participant", async function () {
-    await participantManager.addParticipant(addr1.address);
-    await expect(participantManager.addParticipant(addr1.address)).to.be.revertedWith(
+    await participantManager.addParticipant(address1);
+    await expect(participantManager.addParticipant(address1)).to.be.revertedWith(
       "Already a participant"
     );
   });
@@ -53,7 +55,7 @@ describe("ParticipantManager - Adding Participants", function () {
     );
     await participantManager.waitForDeployment();
 
-    await expect(participantManager.addParticipant(addr2.address)).to.be.revertedWith(
+    await expect(participantManager.addParticipant(address2)).to.be.revertedWith(
       "Participant not eligible"
     );
   });

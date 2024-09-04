@@ -6,6 +6,7 @@ describe("VotingManager - Task Submission and Completion", function () {
 
   beforeEach(async function () {
     [owner, addr1] = await ethers.getSigners();
+    address1 = await addr1.getAddress();
 
     // Deploy mock contracts
     const MockParticipantManager = await ethers.getContractFactory("MockParticipantManager");
@@ -31,7 +32,7 @@ describe("VotingManager - Task Submission and Completion", function () {
     await votingManager.waitForDeployment();
 
     // Add addr1 as a participant
-    await votingManager.addParticipant(addr1.address, "0x", "0x");
+    await votingManager.addParticipant(address1, "0x", "0x");
   });
 
   it("Should allow the current submitter to submit a task", async function () {
@@ -40,14 +41,7 @@ describe("VotingManager - Task Submission and Completion", function () {
 
     await expect(votingManager.submitTaskReceipt(taskId, result, "0x"))
       .to.emit(votingManager, "TaskCompleted")
-      .withArgs(
-        taskId,
-        addr1.address,
-        (
-          await ethers.provider.getBlock("latest")
-        ).timestamp,
-        result
-      );
+      .withArgs(taskId, address1, (await ethers.provider.getBlock("latest")).timestamp, result);
   });
 
   it("Should revert if non-current submitter tries to submit a task", async function () {

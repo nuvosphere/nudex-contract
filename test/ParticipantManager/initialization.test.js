@@ -6,6 +6,7 @@ describe("ParticipantManager - Initialization", function () {
 
   beforeEach(async function () {
     [owner, addr1] = await ethers.getSigners();
+    address1 = await addr1.getAddress();
 
     // Deploy mock NuvoLockUpgradeable
     const NuvoLockUpgradeable = await ethers.getContractFactory("MockNuvoLockUpgradeable");
@@ -34,7 +35,7 @@ describe("ParticipantManager - Initialization", function () {
     await expect(
       upgrades.deployProxy(
         ParticipantManager,
-        [await nuvoLock.getAddress(), 100, 7 * 24 * 60 * 60, addr1.address],
+        [await nuvoLock.getAddress(), 100, 7 * 24 * 60 * 60, address1],
         { initializer: "initialize" }
       )
     ).to.be.revertedWith("Ownable: caller is not the owner");

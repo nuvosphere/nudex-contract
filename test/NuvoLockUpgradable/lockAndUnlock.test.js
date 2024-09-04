@@ -2,7 +2,7 @@ const { expect } = require("chai");
 const { ethers } = require("hardhat");
 
 describe("NuvoLockUpgradeable - Locking and Unlocking Tokens", function () {
-  let nuvoLock, nuvoToken, owner, addr1, addr2;
+  let nuvoLock, nuvoToken, owner, addr1, addr2, address1, address2;
 
   beforeEach(async function () {
     [owner, addr1, addr2] = await ethers.getSigners();
@@ -20,14 +20,15 @@ describe("NuvoLockUpgradeable - Locking and Unlocking Tokens", function () {
       { initializer: "initialize" }
     );
     await nuvoLock.waitForDeployment();
+    await nuvoLock.setMinLockPeriod(7 * 24 * 60 * 60); // one week
 
     // Mint tokens and approve transfer
-    await nuvoToken.mint(addr1.address, ethers.parseUnits("1000", 18));
+    await nuvoToken.mint(address1, ethers.parseUnits("1000", 18));
     await nuvoToken
       .connect(addr1)
       .approve(await nuvoLock.getAddress(), ethers.parseUnits("1000", 18));
 
-    await nuvoToken.mint(addr2.address, ethers.parseUnits("1000", 18));
+    await nuvoToken.mint(address2, ethers.parseUnits("1000", 18));
     await nuvoToken
       .connect(addr2)
       .approve(await nuvoLock.getAddress(), ethers.parseUnits("1000", 18));
@@ -40,12 +41,12 @@ describe("NuvoLockUpgradeable - Locking and Unlocking Tokens", function () {
     await expect(nuvoLock.connect(addr1).lock(lockAmount, lockPeriod))
       .to.emit(nuvoLock, "Locked")
       .withArgs(
-        addr1.address,
+        address1,
         lockAmount,
         (await ethers.provider.getBlock("latest")).timestamp + lockPeriod
       );
 
-    const lockInfo = await nuvoLock.getLockInfo(addr1.address);
+    const lockInfo = await nuvoLock.getLockInfo(address1);
     expect(lockInfo.amount).to.equal(lockAmount);
     expect(lockInfo.unlockTime).to.be.gt(0);
     expect(lockInfo.originalLockTime).to.equal(lockPeriod);
@@ -92,12 +93,12 @@ describe("NuvoLockUpgradeable - Locking and Unlocking Tokens", function () {
 
     await expect(nuvoLock.connect(addr1).unlock())
       .to.emit(nuvoLock, "Unlocked")
-      .withArgs(addr1.address, lockAmount);
+      .withArgs(address1, lockAmount);
 
-    const lockInfo = await nuvoLock.getLockInfo(addr1.address);
+    const lockInfo = await nuvoLock.getLockInfo(address1);
     expect(lockInfo.amount).to.equal(0);
 
-    const finalBalance = await nuvoToken.balanceOf(addr1.address);
+    const finalBalance = await nuvoToken.balanceOf(address1);
     expect(finalBalance).to.equal(ethers.parseUnits("1000", 18));
   });
 

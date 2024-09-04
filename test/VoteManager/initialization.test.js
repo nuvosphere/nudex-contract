@@ -6,13 +6,14 @@ describe("VotingManager - Initialization", function () {
 
   beforeEach(async function () {
     [owner, addr1] = await ethers.getSigners();
+    address1 = await addr1.getAddress();
 
     // Deploy mock contracts
     const MockParticipantManager = await ethers.getContractFactory("MockParticipantManager");
     participantManager = await MockParticipantManager.deploy();
     await participantManager.waitForDeployment();
     // Set addr1 participants
-    await participantManager.mockSetParticipant(addr1.address, true);
+    await participantManager.mockSetParticipant(address1, true);
 
     const MockNuvoLockUpgradeable = await ethers.getContractFactory("MockNuvoLockUpgradeable");
     nuvoLock = await MockNuvoLockUpgradeable.deploy();
@@ -49,12 +50,7 @@ describe("VotingManager - Initialization", function () {
     await expect(
       upgrades.deployProxy(
         VotingManager,
-        [
-          participantManager.address,
-          await nuvoLock.getAddress(),
-          depositManager.address,
-          addr1.address,
-        ],
+        [participantManager.address, await nuvoLock.getAddress(), depositManager.address, address1],
         { initializer: "initialize" }
       )
     ).to.be.revertedWith("Ownable: caller is not the owner");

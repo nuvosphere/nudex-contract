@@ -6,13 +6,14 @@ describe("VotingManager - Asset Management", function () {
 
   beforeEach(async function () {
     [owner, addr1] = await ethers.getSigners();
+    address1 = await addr1.getAddress();
 
     // Deploy mock contracts
     const MockParticipantManager = await ethers.getContractFactory("MockParticipantManager");
     participantManager = await MockParticipantManager.deploy();
     await participantManager.waitForDeployment();
     // Set addr1 participants
-    await participantManager.mockSetParticipant(addr1.address, true);
+    await participantManager.mockSetParticipant(address1, true);
 
     const MockNuvoLockUpgradeable = await ethers.getContractFactory("MockNuvoLockUpgradeable");
     nuvoLock = await MockNuvoLockUpgradeable.deploy();
@@ -37,14 +38,14 @@ describe("VotingManager - Asset Management", function () {
     await votingManager.waitForDeployment();
 
     // Add addr1 as a participant
-    await votingManager.addParticipant(addr1.address, "0x", "0x");
+    await votingManager.addParticipant(address1, "0x", "0x");
   });
 
   it("Should allow the current submitter to list a new asset", async function () {
     const assetType = 2; // ERC20
     const assetName = "TestAsset";
     const nuDexName = "TST";
-    const contractAddress = addr1.address;
+    const contractAddress = address1;
     const chainId = 1;
 
     await expect(
@@ -58,7 +59,7 @@ describe("VotingManager - Asset Management", function () {
     const assetType = 2; // ERC20
     const assetName = "TestAsset";
     const nuDexName = "TST";
-    const contractAddress = addr1.address;
+    const contractAddress = address1;
     const chainId = 1;
 
     await expect(
@@ -70,7 +71,7 @@ describe("VotingManager - Asset Management", function () {
 
   it("Should allow the current submitter to delist an asset", async function () {
     const assetType = 2; // ERC20
-    const contractAddress = addr1.address;
+    const contractAddress = address1;
     const chainId = 1;
 
     // List the asset first
@@ -86,7 +87,7 @@ describe("VotingManager - Asset Management", function () {
 
   it("Should revert if non-current submitter tries to delist an asset", async function () {
     const assetType = 2; // ERC20
-    const contractAddress = addr1.address;
+    const contractAddress = address1;
     const chainId = 1;
 
     // List the asset first
@@ -101,7 +102,7 @@ describe("VotingManager - Asset Management", function () {
     const assetType = 2; // ERC20
     const assetName = "TestAsset";
     const nuDexName = "TST";
-    const contractAddress = addr1.address;
+    const contractAddress = address1;
     const chainId = 1;
 
     await expect(
@@ -118,7 +119,7 @@ describe("VotingManager - Asset Management", function () {
 
   it("Should revert if signature verification fails when delisting an asset", async function () {
     const assetType = 2; // ERC20
-    const contractAddress = addr1.address;
+    const contractAddress = address1;
     const chainId = 1;
 
     // List the asset first

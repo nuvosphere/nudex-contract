@@ -6,6 +6,8 @@ describe("VotingManager - Edge Cases and Advanced Scenarios", function () {
 
   beforeEach(async function () {
     [owner, addr1, addr2, addr3] = await ethers.getSigners();
+    address1 = await addr1.getAddress();
+    address2 = await addr2.getAddress();
 
     // Deploy enhanced mock contracts
     const MockParticipantManager = await ethers.getContractFactory("MockParticipantManager");
@@ -35,13 +37,13 @@ describe("VotingManager - Edge Cases and Advanced Scenarios", function () {
     await votingManager.waitForDeployment();
 
     // Simulate adding participants
-    await participantManager.mockSetParticipant(addr1.address, true);
-    await participantManager.mockSetParticipant(addr2.address, true);
+    await participantManager.mockSetParticipant(address1, true);
+    await participantManager.mockSetParticipant(address2, true);
   });
 
   it("Should revert if a non-participant tries to rotate submitter", async function () {
     await expect(
-      votingManager.connect(addr3).chooseNewSubmitter(addr1.address, "0x", "0x")
+      votingManager.connect(addr3).chooseNewSubmitter(address1, "0x", "0x")
     ).to.be.revertedWith("Not a participant");
   });
 
@@ -74,26 +76,26 @@ describe("VotingManager - Edge Cases and Advanced Scenarios", function () {
   });
 
   it("Should revert if trying to add a participant when the same address is already a participant", async function () {
-    await expect(votingManager.addParticipant(addr1.address, "0x", "0x")).to.be.revertedWith(
+    await expect(votingManager.addParticipant(address1, "0x", "0x")).to.be.revertedWith(
       "Already a participant"
     );
   });
 
   it("Should correctly reset and re-add a participant after removal", async function () {
-    await votingManager.removeParticipant(addr1.address, "0x", "0x");
+    await votingManager.removeParticipant(address1, "0x", "0x");
 
-    expect(await participantManager.isParticipant(addr1.address)).to.be.false;
+    expect(await participantManager.isParticipant(address1)).to.be.false;
 
-    await votingManager.addParticipant(addr1.address, "0x", "0x");
+    await votingManager.addParticipant(address1, "0x", "0x");
 
-    expect(await participantManager.isParticipant(addr1.address)).to.be.true;
+    expect(await participantManager.isParticipant(address1)).to.be.true;
   });
 
   it("Should handle the rotation of submitters when the last submitter is removed", async function () {
     // Add and remove participants
     await votingManager.addParticipant(addr3.address, "0x", "0x");
-    await votingManager.removeParticipant(addr2.address, "0x", "0x");
-    await votingManager.removeParticipant(addr1.address, "0x", "0x");
+    await votingManager.removeParticipant(address2, "0x", "0x");
+    await votingManager.removeParticipant(address1, "0x", "0x");
 
     const currentSubmitter = await votingManager.getCurrentSubmitter();
     expect(currentSubmitter).to.equal(addr3.address);

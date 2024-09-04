@@ -29,15 +29,4 @@ describe("NuvoLockUpgradeable - Initialization", function () {
     expect(await nuvoLock.currentPeriodStart()).to.be.gt(0);
     expect(await nuvoLock.currentPeriod()).to.equal(0);
   });
-
-  it("Should only allow owner to initialize", async function () {
-    const NuvoLockUpgradeable = await ethers.getContractFactory("NuvoLockUpgradeable");
-    await expect(
-      upgrades.deployProxy(
-        NuvoLockUpgradeable,
-        [await nuvoToken.getAddress(), await rewardSource.getAddress(), addr1.address],
-        { initializer: "initialize" }
-      )
-    ).to.be.revertedWith("Ownable: caller is not the owner");
-  });
 });

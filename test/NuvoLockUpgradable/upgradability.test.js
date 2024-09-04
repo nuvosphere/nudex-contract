@@ -6,6 +6,7 @@ describe("NuvoLockUpgradeable - Upgrade Functionality", function () {
 
   beforeEach(async function () {
     [owner, addr1, rewardSource] = await ethers.getSigners();
+    address1 = await addr1.getAddress();
 
     // Deploy mock NuvoToken
     const MockNuvoToken = await ethers.getContractFactory("MockNuvoToken");
@@ -36,6 +37,6 @@ describe("NuvoLockUpgradeable - Upgrade Functionality", function () {
     const NuvoLockUpgradeableV2 = await ethers.getContractFactory("NuvoLockUpgradeableV2");
     await expect(
       upgrades.upgradeProxy(await nuvoLock.getAddress(), NuvoLockUpgradeableV2.connect(addr1))
-    ).to.be.revertedWith("Ownable: caller is not the owner");
+    ).to.be.revertedWithCustomError(nuvoLock, "OwnableUnauthorizedAccount");
   });
 });
