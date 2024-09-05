@@ -24,7 +24,7 @@ describe("VotingManager - Task Submission and Completion", function () {
       [
         participantManager.address,
         await nuvoLock.getAddress(),
-        ethers.constants.AddressZero,
+        ethers.ZeroAddress,
         await owner.getAddress(),
       ],
       { initializer: "initialize" }

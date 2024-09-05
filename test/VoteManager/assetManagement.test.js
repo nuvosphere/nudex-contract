@@ -12,8 +12,6 @@ describe("VotingManager - Asset Management", function () {
     const MockParticipantManager = await ethers.getContractFactory("MockParticipantManager");
     participantManager = await MockParticipantManager.deploy();
     await participantManager.waitForDeployment();
-    // Set addr1 participants
-    await participantManager.mockSetParticipant(address1, true);
 
     const MockNuvoLockUpgradeable = await ethers.getContractFactory("MockNuvoLockUpgradeable");
     nuvoLock = await MockNuvoLockUpgradeable.deploy();
@@ -23,14 +21,20 @@ describe("VotingManager - Asset Management", function () {
     assetManager = await MockAssetManager.deploy();
     await assetManager.waitForDeployment();
 
+    // const MockDepositManager = await ethers.getContractFactory("MockDepositManager");
+    // depositManager = await MockDepositManager.deploy();
+    // await depositManager.waitForDeployment();
+
     // Deploy VotingManager
     const VotingManager = await ethers.getContractFactory("VotingManager");
     votingManager = await upgrades.deployProxy(
       VotingManager,
       [
-        participantManager.address,
+        await participantManager.getAddress(),
         await nuvoLock.getAddress(),
-        ethers.constants.AddressZero,
+        ethers.ZeroAddress,
+        ethers.ZeroAddress,
+        ethers.ZeroAddress,
         await owner.getAddress(),
       ],
       { initializer: "initialize" }
@@ -38,7 +42,13 @@ describe("VotingManager - Asset Management", function () {
     await votingManager.waitForDeployment();
 
     // Add addr1 as a participant
-    await votingManager.addParticipant(address1, "0x", "0x");
+    const rawMessage = ethers.solidityPacked(["address"], [address1]);
+    const message = ethers.solidityPackedKeccak256(
+      ["string", "bytes"],
+      [rawMessage.length.toString(), rawMessage]
+    );
+    const rawSignature = await addr1.signMessage(ethers.toBeArray(message));
+    await votingManager.addParticipant(address1, "0x", rawSignature);
   });
 
   it("Should allow the current submitter to list a new asset", async function () {
@@ -48,8 +58,24 @@ describe("VotingManager - Asset Management", function () {
     const contractAddress = address1;
     const chainId = 1;
 
+    const rawMessage = ethers.solidityPacked(
+      ["string", "string", "uint", "address", "uint"],
+      [assetName, nuDexName, assetType, contractAddress, chainId]
+    );
+    const message = ethers.solidityPackedKeccak256(
+      ["string", "bytes"],
+      [rawMessage.length.toString(), rawMessage]
+    );
+    const rawSignature = await addr1.signMessage(ethers.toBeArray(message));
     await expect(
-      votingManager.listAsset(assetName, nuDexName, assetType, contractAddress, chainId, "0x")
+      votingManager.listAsset(
+        assetName,
+        nuDexName,
+        assetType,
+        contractAddress,
+        chainId,
+        rawSignature
+      )
     ).to.emit(votingManager, "AssetListed");
 
     expect(await assetManager.isAssetListed(assetType, contractAddress, chainId)).to.be.true;

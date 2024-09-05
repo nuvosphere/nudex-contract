@@ -25,7 +25,7 @@ describe("VotingManager - Participant Management", function () {
       [
         participantManager.address,
         await nuvoLock.getAddress(),
-        ethers.constants.AddressZero,
+        ethers.ZeroAddress,
         await owner.getAddress(),
       ],
       { initializer: "initialize" }

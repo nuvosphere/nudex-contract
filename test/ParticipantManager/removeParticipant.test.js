@@ -10,7 +10,9 @@ describe("ParticipantManager - Removing Participants", function () {
     address2 = await addr2.getAddress();
 
     // Deploy mock NuvoLockUpgradeable
-    const MockNuvoLockUpgradeable = await ethers.getContractFactory("MockNuvoLockUpgradeable");
+    const MockNuvoLockUpgradeable = await ethers.getContractFactory(
+      "MockNuvoLockUpgradeablePreset"
+    );
     nuvoLock = await MockNuvoLockUpgradeable.deploy();
     await nuvoLock.waitForDeployment();
 

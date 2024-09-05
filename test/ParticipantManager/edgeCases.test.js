@@ -9,7 +9,9 @@ describe("ParticipantManager - Edge Cases", function () {
     address1 = await addr1.getAddress();
 
     // Deploy mock NuvoLockUpgradeable
-    const MockNuvoLockUpgradeable = await ethers.getContractFactory("MockNuvoLockUpgradeable");
+    const MockNuvoLockUpgradeable = await ethers.getContractFactory(
+      "MockNuvoLockUpgradeablePreset"
+    );
     nuvoLock = await MockNuvoLockUpgradeable.deploy();
     await nuvoLock.waitForDeployment();
 

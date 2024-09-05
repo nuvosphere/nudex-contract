@@ -47,7 +47,7 @@ contract ParticipantManager is IParticipantManager, OwnableUpgradeable {
 
     function isEligible(address participant) public view returns (bool) {
         (uint256 amount, uint256 unlockTime, , , , , ,) = nuvoLock.getLockInfo(participant);
-        return amount >= minLockAmount && unlockTime > block.timestamp + minLockPeriod;
+        return amount >= minLockAmount && unlockTime >= block.timestamp + minLockPeriod;
     }
 
     function getParticipants() external view returns (address[] memory) {

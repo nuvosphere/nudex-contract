@@ -25,7 +25,7 @@ describe("Funding", function () {
       0, // ProposalCategory.Budget
       ethers.utils.defaultAbiCoder.encode(
         ["address", "uint256", "address", "string"],
-        [member1.address, ethers.parseEther("10"), ethers.constants.AddressZero, "Development Fund"]
+        [member1.address, ethers.parseEther("10"), ethers.ZeroAddress, "Development Fund"]
       ),
       { value: ethers.parseEther("1") }
     );

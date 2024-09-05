@@ -10,7 +10,9 @@ describe("ParticipantManager - Eligibility Check", function () {
     address2 = await addr2.getAddress();
 
     // Deploy mock NuvoLockUpgradeable
-    const MockNuvoLockUpgradeable = await ethers.getContractFactory("MockNuvoLockUpgradeable");
+    const MockNuvoLockUpgradeable = await ethers.getContractFactory(
+      "MockNuvoLockUpgradeablePreset"
+    );
     nuvoLock = await MockNuvoLockUpgradeable.deploy();
     await nuvoLock.waitForDeployment();
 
@@ -31,16 +33,16 @@ describe("ParticipantManager - Eligibility Check", function () {
 
   it("Should return false for ineligible participant", async function () {
     // Override the mock to return a non-eligible lock info
-    const MockNuvoLockUpgradeableIneligible = await ethers.getContractFactory(
-      "MockNuvoLockUpgradeableIneligible"
+    const MockNuvoLockUpgradeablePreset = await ethers.getContractFactory(
+      "MockNuvoLockUpgradeablePreset"
     );
-    nuvoLock = await MockNuvoLockUpgradeableIneligible.deploy();
+    nuvoLock = await MockNuvoLockUpgradeablePreset.deploy();
     await nuvoLock.waitForDeployment();
 
     const ParticipantManager = await ethers.getContractFactory("ParticipantManager");
     participantManager = await upgrades.deployProxy(
       ParticipantManager,
-      [await nuvoLock.getAddress(), 100, 7 * 24 * 60 * 60, await owner.getAddress()],
+      [await nuvoLock.getAddress(), 200, 7 * 24 * 60 * 60, await owner.getAddress()], // min value higher than preset value
       { initializer: "initialize" }
     );
     await participantManager.waitForDeployment();

@@ -4,6 +4,13 @@ pragma solidity ^0.8.0;
 contract MockParticipantManager {
     mapping(address => bool) private participants;
 
+    
+    function getParticipants() external view returns (address[] memory) {
+        address[] memory res = new address[](1);
+        res[0] = tx.origin;
+        return res;
+    }
+
     // Function to mock the setting of participant status
     function mockSetParticipant(address participant, bool status) external {
         participants[participant] = status;

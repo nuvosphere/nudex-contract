@@ -10,7 +10,9 @@ describe("ParticipantManager - Adding Participants", function () {
     address2 = await addr2.getAddress();
 
     // Deploy mock NuvoLockUpgradeable
-    const MockNuvoLockUpgradeable = await ethers.getContractFactory("MockNuvoLockUpgradeable");
+    const MockNuvoLockUpgradeable = await ethers.getContractFactory(
+      "MockNuvoLockUpgradeablePreset"
+    );
     nuvoLock = await MockNuvoLockUpgradeable.deploy();
     await nuvoLock.waitForDeployment();
 
@@ -41,10 +43,10 @@ describe("ParticipantManager - Adding Participants", function () {
 
   it("Should revert if trying to add a participant that is not eligible", async function () {
     // Override the mock to return a non-eligible lock info
-    const MockNuvoLockUpgradeableIneligible = await ethers.getContractFactory(
-      "MockNuvoLockUpgradeableIneligible"
+    const MockNuvoLockUpgradeablePreset = await ethers.getContractFactory(
+      "MockNuvoLockUpgradeablePreset"
     );
-    nuvoLock = await MockNuvoLockUpgradeableIneligible.deploy();
+    nuvoLock = await MockNuvoLockUpgradeablePreset.deploy();
     await nuvoLock.waitForDeployment();
 
     const ParticipantManager = await ethers.getContractFactory("ParticipantManager");

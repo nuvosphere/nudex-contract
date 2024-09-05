@@ -43,7 +43,7 @@ describe("Errors", function () {
       0, // ProposalCategory.Budget
       ethers.utils.defaultAbiCoder.encode(
         ["address", "uint256", "address", "string"],
-        [member1.address, ethers.parseEther("1000"), ethers.constants.AddressZero, "Overdraw Test"]
+        [member1.address, ethers.parseEther("1000"), ethers.ZeroAddress, "Overdraw Test"]
       ),
       { value: ethers.parseEther("1") }
     );

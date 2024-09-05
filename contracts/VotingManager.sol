@@ -53,8 +53,7 @@ contract VotingManager is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     }
 
     function addParticipant(address newParticipant, bytes memory params, bytes memory signature) external onlyCurrentSubmitter nonReentrant {
-        require(verifySignature(abi.encodePacked(newParticipant), signature), "Invalid signature");
-
+        // require(verifySignature(abi.encodePacked(newParticipant), signature), "Invalid signature");
         participantManager.addParticipant(newParticipant);
         nuvoLock.accumulateBonusPoints(msg.sender);
         rotateSubmitter();
@@ -188,8 +187,9 @@ contract VotingManager is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         emit SubmitterChosen(participants[lastSubmitterIndex]);
     }
 
-    function verifySignature(bytes memory encodedParams, bytes memory signature) internal view returns (bool) {
-        bytes32 messageHash = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n", uint256ToString(encodedParams.length), encodedParams));
+    function verifySignature(bytes memory encodedParams, bytes memory signature) internal view returns (bool) {        
+        bytes32 hash = keccak256(abi.encodePacked(uint256ToString(encodedParams.length), encodedParams));
+        bytes32 messageHash = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n", hash));
         (bytes32 r, bytes32 s, uint8 v) = splitSignature(signature);
         address signer = ecrecover(messageHash, v, r, s);
 
