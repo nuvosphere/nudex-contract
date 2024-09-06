@@ -2,11 +2,20 @@ const { expect } = require("chai");
 const { ethers } = require("hardhat");
 
 describe("VotingManager - Asset Management", function () {
-  let votingManager, participantManager, nuvoLock, assetManager, owner, addr1;
+  let votingManager, participantManager, nuvoLock, assetManager, owner, addr1, address1;
+
+  // listAsset params
+  let assetType = 2; // ERC20
+  let assetName = "TestAsset";
+  let nuDexName = "TST";
+  let contractAddress;
+  let chainId = 1;
+  let signature;
 
   beforeEach(async function () {
     [owner, addr1] = await ethers.getSigners();
     address1 = await addr1.getAddress();
+    contractAddress = address1;
 
     // Deploy mock contracts
     const MockParticipantManager = await ethers.getContractFactory("MockParticipantManager");
@@ -32,7 +41,7 @@ describe("VotingManager - Asset Management", function () {
       [
         await participantManager.getAddress(),
         await nuvoLock.getAddress(),
-        ethers.ZeroAddress,
+        await assetManager.getAddress(),
         ethers.ZeroAddress,
         ethers.ZeroAddress,
         await owner.getAddress(),
@@ -42,68 +51,64 @@ describe("VotingManager - Asset Management", function () {
     await votingManager.waitForDeployment();
 
     // Add addr1 as a participant
-    const rawMessage = ethers.solidityPacked(["address"], [address1]);
-    const message = ethers.solidityPackedKeccak256(
-      ["string", "bytes"],
-      [rawMessage.length.toString(), rawMessage]
-    );
-    const rawSignature = await addr1.signMessage(ethers.toBeArray(message));
-    await votingManager.addParticipant(address1, "0x", rawSignature);
-  });
-
-  it("Should allow the current submitter to list a new asset", async function () {
-    const assetType = 2; // ERC20
-    const assetName = "TestAsset";
-    const nuDexName = "TST";
-    const contractAddress = address1;
-    const chainId = 1;
+    await votingManager.addParticipant(address1, "0x", "0x");
+    // set the submitter to msg.sender in Mock contract
+    await participantManager.setParticipant(await votingManager.lastSubmitterIndex());
 
     const rawMessage = ethers.solidityPacked(
-      ["string", "string", "uint", "address", "uint"],
+      ["string", "string", "uint8", "address", "uint"],
       [assetName, nuDexName, assetType, contractAddress, chainId]
     );
     const message = ethers.solidityPackedKeccak256(
       ["string", "bytes"],
-      [rawMessage.length.toString(), rawMessage]
+      [((rawMessage.length - 2) / 2).toString(), rawMessage]
     );
-    const rawSignature = await addr1.signMessage(ethers.toBeArray(message));
+    signature = await addr1.signMessage(ethers.toBeArray(message));
+  });
+
+  it("Should allow the current submitter to list a new asset", async function () {
     await expect(
-      votingManager.listAsset(
-        assetName,
-        nuDexName,
-        assetType,
-        contractAddress,
-        chainId,
-        rawSignature
-      )
+      votingManager.listAsset(assetName, nuDexName, assetType, contractAddress, chainId, signature)
     ).to.emit(votingManager, "AssetListed");
 
     expect(await assetManager.isAssetListed(assetType, contractAddress, chainId)).to.be.true;
   });
 
   it("Should revert if non-current submitter tries to list a new asset", async function () {
-    const assetType = 2; // ERC20
-    const assetName = "TestAsset";
-    const nuDexName = "TST";
-    const contractAddress = address1;
-    const chainId = 1;
-
+    // set the submitter other than msg.sender
+    await participantManager.setParticipant(
+      (await votingManager.lastSubmitterIndex()) >= 9 ? 1 : 9
+    );
     await expect(
       votingManager
         .connect(addr1)
-        .listAsset(assetName, nuDexName, assetType, contractAddress, chainId, "0x")
+        .listAsset(assetName, nuDexName, assetType, contractAddress, chainId, signature)
     ).to.be.revertedWith("Not the current submitter");
   });
 
   it("Should allow the current submitter to delist an asset", async function () {
-    const assetType = 2; // ERC20
-    const contractAddress = address1;
-    const chainId = 1;
-
     // List the asset first
-    await votingManager.listAsset("TestAsset", "TST", assetType, contractAddress, chainId, "0x");
+    await votingManager.listAsset(
+      assetName,
+      nuDexName,
+      assetType,
+      contractAddress,
+      chainId,
+      signature
+    );
 
-    await expect(votingManager.delistAsset(assetType, contractAddress, chainId, "0x")).to.emit(
+    await participantManager.setParticipant(await votingManager.lastSubmitterIndex());
+    const rawMessage = ethers.solidityPacked(
+      ["uint8", "address", "uint"],
+      [assetType, contractAddress, chainId]
+    );
+    const message = ethers.solidityPackedKeccak256(
+      ["string", "bytes"],
+      [((rawMessage.length - 2) / 2).toString(), rawMessage]
+    );
+    signature = await addr1.signMessage(ethers.toBeArray(message));
+
+    await expect(votingManager.delistAsset(assetType, contractAddress, chainId, signature)).to.emit(
       votingManager,
       "AssetDelisted"
     );
@@ -112,25 +117,36 @@ describe("VotingManager - Asset Management", function () {
   });
 
   it("Should revert if non-current submitter tries to delist an asset", async function () {
-    const assetType = 2; // ERC20
-    const contractAddress = address1;
-    const chainId = 1;
-
     // List the asset first
-    await votingManager.listAsset("TestAsset", "TST", assetType, contractAddress, chainId, "0x");
+    await votingManager.listAsset(
+      assetName,
+      nuDexName,
+      assetType,
+      contractAddress,
+      chainId,
+      signature
+    );
 
+    // set the submitter other than msg.sender
+    await participantManager.setParticipant(
+      (await votingManager.lastSubmitterIndex()) >= 9 ? 1 : 9
+    );
+    const rawMessage = ethers.solidityPacked(
+      ["uint8", "address", "uint"],
+      [assetType, contractAddress, chainId]
+    );
+    const message = ethers.solidityPackedKeccak256(
+      ["string", "bytes"],
+      [((rawMessage.length - 2) / 2).toString(), rawMessage]
+    );
+    signature = await addr1.signMessage(ethers.toBeArray(message));
     await expect(
       votingManager.connect(addr1).delistAsset(assetType, contractAddress, chainId, "0x")
     ).to.be.revertedWith("Not the current submitter");
   });
 
   it("Should revert if signature verification fails when listing an asset", async function () {
-    const assetType = 2; // ERC20
-    const assetName = "TestAsset";
-    const nuDexName = "TST";
-    const contractAddress = address1;
-    const chainId = 1;
-
+    signature = signature.replace("1", "2"); // create a invalid signature
     await expect(
       votingManager.listAsset(
         assetName,
@@ -138,21 +154,35 @@ describe("VotingManager - Asset Management", function () {
         assetType,
         contractAddress,
         chainId,
-        "0xInvalidSignature"
+        signature // invalid signature
       )
     ).to.be.revertedWith("Invalid signature");
   });
 
   it("Should revert if signature verification fails when delisting an asset", async function () {
-    const assetType = 2; // ERC20
-    const contractAddress = address1;
-    const chainId = 1;
-
     // List the asset first
-    await votingManager.listAsset("TestAsset", "TST", assetType, contractAddress, chainId, "0x");
+    await votingManager.listAsset(
+      assetName,
+      nuDexName,
+      assetType,
+      contractAddress,
+      chainId,
+      signature
+    );
 
+    await participantManager.setParticipant(await votingManager.lastSubmitterIndex());
+    const rawMessage = ethers.solidityPacked(
+      ["uint8", "address", "uint"],
+      [assetType, contractAddress, chainId]
+    );
+    const message = ethers.solidityPackedKeccak256(
+      ["string", "bytes"],
+      [((rawMessage.length - 2) / 2).toString(), rawMessage]
+    );
+    signature = await addr1.signMessage(ethers.toBeArray(message));
+    signature = signature.replace("1", "2"); // create a invalid signature
     await expect(
-      votingManager.delistAsset(assetType, contractAddress, chainId, "0xInvalidSignature")
+      votingManager.delistAsset(assetType, contractAddress, chainId, signature)
     ).to.be.revertedWith("Invalid signature");
   });
 });

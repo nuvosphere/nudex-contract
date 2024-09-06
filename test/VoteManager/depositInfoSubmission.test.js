@@ -12,8 +12,6 @@ describe("VotingManager - Deposit Information Submission", function () {
     const MockParticipantManager = await ethers.getContractFactory("MockParticipantManager");
     participantManager = await MockParticipantManager.deploy();
     await participantManager.waitForDeployment();
-    // Set addr1 participants
-    await participantManager.mockSetParticipant(address1, true);
 
     const MockNuvoLockUpgradeable = await ethers.getContractFactory("MockNuvoLockUpgradeable");
     nuvoLock = await MockNuvoLockUpgradeable.deploy();
@@ -28,9 +26,11 @@ describe("VotingManager - Deposit Information Submission", function () {
     votingManager = await upgrades.deployProxy(
       VotingManager,
       [
-        participantManager.address,
+        await participantManager.getAddress(),
         await nuvoLock.getAddress(),
-        depositManager.address,
+        ethers.ZeroAddress,
+        await depositManager.getAddress(),
+        ethers.ZeroAddress,
         await owner.getAddress(),
       ],
       { initializer: "initialize" }
@@ -39,10 +39,21 @@ describe("VotingManager - Deposit Information Submission", function () {
 
     // Add addr1 as a participant
     await votingManager.addParticipant(address1, "0x", "0x");
+    await participantManager.setParticipant(await votingManager.lastSubmitterIndex());
+
+    const rawMessage = ethers.solidityPacked(
+      ["address", "uint", "bytes", "uint", "bytes"],
+      [address1, 100, "0x1234", 1, "0x5678"]
+    );
+    const message = ethers.solidityPackedKeccak256(
+      ["string", "bytes"],
+      [((rawMessage.length - 2) / 2).toString(), rawMessage]
+    );
+    signature = await addr1.signMessage(ethers.toBeArray(message));
   });
 
   it("Should allow the current submitter to submit deposit info", async function () {
-    await expect(votingManager.submitDepositInfo(address1, 100, "0x1234", 1, "0x5678", "0x"))
+    await expect(votingManager.submitDepositInfo(address1, 100, "0x1234", 1, "0x5678", signature))
       .to.emit(votingManager, "DepositInfoSubmitted")
       .withArgs(address1, 100, "0x1234", 1, "0x5678");
 
@@ -50,15 +61,22 @@ describe("VotingManager - Deposit Information Submission", function () {
   });
 
   it("Should revert if non-current submitter tries to submit deposit info", async function () {
+    // set the submitter other than msg.sender
+    await participantManager.setParticipant(
+      (await votingManager.lastSubmitterIndex()) >= 9 ? 1 : 9
+    );
     await expect(
-      votingManager.connect(addr1).submitDepositInfo(address1, 100, "0x1234", 1, "0x5678", "0x")
+      votingManager
+        .connect(addr1)
+        .submitDepositInfo(address1, 100, "0x1234", 1, "0x5678", signature)
     ).to.be.revertedWith("Not the current submitter");
   });
 
   it("Should revert if signature verification fails", async function () {
+    signature = signature.replace("1", "2"); // create a invalid signature
     // Attempt to submit deposit info with an invalid signature
     await expect(
-      votingManager.submitDepositInfo(address1, 100, "0x1234", 1, "0x5678", "0xInvalidSignature")
+      votingManager.submitDepositInfo(address1, 100, "0x1234", 1, "0x5678", signature)
     ).to.be.revertedWith("Invalid signature");
   });
 });
