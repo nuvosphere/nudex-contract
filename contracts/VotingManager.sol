@@ -3,18 +3,20 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
-import "./ParticipantManager.sol";
-import "./NuvoLockUpgradeable.sol";
-import "./DepositManager.sol";
-import "./AssetManager.sol";
-import "./NuDexOperations.sol";
+import "./interfaces/IAccountManager.sol";
+import "./interfaces/IAssetManager.sol";
+import "./interfaces/IDepositManager.sol";
+import "./interfaces/IParticipantManager.sol";
+import "./interfaces/INuDexOperations.sol";
+import "./interfaces/INuvoLock.sol";
 
 contract VotingManager is OwnableUpgradeable, ReentrancyGuardUpgradeable {
-    ParticipantManager public participantManager;
-    NuvoLockUpgradeable public nuvoLock;
-    AssetManager public assetManager;
-    DepositManager public depositManager;
-    NuDexOperations public nuDexOperations;
+    IAccountManager public accountManager;
+    IAssetManager public assetManager;
+    IDepositManager public depositManager;
+    IParticipantManager public participantManager;
+    INuDexOperations public nuDexOperations;
+    INuvoLock public nuvoLock;
 
     uint256 public lastSubmitterIndex;
     uint256 public lastSubmissionTime;
@@ -42,20 +44,20 @@ contract VotingManager is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         _;
     }
 
-    function initialize(address _participantManager, address _nuvoLock, address _assetManager, address _depositManager, address _nuDexOperations, address _initialOwner) initializer public {
+    function initialize(address _accountManager, address _assetManager, address _depositManager, address _participantManager, address _nuDexOperations, address _nuvoLock, address _initialOwner) initializer public {
         __Ownable_init(_initialOwner);
         __ReentrancyGuard_init();
-        participantManager = ParticipantManager(_participantManager);
-        nuvoLock = NuvoLockUpgradeable(_nuvoLock);
-        depositManager = DepositManager(_depositManager);
-        nuDexOperations = NuDexOperations(_nuDexOperations);
-        assetManager = AssetManager(_assetManager);
+        accountManager = IAccountManager(_accountManager);
+        assetManager = IAssetManager(_assetManager);
+        depositManager = IDepositManager(_depositManager);
+        participantManager = IParticipantManager(_participantManager);
+        nuDexOperations = INuDexOperations(_nuDexOperations);
+        nuvoLock = INuvoLock(_nuvoLock);
     }
 
     function addParticipant(address newParticipant, bytes memory params, bytes memory signature) external onlyCurrentSubmitter nonReentrant {
         // require(verifySignature(abi.encodePacked(newParticipant), signature), "Invalid signature");
         participantManager.addParticipant(newParticipant);
-        nuvoLock.accumulateBonusPoints(msg.sender);
         rotateSubmitter();
 
         emit ParticipantAdded(newParticipant);
@@ -65,7 +67,6 @@ contract VotingManager is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         require(verifySignature(abi.encodePacked(participant), signature), "Invalid signature");
 
         participantManager.removeParticipant(participant);
-        nuvoLock.accumulateBonusPoints(msg.sender);
         rotateSubmitter();
 
         emit ParticipantRemoved(participant);
@@ -77,7 +78,7 @@ contract VotingManager is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         require(block.timestamp >= lastSubmissionTime + forcedRotationWindow, "Submitter rotation not allowed yet");
 
         // Check for uncompleted tasks and apply demerit points if needed
-        NuDexOperations.Task[] memory uncompletedTasks = nuDexOperations.getUncompletedTasks();
+        INuDexOperations.Task[] memory uncompletedTasks = nuDexOperations.getUncompletedTasks();
         for (uint256 i = 0; i < uncompletedTasks.length; i++) {
             if (block.timestamp > uncompletedTasks[i].createdAt + taskCompletionThreshold) {
                 //uncompleted tasks
@@ -103,7 +104,6 @@ contract VotingManager is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         depositManager.recordDeposit(targetAddress, amount, txInfo, chainId, extraInfo);
         lastSubmissionTime = block.timestamp;
 
-        nuvoLock.accumulateBonusPoints(msg.sender);
         rotateSubmitter();
 
         emit DepositInfoSubmitted(targetAddress, amount, txInfo, chainId, extraInfo);  // Updated event
@@ -116,14 +116,13 @@ contract VotingManager is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         nuvoLock.setRewardPerPeriod(newRewardPerPeriod);
         emit RewardPerPeriodVoted(newRewardPerPeriod);
 
-        nuvoLock.accumulateBonusPoints(msg.sender);
         rotateSubmitter();
     }
 
     function listAsset(
         string memory name,
         string memory nuDexName,
-        AssetManager.AssetType assetType,
+        IAssetManager.AssetType assetType,
         address contractAddress,
         uint256 chainId,
         bytes memory signature
@@ -133,14 +132,13 @@ contract VotingManager is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         assetManager.listAsset(name, nuDexName, assetType, contractAddress, chainId);
         bytes32 assetId = assetManager.getAssetIdentifier(assetType, contractAddress, chainId);
 
-        nuvoLock.accumulateBonusPoints(msg.sender);
         rotateSubmitter();
 
         emit AssetListed(assetId);
     }
 
     function delistAsset(
-        AssetManager.AssetType assetType,
+        IAssetManager.AssetType assetType,
         address contractAddress,
         uint256 chainId,
         bytes memory signature
@@ -151,14 +149,12 @@ contract VotingManager is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         assetManager.delistAsset(assetType, contractAddress, chainId);
         bytes32 assetId = assetManager.getAssetIdentifier(assetType, contractAddress, chainId);
 
-        nuvoLock.accumulateBonusPoints(msg.sender);
         rotateSubmitter();
 
         emit AssetDelisted(assetId);
     }
 
     function submitTaskReceipt(uint256 taskId, bytes memory result, bytes memory signature) external onlyCurrentSubmitter nonReentrant {
-        
         require(!nuDexOperations.isTaskCompleted(taskId), "Task already completed");
         bytes memory encodedParams = abi.encodePacked(taskId, result);
         require(verifySignature(encodedParams, signature), "Invalid signature");
@@ -171,9 +167,18 @@ contract VotingManager is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         rotateSubmitter();
     }
 
+    function registerAccount(address _user, uint _account, IAccountManager.Chain _chain, uint _index, address _address, bytes memory _signature) external onlyCurrentSubmitter nonReentrant {
+        bytes memory encodedParams = abi.encodePacked(_user, _account, _chain, _index, _address);
+        require(verifySignature(encodedParams, _signature), "Invalid signature");
+        accountManager.registerNewAddress(_user, _account, _chain, _index, _address);
+
+        rotateSubmitter();
+    }
+
     function rotateSubmitter() internal {
         address[] memory participants = participantManager.getParticipants();
         require(participants.length > 0, "No participants available");
+        nuvoLock.accumulateBonusPoints(msg.sender);
 
         uint256 randomIndex = uint256(keccak256(abi.encodePacked(
             block.prevrandao, // instead of difficulty in PoS
