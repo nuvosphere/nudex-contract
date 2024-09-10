@@ -13,7 +13,7 @@ describe("VotingManager - Reward Voting", function () {
     participantManager = await MockParticipantManager.deploy();
     await participantManager.waitForDeployment();
     // Set addr1 participants
-    await participantManager.mockSetParticipant(address1, true);
+    await participantManager.addParticipant(address1, true);
 
     const MockNuvoLockUpgradeable = await ethers.getContractFactory("MockNuvoLockUpgradeable");
     nuvoLock = await MockNuvoLockUpgradeable.deploy();
@@ -24,10 +24,13 @@ describe("VotingManager - Reward Voting", function () {
     votingManager = await upgrades.deployProxy(
       VotingManager,
       [
-        participantManager.address,
-        await nuvoLock.getAddress(),
-        ethers.ZeroAddress,
-        await owner.getAddress(),
+        ethers.ZeroAddress, // account manager
+        ethers.ZeroAddress, // asset manager
+        await depositManager.getAddress(), // deposit manager
+        await participantManager.getAddress(), // participant manager
+        ethers.ZeroAddress, // nuDex operation
+        await nuvoLock.getAddress(), // nuvoLock
+        await owner.getAddress(), // owner
       ],
       { initializer: "initialize" }
     );

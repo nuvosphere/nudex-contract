@@ -26,21 +26,22 @@ describe("VotingManager - Deposit Information Submission", function () {
     votingManager = await upgrades.deployProxy(
       VotingManager,
       [
-        await participantManager.getAddress(),
-        await nuvoLock.getAddress(),
-        ethers.ZeroAddress,
-        await depositManager.getAddress(),
-        ethers.ZeroAddress,
-        await owner.getAddress(),
+        ethers.ZeroAddress, // account manager
+        ethers.ZeroAddress, // asset manager
+        await depositManager.getAddress(), // deposit manager
+        await participantManager.getAddress(), // participant manager
+        ethers.ZeroAddress, // nuDex operation
+        await nuvoLock.getAddress(), // nuvoLock
+        await owner.getAddress(), // owner
       ],
       { initializer: "initialize" }
     );
     await votingManager.waitForDeployment();
 
     // Add addr1 as a participant
-    await votingManager.addParticipant(address1, "0x", "0x");
-    await participantManager.setParticipant(await votingManager.lastSubmitterIndex());
+    await participantManager.addParticipant(address1);
 
+    // generate signature
     const rawMessage = ethers.solidityPacked(
       ["address", "uint", "bytes", "uint", "bytes"],
       [address1, 100, "0x1234", 1, "0x5678"]
@@ -53,7 +54,11 @@ describe("VotingManager - Deposit Information Submission", function () {
   });
 
   it("Should allow the current submitter to submit deposit info", async function () {
-    await expect(votingManager.submitDepositInfo(address1, 100, "0x1234", 1, "0x5678", signature))
+    await expect(
+      votingManager
+        .connect(addr1)
+        .submitDepositInfo(address1, 100, "0x1234", 1, "0x5678", signature)
+    )
       .to.emit(votingManager, "DepositInfoSubmitted")
       .withArgs(address1, 100, "0x1234", 1, "0x5678");
 
@@ -61,9 +66,10 @@ describe("VotingManager - Deposit Information Submission", function () {
   });
 
   it("Should revert if non-current submitter tries to submit deposit info", async function () {
-    // set the submitter other than msg.sender
+    // set the address to non-current submitter
     await participantManager.setParticipant(
-      (await votingManager.lastSubmitterIndex()) >= 9 ? 1 : 9
+      await votingManager.lastSubmitterIndex(),
+      ethers.ZeroAddress
     );
     await expect(
       votingManager
@@ -76,7 +82,9 @@ describe("VotingManager - Deposit Information Submission", function () {
     signature = signature.replace("1", "2"); // create a invalid signature
     // Attempt to submit deposit info with an invalid signature
     await expect(
-      votingManager.submitDepositInfo(address1, 100, "0x1234", 1, "0x5678", signature)
+      votingManager
+        .connect(addr1)
+        .submitDepositInfo(address1, 100, "0x1234", 1, "0x5678", signature)
     ).to.be.revertedWith("Invalid signature");
   });
 });

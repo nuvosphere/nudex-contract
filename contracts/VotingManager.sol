@@ -53,17 +53,18 @@ contract VotingManager is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         participantManager = IParticipantManager(_participantManager);
         nuDexOperations = INuDexOperations(_nuDexOperations);
         nuvoLock = INuvoLock(_nuvoLock);
+        lastSubmissionTime = block.timestamp;
     }
 
-    function addParticipant(address newParticipant, bytes memory params, bytes memory signature) external onlyCurrentSubmitter nonReentrant {
-        // require(verifySignature(abi.encodePacked(newParticipant), signature), "Invalid signature");
+    function addParticipant(address newParticipant, bytes memory signature) external onlyCurrentSubmitter nonReentrant {
+        require(verifySignature(abi.encodePacked(newParticipant), signature), "Invalid signature");
         participantManager.addParticipant(newParticipant);
         rotateSubmitter();
 
         emit ParticipantAdded(newParticipant);
     }
 
-    function removeParticipant(address participant, bytes memory params, bytes memory signature) external onlyCurrentSubmitter nonReentrant {
+    function removeParticipant(address participant, bytes memory signature) external onlyCurrentSubmitter nonReentrant {
         require(verifySignature(abi.encodePacked(participant), signature), "Invalid signature");
 
         participantManager.removeParticipant(participant);
@@ -72,7 +73,7 @@ contract VotingManager is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         emit ParticipantRemoved(participant);
     }
 
-    function chooseNewSubmitter(address currentSubmitter, bytes memory params, bytes memory signature) external onlyParticipant nonReentrant {
+    function chooseNewSubmitter(address currentSubmitter, bytes memory signature) external onlyParticipant nonReentrant {
         require(verifySignature(abi.encodePacked(currentSubmitter), signature), "Invalid signature");
         require(currentSubmitter == getCurrentSubmitter(), "Incorrect current submitter");
         require(block.timestamp >= lastSubmissionTime + forcedRotationWindow, "Submitter rotation not allowed yet");

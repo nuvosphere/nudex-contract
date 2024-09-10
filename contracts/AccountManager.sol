@@ -6,7 +6,7 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 contract AccountManagerUpgradeable is IAccountManager, OwnableUpgradeable {
   
-    // user address => account => chain => index => registered address
+    // encode(user address, account, chain, index) => registered address
     mapping(bytes => address) public addressRecord;
     mapping(address => mapping(Chain => address)) public userMapping;
 

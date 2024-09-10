@@ -23,45 +23,71 @@ describe("VotingManager - Participant Management", function () {
     votingManager = await upgrades.deployProxy(
       VotingManager,
       [
-        participantManager.address,
-        await nuvoLock.getAddress(),
-        ethers.ZeroAddress,
-        await owner.getAddress(),
+        ethers.ZeroAddress, // account manager
+        ethers.ZeroAddress, // asset manager
+        ethers.ZeroAddress, // deposit manager
+        await participantManager.getAddress(), // participant manager
+        ethers.ZeroAddress, // nuDex operation
+        await nuvoLock.getAddress(), // nuvoLock
+        await owner.getAddress(), // owner
       ],
       { initializer: "initialize" }
     );
     await votingManager.waitForDeployment();
+
+    // Add addr1 as a participant
+    await participantManager.addParticipant(address1);
+
+    // generate signature
+    signature = await generateSigForAddress(address1, addr1);
   });
 
   it("Should allow the current submitter to add a new participant", async function () {
-    // Simulate adding a new participant
-    await votingManager.addParticipant(address1, "0x", "0x");
+    expect(await participantManager.isParticipant(address2)).to.be.false;
 
-    expect(await participantManager.isParticipant(address1)).to.be.true;
+    // Simulate adding a new participant
+    signature = await generateSigForAddress(address2, addr1);
+    await votingManager.connect(addr1).addParticipant(address2, signature);
+
+    expect(await participantManager.isParticipant(address2)).to.be.true;
   });
 
   it("Should revert if non-current submitter tries to add a participant", async function () {
+    // set the address to non-current submitter
+    await participantManager.setParticipant(
+      await votingManager.lastSubmitterIndex(),
+      ethers.ZeroAddress
+    );
     // Trying to add a participant from a non-current submitter
-    await expect(
-      votingManager.connect(addr2).addParticipant(address1, "0x", "0x")
-    ).to.be.revertedWith("Not the current submitter");
+    await expect(votingManager.connect(addr2).addParticipant(address1, "0x")).to.be.revertedWith(
+      "Not the current submitter"
+    );
   });
 
   it("Should allow the current submitter to remove a participant", async function () {
-    // Simulate adding and then removing a participant
-    await votingManager.addParticipant(address1, "0x", "0x");
-    await votingManager.removeParticipant(address1, "0x", "0x");
-
+    // Add another participant so after remove it has at least one participant left
+    await participantManager.addParticipant(address2);
+    await votingManager.connect(addr1).removeParticipant(address1, signature);
     expect(await participantManager.isParticipant(address1)).to.be.false;
   });
 
   it("Should revert if non-current submitter tries to remove a participant", async function () {
-    // Simulate adding a participant
-    await votingManager.addParticipant(address1, "0x", "0x");
-
+    // Add address2 as another participant
+    await participantManager.addParticipant(address2);
+    // set the address to non-current submitter
+    await participantManager.setParticipant(await votingManager.lastSubmitterIndex(), address2);
     // Trying to remove the participant from a non-current submitter
     await expect(
-      votingManager.connect(addr2).removeParticipant(address1, "0x", "0x")
+      votingManager.connect(addr1).removeParticipant(address1, signature)
     ).to.be.revertedWith("Not the current submitter");
   });
 });
+
+async function generateSigForAddress(addr, signer) {
+  const rawMessage = ethers.solidityPacked(["address"], [addr]);
+  const message = ethers.solidityPackedKeccak256(
+    ["string", "bytes"],
+    [((rawMessage.length - 2) / 2).toString(), rawMessage]
+  );
+  return await signer.signMessage(ethers.toBeArray(message));
+}

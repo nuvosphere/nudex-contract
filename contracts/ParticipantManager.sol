@@ -13,11 +13,14 @@ contract ParticipantManager is IParticipantManager, OwnableUpgradeable {
     address[] public participants;
     mapping(address => bool) public isParticipant;
 
-    function initialize(address _nuvoLock, uint256 _minLockAmount, uint256 _minLockPeriod, address _initialOwner) initializer public {
-        __Ownable_init(_initialOwner);
+    function initialize(address _nuvoLock, uint256 _minLockAmount, uint256 _minLockPeriod, address _initialParticipant) initializer public {
+        __Ownable_init(_nuvoLock);
         nuvoLock = INuvoLock(_nuvoLock);
         minLockAmount = _minLockAmount;
         minLockPeriod = _minLockPeriod;
+        
+        participants.push(_initialParticipant);
+        isParticipant[_initialParticipant] = true;
     }
 
     function addParticipant(address newParticipant) external onlyOwner {

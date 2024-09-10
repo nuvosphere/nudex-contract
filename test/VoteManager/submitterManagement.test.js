@@ -27,10 +27,13 @@ describe("VotingManager - Submitter Management", function () {
     votingManager = await upgrades.deployProxy(
       VotingManager,
       [
-        participantManager.address,
-        await nuvoLock.getAddress(),
-        depositManager.address,
-        await owner.getAddress(),
+        ethers.ZeroAddress, // account manager
+        await assetManager.getAddress(), // asset manager
+        await depositManager.getAddress(), // deposit manager
+        await participantManager.getAddress(), // participant manager
+        ethers.ZeroAddress, // nuDex operation
+        await nuvoLock.getAddress(), // nuvoLock
+        await owner.getAddress(), // owner
       ],
       { initializer: "initialize" }
     );

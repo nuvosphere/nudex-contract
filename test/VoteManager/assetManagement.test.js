@@ -39,22 +39,22 @@ describe("VotingManager - Asset Management", function () {
     votingManager = await upgrades.deployProxy(
       VotingManager,
       [
-        await participantManager.getAddress(),
-        await nuvoLock.getAddress(),
-        await assetManager.getAddress(),
-        ethers.ZeroAddress,
-        ethers.ZeroAddress,
-        await owner.getAddress(),
+        ethers.ZeroAddress, // account manager
+        await assetManager.getAddress(), // asset manager
+        ethers.ZeroAddress, // deposit manager
+        await participantManager.getAddress(), // participant manager
+        ethers.ZeroAddress, // nuDex operation
+        await nuvoLock.getAddress(), // nuvoLock
+        await owner.getAddress(), // owner
       ],
       { initializer: "initialize" }
     );
     await votingManager.waitForDeployment();
 
     // Add addr1 as a participant
-    await votingManager.addParticipant(address1, "0x", "0x");
-    // set the submitter to msg.sender in Mock contract
-    await participantManager.setParticipant(await votingManager.lastSubmitterIndex());
+    await participantManager.addParticipant(address1);
 
+    // generate signature
     const rawMessage = ethers.solidityPacked(
       ["string", "string", "uint8", "address", "uint"],
       [assetName, nuDexName, assetType, contractAddress, chainId]
@@ -68,16 +68,19 @@ describe("VotingManager - Asset Management", function () {
 
   it("Should allow the current submitter to list a new asset", async function () {
     await expect(
-      votingManager.listAsset(assetName, nuDexName, assetType, contractAddress, chainId, signature)
+      votingManager
+        .connect(addr1)
+        .listAsset(assetName, nuDexName, assetType, contractAddress, chainId, signature)
     ).to.emit(votingManager, "AssetListed");
 
     expect(await assetManager.isAssetListed(assetType, contractAddress, chainId)).to.be.true;
   });
 
   it("Should revert if non-current submitter tries to list a new asset", async function () {
-    // set the submitter other than msg.sender
+    // set the address to non-current submitter
     await participantManager.setParticipant(
-      (await votingManager.lastSubmitterIndex()) >= 9 ? 1 : 9
+      await votingManager.lastSubmitterIndex(),
+      ethers.ZeroAddress
     );
     await expect(
       votingManager
@@ -88,16 +91,11 @@ describe("VotingManager - Asset Management", function () {
 
   it("Should allow the current submitter to delist an asset", async function () {
     // List the asset first
-    await votingManager.listAsset(
-      assetName,
-      nuDexName,
-      assetType,
-      contractAddress,
-      chainId,
-      signature
-    );
+    await votingManager
+      .connect(addr1)
+      .listAsset(assetName, nuDexName, assetType, contractAddress, chainId, signature);
 
-    await participantManager.setParticipant(await votingManager.lastSubmitterIndex());
+    await participantManager.setParticipant(await votingManager.lastSubmitterIndex(), address1);
     const rawMessage = ethers.solidityPacked(
       ["uint8", "address", "uint"],
       [assetType, contractAddress, chainId]
@@ -108,28 +106,23 @@ describe("VotingManager - Asset Management", function () {
     );
     signature = await addr1.signMessage(ethers.toBeArray(message));
 
-    await expect(votingManager.delistAsset(assetType, contractAddress, chainId, signature)).to.emit(
-      votingManager,
-      "AssetDelisted"
-    );
+    await expect(
+      votingManager.connect(addr1).delistAsset(assetType, contractAddress, chainId, signature)
+    ).to.emit(votingManager, "AssetDelisted");
 
     expect(await assetManager.isAssetListed(assetType, contractAddress, chainId)).to.be.false;
   });
 
   it("Should revert if non-current submitter tries to delist an asset", async function () {
     // List the asset first
-    await votingManager.listAsset(
-      assetName,
-      nuDexName,
-      assetType,
-      contractAddress,
-      chainId,
-      signature
-    );
+    await votingManager
+      .connect(addr1)
+      .listAsset(assetName, nuDexName, assetType, contractAddress, chainId, signature);
 
-    // set the submitter other than msg.sender
+    // set the address to non-current submitter
     await participantManager.setParticipant(
-      (await votingManager.lastSubmitterIndex()) >= 9 ? 1 : 9
+      await votingManager.lastSubmitterIndex(),
+      ethers.ZeroAddress
     );
     const rawMessage = ethers.solidityPacked(
       ["uint8", "address", "uint"],
@@ -148,7 +141,7 @@ describe("VotingManager - Asset Management", function () {
   it("Should revert if signature verification fails when listing an asset", async function () {
     signature = signature.replace("1", "2"); // create a invalid signature
     await expect(
-      votingManager.listAsset(
+      votingManager.connect(addr1).listAsset(
         assetName,
         nuDexName,
         assetType,
@@ -161,16 +154,11 @@ describe("VotingManager - Asset Management", function () {
 
   it("Should revert if signature verification fails when delisting an asset", async function () {
     // List the asset first
-    await votingManager.listAsset(
-      assetName,
-      nuDexName,
-      assetType,
-      contractAddress,
-      chainId,
-      signature
-    );
+    await votingManager
+      .connect(addr1)
+      .listAsset(assetName, nuDexName, assetType, contractAddress, chainId, signature);
 
-    await participantManager.setParticipant(await votingManager.lastSubmitterIndex());
+    await participantManager.setParticipant(await votingManager.lastSubmitterIndex(), address1);
     const rawMessage = ethers.solidityPacked(
       ["uint8", "address", "uint"],
       [assetType, contractAddress, chainId]
@@ -182,7 +170,7 @@ describe("VotingManager - Asset Management", function () {
     signature = await addr1.signMessage(ethers.toBeArray(message));
     signature = signature.replace("1", "2"); // create a invalid signature
     await expect(
-      votingManager.delistAsset(assetType, contractAddress, chainId, signature)
+      votingManager.connect(addr1).delistAsset(assetType, contractAddress, chainId, signature)
     ).to.be.revertedWith("Invalid signature");
   });
 });
