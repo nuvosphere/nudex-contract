@@ -3,6 +3,7 @@ const { ethers } = require("hardhat");
 
 describe("VotingManager - Participant Management", function () {
   let votingManager, participantManager, nuvoLock, owner, addr1, addr2, address1, address2;
+  let signature;
 
   beforeEach(async function () {
     [owner, addr1, addr2] = await ethers.getSigners();

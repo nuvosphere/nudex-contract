@@ -24,9 +24,6 @@ contract NuvoLockUpgradeable is INuvoLock, Initializable, UUPSUpgradeable, Ownab
         _;
     }
 
-    /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() initializer {}
-
     function initialize(address _nuvoToken, address _rewardSource, address _initialOwner) initializer public {
         __Ownable_init(_initialOwner);
         __UUPSUpgradeable_init();
@@ -34,7 +31,6 @@ contract NuvoLockUpgradeable is INuvoLock, Initializable, UUPSUpgradeable, Ownab
         nuvoToken = INuvoToken(_nuvoToken);
         rewardSource = _rewardSource;
         currentPeriodStart = block.timestamp;
-        currentPeriod = 0;
     }
 
     function setMinLockPeriod(uint256 _minLockPeriod) public onlyOwner {
