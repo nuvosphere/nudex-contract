@@ -54,10 +54,6 @@ describe("VotingManager - Task Submission and Completion", function () {
   });
 
   it("Should allow the current submitter to submit a task", async function () {
-    console.log(
-      await ethers.provider.getBlockNumber(),
-      (await ethers.provider.getBlock()).timestamp
-    );
     await expect(votingManager.connect(addr1).submitTaskReceipt(taskId, result, signature))
       .to.emit(votingManager, "TaskCompleted")
       .withArgs(taskId, address1, (await ethers.provider.getBlock("latest")).timestamp, result);

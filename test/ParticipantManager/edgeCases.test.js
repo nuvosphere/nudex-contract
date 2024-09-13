@@ -2,10 +2,11 @@ const { expect } = require("chai");
 const { ethers } = require("hardhat");
 
 describe("ParticipantManager - Edge Cases", function () {
-  let participantManager, nuvoLock, owner, addr1;
+  let participantManager, nuvoLock, owner, addr1, ownerAddress, address1;
 
   beforeEach(async function () {
     [owner, addr1] = await ethers.getSigners();
+    ownerAddress = await owner.getAddress();
     address1 = await addr1.getAddress();
 
     // Deploy mock NuvoLockUpgradeable
@@ -19,7 +20,7 @@ describe("ParticipantManager - Edge Cases", function () {
     const ParticipantManager = await ethers.getContractFactory("ParticipantManager");
     participantManager = await upgrades.deployProxy(
       ParticipantManager,
-      [await nuvoLock.getAddress(), 100, 7 * 24 * 60 * 60, await owner.getAddress()],
+      [await nuvoLock.getAddress(), 100, 7 * 24 * 60 * 60, ownerAddress, ownerAddress],
       { initializer: "initialize" }
     );
     await participantManager.waitForDeployment();
@@ -27,7 +28,7 @@ describe("ParticipantManager - Edge Cases", function () {
 
   it("Should handle the scenario where no participants are added", async function () {
     const participants = await participantManager.getParticipants();
-    expect(participants.length).to.equal(0);
+    expect(participants.length).to.equal(1); // only the initial participant
   });
 
   it("Should revert if trying to remove a participant after all have been removed", async function () {

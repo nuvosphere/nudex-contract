@@ -2,10 +2,11 @@ const { expect } = require("chai");
 const { ethers } = require("hardhat");
 
 describe("ParticipantManager - Initialization", function () {
-  let participantManager, nuvoLock, owner, addr1;
+  let participantManager, nuvoLock, owner, addr1, ownerAddress, address1;
 
   beforeEach(async function () {
     [owner, addr1] = await ethers.getSigners();
+    ownerAddress = await owner.getAddress();
     address1 = await addr1.getAddress();
 
     // Deploy mock NuvoLockUpgradeable
@@ -17,7 +18,7 @@ describe("ParticipantManager - Initialization", function () {
     const ParticipantManager = await ethers.getContractFactory("ParticipantManager");
     participantManager = await upgrades.deployProxy(
       ParticipantManager,
-      [await nuvoLock.getAddress(), 100, 7 * 24 * 60 * 60, await owner.getAddress()],
+      [await nuvoLock.getAddress(), 100, 7 * 24 * 60 * 60, ownerAddress, ownerAddress],
       { initializer: "initialize" }
     );
     await participantManager.waitForDeployment();

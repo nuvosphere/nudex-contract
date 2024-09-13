@@ -6,6 +6,8 @@ describe("NuvoLockUpgradeable - Locking and Unlocking Tokens", function () {
 
   beforeEach(async function () {
     [owner, addr1, addr2] = await ethers.getSigners();
+    address1 = await addr1.getAddress();
+    address2 = await addr2.getAddress();
 
     // Deploy mock NuvoToken
     const MockNuvoToken = await ethers.getContractFactory("MockNuvoToken");

@@ -3,21 +3,15 @@ pragma solidity ^0.8.0;
 
 contract Proxy {
     address public implementation;
-    address public admin;
 
     event Upgraded(address indexed implementation);
 
-    modifier onlyAdmin() {
-        require(msg.sender == admin, "Only admin can perform this action");
-        _;
-    }
-
     constructor(address _implementation) {
         implementation = _implementation;
-        admin = msg.sender;
     }
 
-    function upgrade(address _newImplementation) external onlyAdmin {
+    function upgrade(address _newImplementation) external {
+        require(msg.sender == address(this), "Can only be upgraded through DAO proposal");
         implementation = _newImplementation;
         emit Upgraded(_newImplementation);
     }

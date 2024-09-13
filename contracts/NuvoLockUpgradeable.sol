@@ -6,7 +6,7 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "./interfaces/INuvoLock.sol";
 
-contract NuvoLockUpgradeable is INuvoLock, Initializable, UUPSUpgradeable, OwnableUpgradeable {
+contract NuvoLockUpgradeable is INuvoLock, UUPSUpgradeable, OwnableUpgradeable {
     INuvoToken public nuvoToken;
     address public rewardSource;
     uint256 public minLockPeriod;
@@ -142,13 +142,12 @@ contract NuvoLockUpgradeable is INuvoLock, Initializable, UUPSUpgradeable, Ownab
                     // Reset bonus points for the participant during the same loop
                     lockInfo.bonusPoints = 0;
                 }
-
-            // FIXME: the following code should be placed inside the if statement?
-            // Reset the total bonus points for the next period
-            totalBonusPoints = 0;
-            // Update the current period and its start time
-            currentPeriod = currentPeriodNumber;
-            currentPeriodStart += (currentPeriodNumber - currentPeriod) * 1 weeks;
+                
+                // Reset the total bonus points for the next period
+                totalBonusPoints = 0;
+                // Update the current period and its start time
+                currentPeriod = currentPeriodNumber;
+                currentPeriodStart += (currentPeriodNumber - currentPeriod) * 1 weeks;
             } 
         }
     }

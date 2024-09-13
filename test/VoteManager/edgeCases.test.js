@@ -63,12 +63,6 @@ describe("VotingManager - Edge Cases and Advanced Scenarios", function () {
 
     // generate signature
     initialSubmitter = await votingManager.getCurrentSubmitter();
-    // const rawMessage = ethers.solidityPacked(["address"], [initialSubmitter]);
-    // const message = ethers.solidityPackedKeccak256(
-    //   ["string", "bytes"],
-    //   [((rawMessage.length - 2) / 2).toString(), rawMessage]
-    // );
-    // signature = await addr1.signMessage(ethers.toBeArray(message));
     signature = generateSigForAddress(initialSubmitter, addr1);
   });
 
@@ -85,7 +79,6 @@ describe("VotingManager - Edge Cases and Advanced Scenarios", function () {
     await ethers.provider.send("evm_increaseTime", [2 * 60 * 60]); // 2 hours
     await ethers.provider.send("evm_mine");
 
-    console.log(" current: ", await votingManager.getCurrentSubmitter(), initialSubmitter);
     await votingManager.connect(addr1).chooseNewSubmitter(initialSubmitter, signature);
 
     const newSubmitter = await votingManager.getCurrentSubmitter();

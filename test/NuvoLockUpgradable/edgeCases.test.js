@@ -63,11 +63,15 @@ describe("NuvoLockUpgradeable - Edge Cases", function () {
     const rewardPerPeriod = ethers.parseUnits("20", 18);
     await nuvoLock.connect(owner).setRewardPerPeriod(rewardPerPeriod);
 
+    // Accumulate rewards
+    await nuvoLock.connect(owner).accumulateBonusPoints(address1);
+    await nuvoLock.connect(owner).accumulateBonusPoints(address2);
+
     // Simulate time passing to create a new period
     await ethers.provider.send("evm_increaseTime", [lockPeriod + 1]);
     await ethers.provider.send("evm_mine");
 
-    // Accumulate rewards
+    // calculate reward for current period
     await nuvoLock.connect(owner).accumulateRewards();
 
     const lockInfo1 = await nuvoLock.getLockInfo(address1);
@@ -78,18 +82,18 @@ describe("NuvoLockUpgradeable - Edge Cases", function () {
   });
 
   it("Should handle multiple reward periods correctly", async function () {
-    await nuvoToken.connect(addr1).approve(await nuvoLock.getAddress(), lockAmount);
-    await nuvoLock.connect(addr1).lock(lockAmount, lockPeriod);
-
     // Set reward per period
     const rewardPerPeriod = ethers.parseUnits("10", 18);
     await nuvoLock.connect(owner).setRewardPerPeriod(rewardPerPeriod);
+    await nuvoToken.connect(addr1).approve(await nuvoLock.getAddress(), lockAmount);
+    await nuvoLock.connect(addr1).lock(lockAmount, lockPeriod);
 
     // Simulate multiple periods passing
     await ethers.provider.send("evm_increaseTime", [lockPeriod * 2 + 1]);
     await ethers.provider.send("evm_mine");
 
     // Accumulate rewards
+    await nuvoLock.connect(owner).accumulateBonusPoints(address1);
     await nuvoLock.connect(owner).accumulateRewards();
 
     const lockInfo = await nuvoLock.getLockInfo(address1);

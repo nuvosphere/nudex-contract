@@ -2,10 +2,11 @@ const { expect } = require("chai");
 const { ethers } = require("hardhat");
 
 describe("ParticipantManager - Eligibility Check", function () {
-  let participantManager, nuvoLock, owner, addr1, addr2, address1, address2;
+  let participantManager, nuvoLock, owner, addr1, addr2, ownerAddress, address1, address2;
 
   beforeEach(async function () {
     [owner, addr1, addr2] = await ethers.getSigners();
+    ownerAddress = await owner.getAddress();
     address1 = await addr1.getAddress();
     address2 = await addr2.getAddress();
 
@@ -20,7 +21,7 @@ describe("ParticipantManager - Eligibility Check", function () {
     const ParticipantManager = await ethers.getContractFactory("ParticipantManager");
     participantManager = await upgrades.deployProxy(
       ParticipantManager,
-      [await nuvoLock.getAddress(), 100, 7 * 24 * 60 * 60, await owner.getAddress()],
+      [await nuvoLock.getAddress(), 100, 7 * 24 * 60 * 60, ownerAddress, ownerAddress],
       { initializer: "initialize" }
     );
     await participantManager.waitForDeployment();
@@ -42,7 +43,7 @@ describe("ParticipantManager - Eligibility Check", function () {
     const ParticipantManager = await ethers.getContractFactory("ParticipantManager");
     participantManager = await upgrades.deployProxy(
       ParticipantManager,
-      [await nuvoLock.getAddress(), 200, 7 * 24 * 60 * 60, await owner.getAddress()], // min value higher than preset value
+      [await nuvoLock.getAddress(), 200, 7 * 24 * 60 * 60, ownerAddress, ownerAddress], // min value higher than preset value
       { initializer: "initialize" }
     );
     await participantManager.waitForDeployment();

@@ -13,7 +13,7 @@ describe("VotingManager - Initialization", function () {
     participantManager = await MockParticipantManager.deploy();
     await participantManager.waitForDeployment();
     // Set addr1 participants
-    await participantManager.addParticipant(address1, true);
+    await participantManager.addParticipant(address1);
 
     const MockNuvoLockUpgradeable = await ethers.getContractFactory("MockNuvoLockUpgradeable");
     nuvoLock = await MockNuvoLockUpgradeable.deploy();

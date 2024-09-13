@@ -25,7 +25,7 @@ describe("NuDexOperations - Task Management", function () {
     await nuDexOperations.waitForDeployment();
 
     // Assume addr1 is a participant
-    await participantManager.mockSetParticipant(address1, true);
+    await participantManager.addParticipant(address1);
   });
 
   it("Should allow a participant to submit a task", async function () {
