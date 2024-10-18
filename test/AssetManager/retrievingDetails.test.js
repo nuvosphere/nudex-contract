@@ -2,27 +2,28 @@ const { expect } = require("chai");
 const { ethers } = require("hardhat");
 
 describe("AssetManager - Retrieving Asset Details", function () {
-  let assetManager, owner, addr1;
+  let assetManager, owner, addr1, address1;
 
   beforeEach(async function () {
     [owner, addr1] = await ethers.getSigners();
+    address1 = await addr1.getAddress();
 
     // Deploy AssetManager
     const AssetManager = await ethers.getContractFactory("AssetManager");
     assetManager = await AssetManager.deploy();
-    await assetManager.deployed();
+    await assetManager.waitForDeployment();
 
     // List some assets to retrieve later
     const assetType1 = 2; // ERC20
     const assetName1 = "TestAsset1";
     const nuDexName1 = "TST1";
-    const contractAddress1 = addr1.address;
+    const contractAddress1 = address1;
     const chainId1 = 1;
 
     const assetType2 = 3; // Another type (e.g., Ordinals)
     const assetName2 = "TestAsset2";
     const nuDexName2 = "TST2";
-    const contractAddress2 = owner.address;
+    const contractAddress2 = await owner.getAddress();
     const chainId2 = 1;
 
     await assetManager.listAsset(assetName1, nuDexName1, assetType1, contractAddress1, chainId1);
@@ -31,7 +32,7 @@ describe("AssetManager - Retrieving Asset Details", function () {
 
   it("Should retrieve correct details for a listed asset", async function () {
     const assetType = 2; // ERC20
-    const contractAddress = addr1.address;
+    const contractAddress = address1;
     const chainId = 1;
 
     const assetId = await assetManager.getAssetIdentifier(assetType, contractAddress, chainId);
@@ -47,7 +48,7 @@ describe("AssetManager - Retrieving Asset Details", function () {
 
   it("Should revert if trying to retrieve details for an unlisted asset", async function () {
     const assetType = 2; // ERC20
-    const contractAddress = addr1.address;
+    const contractAddress = address1;
     const chainId = 1;
 
     // Delist the asset first
@@ -59,11 +60,11 @@ describe("AssetManager - Retrieving Asset Details", function () {
 
   it("Should correctly retrieve details for multiple assets", async function () {
     const assetType1 = 2; // ERC20
-    const contractAddress1 = addr1.address;
+    const contractAddress1 = address1;
     const chainId1 = 1;
 
     const assetType2 = 3; // Another type (e.g., Ordinals)
-    const contractAddress2 = owner.address;
+    const contractAddress2 = await owner.getAddress();
     const chainId2 = 1;
 
     const assetId1 = await assetManager.getAssetIdentifier(assetType1, contractAddress1, chainId1);

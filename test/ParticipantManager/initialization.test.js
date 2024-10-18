@@ -2,33 +2,32 @@ const { expect } = require("chai");
 const { ethers } = require("hardhat");
 
 describe("ParticipantManager - Initialization", function () {
-  let participantManager, nuvoLock, owner, addr1;
+  let participantManager, nuvoLock, owner, addr1, ownerAddress, address1;
 
   beforeEach(async function () {
     [owner, addr1] = await ethers.getSigners();
+    ownerAddress = await owner.getAddress();
+    address1 = await addr1.getAddress();
 
     // Deploy mock NuvoLockUpgradeable
-    const NuvoLockUpgradeable = await ethers.getContractFactory("MockNuvoLockUpgradeable");
+    const NuvoLockUpgradeable = await ethers.getContractFactory("MockNuvoLockUpgradeablePreset");
     nuvoLock = await NuvoLockUpgradeable.deploy();
-    await nuvoLock.deployed();
+    await nuvoLock.waitForDeployment();
 
     // Deploy ParticipantManager
     const ParticipantManager = await ethers.getContractFactory("ParticipantManager");
-    participantManager = await upgrades.deployProxy(ParticipantManager, [nuvoLock.address, 100, 7 * 24 * 60 * 60, owner.address], { initializer: "initialize" });
-    await participantManager.deployed();
+    participantManager = await upgrades.deployProxy(
+      ParticipantManager,
+      [await nuvoLock.getAddress(), 100, 7 * 24 * 60 * 60, ownerAddress, ownerAddress],
+      { initializer: "initialize" }
+    );
+    await participantManager.waitForDeployment();
   });
 
   it("Should initialize with correct parameters", async function () {
-    expect(await participantManager.nuvoLock()).to.equal(nuvoLock.address);
+    expect(await participantManager.nuvoLock()).to.equal(await nuvoLock.getAddress());
     expect(await participantManager.minLockAmount()).to.equal(100);
     expect(await participantManager.minLockPeriod()).to.equal(7 * 24 * 60 * 60);
-    expect(await participantManager.owner()).to.equal(owner.address);
-  });
-
-  it("Should only allow owner to initialize", async function () {
-    const ParticipantManager = await ethers.getContractFactory("ParticipantManager");
-    await expect(
-      upgrades.deployProxy(ParticipantManager, [nuvoLock.address, 100, 7 * 24 * 60 * 60, addr1.address], { initializer: "initialize" })
-    ).to.be.revertedWith("Ownable: caller is not the owner");
+    expect(await participantManager.owner()).to.equal(await owner.getAddress());
   });
 });

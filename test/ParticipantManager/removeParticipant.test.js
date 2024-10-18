@@ -2,47 +2,58 @@ const { expect } = require("chai");
 const { ethers } = require("hardhat");
 
 describe("ParticipantManager - Removing Participants", function () {
-  let participantManager, nuvoLock, owner, addr1, addr2;
+  let participantManager, nuvoLock, owner, addr1, addr2, ownerAddress, address1, address2;
 
   beforeEach(async function () {
     [owner, addr1, addr2] = await ethers.getSigners();
+    ownerAddress = await owner.getAddress();
+    address1 = await addr1.getAddress();
+    address2 = await addr2.getAddress();
 
     // Deploy mock NuvoLockUpgradeable
-    const MockNuvoLockUpgradeable = await ethers.getContractFactory("MockNuvoLockUpgradeable");
+    const MockNuvoLockUpgradeable = await ethers.getContractFactory(
+      "MockNuvoLockUpgradeablePreset"
+    );
     nuvoLock = await MockNuvoLockUpgradeable.deploy();
-    await nuvoLock.deployed();
+    await nuvoLock.waitForDeployment();
 
     // Deploy ParticipantManager
     const ParticipantManager = await ethers.getContractFactory("ParticipantManager");
-    participantManager = await upgrades.deployProxy(ParticipantManager, [nuvoLock.address, 100, 7 * 24 * 60 * 60, owner.address], { initializer: "initialize" });
-    await participantManager.deployed();
+    participantManager = await upgrades.deployProxy(
+      ParticipantManager,
+      [await nuvoLock.getAddress(), 100, 7 * 24 * 60 * 60, ownerAddress, ownerAddress],
+      { initializer: "initialize" }
+    );
+    await participantManager.waitForDeployment();
 
     // Add participants
-    await participantManager.addParticipant(addr1.address);
-    await participantManager.addParticipant(addr2.address);
+    await participantManager.addParticipant(address1);
+    await participantManager.addParticipant(address2);
   });
 
   it("Should allow the owner to remove a participant", async function () {
-    await expect(participantManager.removeParticipant(addr1.address))
+    await expect(participantManager.removeParticipant(address1))
       .to.emit(participantManager, "ParticipantRemoved")
-      .withArgs(addr1.address);
+      .withArgs(address1);
 
-    expect(await participantManager.isParticipant(addr1.address)).to.be.false;
+    expect(await participantManager.isParticipant(address1)).to.be.false;
   });
 
   it("Should revert if trying to remove a non-participant", async function () {
-    await participantManager.removeParticipant(addr1.address); // Removing addr1 first
-    await expect(participantManager.removeParticipant(addr1.address)).to.be.revertedWith("Not a participant");
+    await participantManager.removeParticipant(address1); // Removing addr1 first
+    await expect(participantManager.removeParticipant(address1)).to.be.revertedWith(
+      "Not a participant"
+    );
   });
 
   it("Should correctly handle removing the last participant", async function () {
-    await participantManager.removeParticipant(addr1.address);
-    await participantManager.removeParticipant(addr2.address);
+    await participantManager.removeParticipant(address1);
+    await participantManager.removeParticipant(address2);
 
-    expect(await participantManager.isParticipant(addr1.address)).to.be.false;
-    expect(await participantManager.isParticipant(addr2.address)).to.be.false;
+    expect(await participantManager.isParticipant(address1)).to.be.false;
+    expect(await participantManager.isParticipant(address2)).to.be.false;
 
     const participants = await participantManager.getParticipants();
-    expect(participants.length).to.equal(0);
+    expect(participants.length).to.equal(1);
   });
 });

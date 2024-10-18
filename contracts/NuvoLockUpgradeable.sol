@@ -6,7 +6,7 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "./interfaces/INuvoLock.sol";
 
-contract NuvoLockUpgradeable is INuvoLock, Initializable, UUPSUpgradeable, OwnableUpgradeable {
+contract NuvoLockUpgradeable is INuvoLock, UUPSUpgradeable, OwnableUpgradeable {
     INuvoToken public nuvoToken;
     address public rewardSource;
     uint256 public minLockPeriod;
@@ -24,9 +24,6 @@ contract NuvoLockUpgradeable is INuvoLock, Initializable, UUPSUpgradeable, Ownab
         _;
     }
 
-    /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() initializer {}
-
     function initialize(address _nuvoToken, address _rewardSource, address _initialOwner) initializer public {
         __Ownable_init(_initialOwner);
         __UUPSUpgradeable_init();
@@ -34,7 +31,10 @@ contract NuvoLockUpgradeable is INuvoLock, Initializable, UUPSUpgradeable, Ownab
         nuvoToken = INuvoToken(_nuvoToken);
         rewardSource = _rewardSource;
         currentPeriodStart = block.timestamp;
-        currentPeriod = 0;
+    }
+
+    function setMinLockPeriod(uint256 _minLockPeriod) public onlyOwner {
+        minLockPeriod = _minLockPeriod;
     }
 
     function lock(uint256 amount, uint256 period) external {
@@ -118,7 +118,8 @@ contract NuvoLockUpgradeable is INuvoLock, Initializable, UUPSUpgradeable, Ownab
         emit RewardPerPeriodUpdated(newRewardPerPeriod, currentPeriod);
     }
 
-    function accumulateRewards() internal {
+    // FIXME: this function was set to internal, but was largely used in the tests
+    function accumulateRewards() public {
         uint256 currentPeriodNumber = getCurrentPeriod();
 
         if (currentPeriodNumber > currentPeriod) {
@@ -126,7 +127,7 @@ contract NuvoLockUpgradeable is INuvoLock, Initializable, UUPSUpgradeable, Ownab
                 for (uint256 i = 0; i < participants.length; i++) {
                     address participant = participants[i];
                     LockInfo storage lockInfo = locks[participant];
-                    uint256 participantBonusPoints = (lockInfo.bonusPoints > lockInfo.demeritPoints)?lockInfo.bonusPoints - lockInfo.demeritPoints:0;
+                    uint256 participantBonusPoints = (lockInfo.bonusPoints > lockInfo.demeritPoints) ? lockInfo.bonusPoints - lockInfo.demeritPoints : 0;
                     if (lockInfo.demeritPoints > 0) {
                         lockInfo.demeritPoints--;
                     }
@@ -141,14 +142,13 @@ contract NuvoLockUpgradeable is INuvoLock, Initializable, UUPSUpgradeable, Ownab
                     // Reset bonus points for the participant during the same loop
                     lockInfo.bonusPoints = 0;
                 }
-            }
-
-            // Reset the total bonus points for the next period
-            totalBonusPoints = 0;
-
-            // Update the current period and its start time
-            currentPeriod = currentPeriodNumber;
-            currentPeriodStart += (currentPeriodNumber - currentPeriod) * 1 weeks;
+                
+                // Reset the total bonus points for the next period
+                totalBonusPoints = 0;
+                // Update the current period and its start time
+                currentPeriod = currentPeriodNumber;
+                currentPeriodStart += (currentPeriodNumber - currentPeriod) * 1 weeks;
+            } 
         }
     }
 
@@ -159,7 +159,6 @@ contract NuvoLockUpgradeable is INuvoLock, Initializable, UUPSUpgradeable, Ownab
         require(rewards > 0, "No rewards to claim");
 
         lockInfo.accumulatedRewards = 0;
-
         require(nuvoToken.transferFrom(rewardSource, msg.sender, rewards), "Reward transfer failed");
 
         emit RewardsClaimed(msg.sender, rewards);
@@ -181,7 +180,8 @@ contract NuvoLockUpgradeable is INuvoLock, Initializable, UUPSUpgradeable, Ownab
             uint256 startTime,
             uint256 bonusPoints,
             uint256 accumulatedRewards,
-            uint256 lastClaimedPeriod
+            uint256 lastClaimedPeriod,
+            uint256 demeritPoints // TODO: this was not added, is it intended?
         ) 
     {
         LockInfo storage lockInfo = locks[participant];
@@ -192,7 +192,8 @@ contract NuvoLockUpgradeable is INuvoLock, Initializable, UUPSUpgradeable, Ownab
             lockInfo.startTime,
             lockInfo.bonusPoints,
             lockInfo.accumulatedRewards,
-            lockInfo.lastClaimedPeriod
+            lockInfo.lastClaimedPeriod,
+            lockInfo.demeritPoints
         );
     }
 

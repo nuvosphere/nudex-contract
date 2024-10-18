@@ -2,32 +2,38 @@
 pragma solidity ^0.8.0;
 
 contract MockParticipantManager {
-    mapping(address => bool) private participants;
+    // mapping(address => bool) private participants;
+    address[] public participants;
+    mapping(address => bool) public isParticipant;
 
-    // Function to mock the setting of participant status
-    function mockSetParticipant(address participant, bool status) external {
-        participants[participant] = status;
+    function getParticipants() external view returns (address[] memory) {
+        return participants;
     }
 
-    // Function to add a participant
-    function addParticipant(address participant) external {
-        require(!participants[participant], "Already a participant");
-        participants[participant] = true;
+    function setParticipant(uint _index, address _addr) external {
+        participants[_index] = _addr;
     }
 
-    // Function to remove a participant
+    function addParticipant(address newParticipant) external {
+        require(!isParticipant[newParticipant], "Already a participant");
+        participants.push(newParticipant);
+        isParticipant[newParticipant] = true;
+    }
+
     function removeParticipant(address participant) external {
-        require(participants[participant], "Not a participant");
-        participants[participant] = false;
-    }
-
-    // Function that checks if an address is a participant
-    function isParticipant(address participant) external view returns (bool) {
-        return participants[participant];
+        require(isParticipant[participant], "Not a participant");
+        isParticipant[participant] = false;
+        for (uint256 i = 0; i < participants.length; i++) {
+            if (participants[i] == participant) {
+                participants[i] = participants[participants.length - 1];
+                participants.pop();
+                break;
+            }
+        }
     }
 
     // Optionally: Function to simulate participant checks for more advanced tests
     function simulateCheck(address participant, bool expected) external view {
-        require(participants[participant] == expected, "Participant status mismatch");
+        require(isParticipant[participant] == expected, "Participant status mismatch");
     }
 }

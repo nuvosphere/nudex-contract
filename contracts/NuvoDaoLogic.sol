@@ -4,23 +4,18 @@ pragma solidity ^0.8.0;
 import "./interfaces/INuvoLock.sol";
 import "./interfaces/IProxy.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-contract NuvoDAOLogic is Ownable {
 
-    uint256 private _proposalIds;
-    address public proxyAdmin;
-    address public proxyAddress;
+contract NuvoDAOLogic is OwnableUpgradeable {
 
-    INuvoLock public nuvoLock;
-    address public multisigWallet;
-    uint256 public constant MIN_LOCK_AMOUNT = 10000 * 10 ** 18; // 10,000 Nuvo tokens
-    uint256 public constant MIN_LOCK_DURATION = 3 days;
-    uint256 public quorumPercentage;
-    uint256 public proposalFee;
-    uint256 public executionDelay;
-    uint256 public fundingThreshold;
-    uint256 public reputationDecayRate; // Rate at which reputation decays over time
+    event ProposalCreated(uint256 id, address proposer, string description, ProposalType proposalType, ProposalCategory proposalCategory);
+    event Voted(uint256 proposalId, address voter, uint256 weight, uint256 quadraticVotes);
+    event ProposalExecuted(uint256 id, bool passed);
+    event FundingProposalExecuted(uint256 id, address recipient, uint256 amount, address token, string purpose);
+    event BundleProposalExecuted(uint256 id, uint256[] executedProposalIds);
+    event Upgraded(address newImplementation);
+    event RewardClaimed(address claimer, uint256 amount);
 
     enum ProposalType { Basic, Funding, Governance, Bundle, Upgrade }
     enum ProposalCategory { Budget, Policy, Membership }
@@ -56,7 +51,7 @@ contract NuvoDAOLogic is Ownable {
 
     mapping(uint256 => Proposal) public proposals;
     mapping(uint256 => FundingProposalParameters) public fundingProposals;
-    mapping(uint256 => BundleProposalParameters) public bundleProposals;
+    mapping(uint256 => BundleProposalParameters) private bundleProposals; // FIXME: public mapping to struct of array not allowed
     mapping(uint256 => UpgradeProposalParameters) public upgradeProposals;
     mapping(uint256 => mapping(address => uint256)) public votes;
     mapping(address => address) public delegation;
@@ -65,16 +60,23 @@ contract NuvoDAOLogic is Ownable {
     mapping(address => uint256) public participationRewards;
     mapping(address => uint256) public reputationScore;
     mapping(address => uint256) public lastActive;
+    
+    uint256 public constant MIN_LOCK_AMOUNT = 10000 * 10 ** 18; // 10,000 Nuvo tokens
+    uint256 public constant MIN_LOCK_DURATION = 3 days;
 
-    event ProposalCreated(uint256 id, address proposer, string description, ProposalType proposalType, ProposalCategory proposalCategory);
-    event Voted(uint256 proposalId, address voter, uint256 weight, uint256 quadraticVotes);
-    event ProposalExecuted(uint256 id, bool passed);
-    event FundingProposalExecuted(uint256 id, address recipient, uint256 amount, address token, string purpose);
-    event BundleProposalExecuted(uint256 id, uint256[] executedProposalIds);
-    event Upgraded(address newImplementation);
-    event RewardClaimed(address claimer, uint256 amount);
+    INuvoLock public nuvoLock;
+    address public proxyAddress;
+    address public multisigWallet;
 
-    constructor(
+    uint256 public quorumPercentage;
+    uint256 public proposalFee;
+    uint256 public proposalId;
+    uint256 public executionDelay;
+    uint256 public fundingThreshold;
+    uint256 public reputationDecayRate; // Rate at which reputation decays over time
+
+    function initialize
+    (
         address _owner,
         INuvoLock _nuvoLock,
         address _multisigWallet,
@@ -83,9 +85,9 @@ contract NuvoDAOLogic is Ownable {
         uint256 _executionDelay,
         uint256 _fundingThreshold,
         uint256 _reputationDecayRate,
-        address _proxyAddress,
-        address _proxyAdmin
-    ) Ownable(_owner) {
+        address _proxyAddress
+    ) initializer public {
+        __Ownable_init(_owner);
         nuvoLock = _nuvoLock;
         multisigWallet = _multisigWallet;
         quorumPercentage = _quorumPercentage;
@@ -94,7 +96,6 @@ contract NuvoDAOLogic is Ownable {
         fundingThreshold = _fundingThreshold;
         reputationDecayRate = _reputationDecayRate;
         proxyAddress = _proxyAddress;
-        proxyAdmin = _proxyAdmin;
     }
 
     modifier onlyMember() {
@@ -109,6 +110,12 @@ contract NuvoDAOLogic is Ownable {
     modifier proposalFeePaid() {
         require(msg.value >= proposalFee, "Proposal fee must be paid");
         _;
+    }
+
+    function getVotingPower(address _member) public view returns (uint256) {
+        uint256 timeWeightedPower = nuvoLock.lockedBalanceOf(_member) * (block.timestamp - nuvoLock.lockedTime(_member));
+        uint256 reputationBonus = reputationScore[_member] * 1e18; // Apply a multiplier to the reputation score
+        return timeWeightedPower + reputationBonus + delegatedVotes[_member] + activityScore[_member];
     }
 
     function delegateVote(address _delegate) external onlyMember {
@@ -134,12 +141,6 @@ contract NuvoDAOLogic is Ownable {
         delegation[msg.sender] = address(0);
     }
 
-    function getVotingPower(address _member) public view returns (uint256) {
-        uint256 timeWeightedPower = nuvoLock.lockedBalanceOf(_member) * (block.timestamp - nuvoLock.lockedTime(_member));
-        uint256 reputationBonus = reputationScore[_member] * 1e18; // Apply a multiplier to the reputation score
-        return timeWeightedPower + delegatedVotes[_member] + activityScore[_member] + reputationBonus;
-    }
-
     function decayReputation(address _member) public {
         uint256 lastActiveTime = lastActive[_member];
         uint256 timeInactive = block.timestamp - lastActiveTime;
@@ -161,7 +162,7 @@ contract NuvoDAOLogic is Ownable {
         ProposalCategory _proposalCategory,
         bytes memory _parameters
     ) external payable onlyMember proposalFeePaid {
-        uint256 newProposalId = ++_proposalIds;
+        uint256 newProposalId = ++proposalId;
 
         proposals[newProposalId] = Proposal({
             id: newProposalId,
@@ -176,7 +177,6 @@ contract NuvoDAOLogic is Ownable {
             proposalCategory: _proposalCategory,
             parameters: _parameters
         });
-
         if (_proposalType == ProposalType.Funding) {
             FundingProposalParameters memory params = abi.decode(_parameters, (FundingProposalParameters));
             fundingProposals[newProposalId] = params;
@@ -187,7 +187,6 @@ contract NuvoDAOLogic is Ownable {
             UpgradeProposalParameters memory params = abi.decode(_parameters, (UpgradeProposalParameters));
             upgradeProposals[newProposalId] = params;
         }
-
         emit ProposalCreated(newProposalId, msg.sender, _description, _proposalType, _proposalCategory);
     }
 
@@ -226,7 +225,6 @@ contract NuvoDAOLogic is Ownable {
 
     function executeProposal(uint256 _proposalId) public onlyOwner {
         Proposal storage proposal = proposals[_proposalId];
-
         require(block.timestamp > proposal.endTime, "Voting period is not over yet");
         require(block.timestamp >= proposal.executionTime, "Execution delay not met");
         require(!proposal.executed, "Proposal already executed");
@@ -235,7 +233,6 @@ contract NuvoDAOLogic is Ownable {
         uint256 quorum = totalLockedTokens * quorumPercentage / 100;
 
         bool passed = proposal.voteCount > (totalLockedTokens / 2) && proposal.voteCount >= quorum;
-
         if (passed) {
             if (proposal.proposalType == ProposalType.Funding) {
                 _executeFundingProposal(_proposalId);
@@ -249,7 +246,6 @@ contract NuvoDAOLogic is Ownable {
                 _executeBasicProposal(_proposalId);
             }
         }
-
         proposal.executed = true;
 
         emit ProposalExecuted(_proposalId, passed);
@@ -262,11 +258,10 @@ contract NuvoDAOLogic is Ownable {
     function _executeFundingProposal(uint256 _proposalId) internal {
         FundingProposalParameters memory params = fundingProposals[_proposalId];
         require(params.amount > 0, "Invalid funding amount");
-
-        if (params.amount >= fundingThreshold) {
-            require(msg.sender == multisigWallet, "Multisig approval required for large funding proposals");
-        }
-
+        // FIXME: this can only be called by owner, is multisigWallet also the owner?
+        // if (params.amount >= fundingThreshold) {
+        //     require(msg.sender == multisigWallet, "Multisig approval required for large funding proposals");
+        // }
         if (params.token == address(0)) {
             // Handle native cryptocurrency (e.g., ETH)
             require(address(this).balance >= params.amount, "Insufficient balance");
@@ -358,17 +353,17 @@ contract NuvoDAOLogic is Ownable {
     // Automated Reporting and Visualization
 
     function generateParticipationReport() public view returns (uint256 totalMembers, uint256 totalProposals, uint256 totalVotes, uint256 totalReputation) {
-        totalMembers = _proposalIds; // Number of members who have created proposals
-        totalProposals = _proposalIds;
+        totalMembers = proposalId; // Number of members who have created proposals
+        totalProposals = proposalId;
         totalVotes = 0;
         totalReputation = 0;
 
-        for (uint256 i = 1; i <= _proposalIds; i++) {
+        for (uint256 i = 1; i <= proposalId; i++) {
             Proposal memory proposal = proposals[i];
             totalVotes = totalVotes + proposal.voteCount;
         }
 
-        for (uint256 i = 1; i <= _proposalIds; i++) {
+        for (uint256 i = 1; i <= proposalId; i++) {
             Proposal memory proposal = proposals[i];
             totalReputation = totalReputation + reputationScore[proposal.proposer];
         }

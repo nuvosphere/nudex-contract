@@ -2,25 +2,14 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "./interfaces/INuDexOperations.sol";
 import "./interfaces/IParticipantManager.sol";
 
-contract NuDexOperations is OwnableUpgradeable {
-    struct Task {
-        uint256 id;
-        string description;
-        address submitter;
-        bool isCompleted;
-        uint256 createdAt;
-        uint256 completedAt;
-        bytes result;
-    }
+contract NuDexOperations is INuDexOperations, OwnableUpgradeable {
 
     uint256 public nextTaskId;
     mapping(uint256 => Task) public tasks;
     IParticipantManager public participantManager;
-
-    event TaskSubmitted(uint256 indexed taskId, string description, address indexed submitter);
-    event TaskCompleted(uint256 indexed taskId, address indexed submitter, uint256 completedAt);
 
     modifier onlyParticipant() {
         require(participantManager.isParticipant(msg.sender), "Not a participant");

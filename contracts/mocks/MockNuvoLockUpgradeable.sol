@@ -13,7 +13,10 @@ contract MockNuvoLockUpgradeable {
         uint256 demeritPoints;
     }
 
+    uint256 public currentPeriod;
+
     mapping(address => LockInfo) public locks;
+    mapping(uint256 => uint256) public rewardPerPeriod;
 
     function accumulateBonusPoints(address participant) external {
         locks[participant].bonusPoints += 1;
@@ -21,6 +24,14 @@ contract MockNuvoLockUpgradeable {
 
     function accumulateDemeritPoints(address participant) external {
         locks[participant].demeritPoints += 1;
+    }
+
+    function setCurrentPeriod(uint256 _currentPeriod) external {
+        currentPeriod = _currentPeriod;
+    }
+
+    function setRewardPerPeriod(uint256 newRewardPerPeriod) external {
+        rewardPerPeriod[currentPeriod] = newRewardPerPeriod;
     }
 
     function getLockInfo(address participant) external view returns (
