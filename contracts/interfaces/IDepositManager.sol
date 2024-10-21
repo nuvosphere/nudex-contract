@@ -2,6 +2,15 @@
 pragma solidity ^0.8.0;
 
 interface IDepositManager {
+
+    event DepositRecorded(
+        address indexed targetAddress,
+        uint256 indexed amount,
+        uint256 indexed chainId,
+        bytes txInfo,
+        bytes extraInfo
+    );
+
     struct DepositInfo {
         address targetAddress;
         uint256 amount;
@@ -9,14 +18,6 @@ interface IDepositManager {
         uint256 chainId;
         bytes extraInfo;
     }
-
-    event DepositRecorded(
-        address indexed targetAddress,
-        uint256 amount,
-        bytes txInfo,
-        uint256 chainId,
-        bytes extraInfo
-    );
 
     function recordDeposit(
         address targetAddress,

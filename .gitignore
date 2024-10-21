@@ -5,9 +5,11 @@ node_modules
 # formatter
 .prettierrc
 
-# Hardhat files
+# cache files
 /cache
+/cache_forge
 /artifacts
+/out
 
 # TypeChain files
 /typechain

@@ -2,10 +2,15 @@
 pragma solidity ^0.8.0;
 
 import "./interfaces/IDepositManager.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-contract DepositManager is IDepositManager {
+contract DepositManager is IDepositManager, OwnableUpgradeable {
 
     mapping(address => DepositInfo[]) public deposits;
+
+    function initialize(address _owner) public initializer {
+        __Ownable_init(_owner);
+    }
 
     function recordDeposit(
         address targetAddress,
@@ -24,7 +29,7 @@ contract DepositManager is IDepositManager {
 
         deposits[targetAddress].push(newDeposit);
 
-        emit DepositRecorded(targetAddress, amount, txInfo, chainId, extraInfo);
+        emit DepositRecorded(targetAddress, amount, chainId, txInfo, extraInfo);
     }
 
     function getDeposits(address targetAddress) external view returns (DepositInfo[] memory) {
