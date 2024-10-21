@@ -6,19 +6,39 @@ import "./interfaces/IProxy.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-
-contract NuvoDAOLogic is OwnableUpgradeable {
-
-    event ProposalCreated(uint256 id, address proposer, string description, ProposalType proposalType, ProposalCategory proposalCategory);
+contract NuvoDAOUpgradeable is OwnableUpgradeable {
+    event ProposalCreated(
+        uint256 id,
+        address proposer,
+        string description,
+        ProposalType proposalType,
+        ProposalCategory proposalCategory
+    );
     event Voted(uint256 proposalId, address voter, uint256 weight, uint256 quadraticVotes);
     event ProposalExecuted(uint256 id, bool passed);
-    event FundingProposalExecuted(uint256 id, address recipient, uint256 amount, address token, string purpose);
+    event FundingProposalExecuted(
+        uint256 id,
+        address recipient,
+        uint256 amount,
+        address token,
+        string purpose
+    );
     event BundleProposalExecuted(uint256 id, uint256[] executedProposalIds);
     event Upgraded(address newImplementation);
     event RewardClaimed(address claimer, uint256 amount);
 
-    enum ProposalType { Basic, Funding, Governance, Bundle, Upgrade }
-    enum ProposalCategory { Budget, Policy, Membership }
+    enum ProposalType {
+        Basic,
+        Funding,
+        Governance,
+        Bundle,
+        Upgrade
+    }
+    enum ProposalCategory {
+        Budget,
+        Policy,
+        Membership
+    }
 
     struct Proposal {
         uint256 id;
@@ -60,7 +80,7 @@ contract NuvoDAOLogic is OwnableUpgradeable {
     mapping(address => uint256) public participationRewards;
     mapping(address => uint256) public reputationScore;
     mapping(address => uint256) public lastActive;
-    
+
     uint256 public constant MIN_LOCK_AMOUNT = 10000 * 10 ** 18; // 10,000 Nuvo tokens
     uint256 public constant MIN_LOCK_DURATION = 3 days;
 
@@ -75,8 +95,7 @@ contract NuvoDAOLogic is OwnableUpgradeable {
     uint256 public fundingThreshold;
     uint256 public reputationDecayRate; // Rate at which reputation decays over time
 
-    function initialize
-    (
+    function initialize(
         address _owner,
         INuvoLock _nuvoLock,
         address _multisigWallet,
@@ -86,7 +105,7 @@ contract NuvoDAOLogic is OwnableUpgradeable {
         uint256 _fundingThreshold,
         uint256 _reputationDecayRate,
         address _proxyAddress
-    ) initializer public {
+    ) public initializer {
         __Ownable_init(_owner);
         nuvoLock = _nuvoLock;
         multisigWallet = _multisigWallet;
@@ -101,7 +120,7 @@ contract NuvoDAOLogic is OwnableUpgradeable {
     modifier onlyMember() {
         require(
             nuvoLock.lockedBalanceOf(msg.sender) >= MIN_LOCK_AMOUNT &&
-            nuvoLock.lockedTime(msg.sender) >= MIN_LOCK_DURATION,
+                nuvoLock.lockedTime(msg.sender) >= MIN_LOCK_DURATION,
             "You must lock at least 10,000 Nuvo tokens for 3 days to participate."
         );
         _;
@@ -113,14 +132,19 @@ contract NuvoDAOLogic is OwnableUpgradeable {
     }
 
     function getVotingPower(address _member) public view returns (uint256) {
-        uint256 timeWeightedPower = nuvoLock.lockedBalanceOf(_member) * (block.timestamp - nuvoLock.lockedTime(_member));
+        uint256 timeWeightedPower = nuvoLock.lockedBalanceOf(_member) *
+            (block.timestamp - nuvoLock.lockedTime(_member));
         uint256 reputationBonus = reputationScore[_member] * 1e18; // Apply a multiplier to the reputation score
-        return timeWeightedPower + reputationBonus + delegatedVotes[_member] + activityScore[_member];
+        return
+            timeWeightedPower + reputationBonus + delegatedVotes[_member] + activityScore[_member];
     }
 
     function delegateVote(address _delegate) external onlyMember {
         require(_delegate != msg.sender, "You cannot delegate to yourself");
-        require(nuvoLock.lockedBalanceOf(_delegate) >= MIN_LOCK_AMOUNT, "Delegate must be a valid DAO member");
+        require(
+            nuvoLock.lockedBalanceOf(_delegate) >= MIN_LOCK_AMOUNT,
+            "Delegate must be a valid DAO member"
+        );
 
         // Revoke previous delegation if it exists
         address previousDelegate = delegation[msg.sender];
@@ -178,16 +202,31 @@ contract NuvoDAOLogic is OwnableUpgradeable {
             parameters: _parameters
         });
         if (_proposalType == ProposalType.Funding) {
-            FundingProposalParameters memory params = abi.decode(_parameters, (FundingProposalParameters));
+            FundingProposalParameters memory params = abi.decode(
+                _parameters,
+                (FundingProposalParameters)
+            );
             fundingProposals[newProposalId] = params;
         } else if (_proposalType == ProposalType.Bundle) {
-            BundleProposalParameters memory params = abi.decode(_parameters, (BundleProposalParameters));
+            BundleProposalParameters memory params = abi.decode(
+                _parameters,
+                (BundleProposalParameters)
+            );
             bundleProposals[newProposalId] = params;
         } else if (_proposalType == ProposalType.Upgrade) {
-            UpgradeProposalParameters memory params = abi.decode(_parameters, (UpgradeProposalParameters));
+            UpgradeProposalParameters memory params = abi.decode(
+                _parameters,
+                (UpgradeProposalParameters)
+            );
             upgradeProposals[newProposalId] = params;
         }
-        emit ProposalCreated(newProposalId, msg.sender, _description, _proposalType, _proposalCategory);
+        emit ProposalCreated(
+            newProposalId,
+            msg.sender,
+            _description,
+            _proposalType,
+            _proposalCategory
+        );
     }
 
     function vote(uint256 _proposalId, uint256 _voteCount) external onlyMember {
@@ -230,7 +269,7 @@ contract NuvoDAOLogic is OwnableUpgradeable {
         require(!proposal.executed, "Proposal already executed");
 
         uint256 totalLockedTokens = nuvoLock.totalLocked();
-        uint256 quorum = totalLockedTokens * quorumPercentage / 100;
+        uint256 quorum = (totalLockedTokens * quorumPercentage) / 100;
 
         bool passed = proposal.voteCount > (totalLockedTokens / 2) && proposal.voteCount >= quorum;
         if (passed) {
@@ -271,7 +310,13 @@ contract NuvoDAOLogic is OwnableUpgradeable {
             IERC20(params.token).transfer(params.recipient, params.amount);
         }
 
-        emit FundingProposalExecuted(_proposalId, params.recipient, params.amount, params.token, params.purpose);
+        emit FundingProposalExecuted(
+            _proposalId,
+            params.recipient,
+            params.amount,
+            params.token,
+            params.purpose
+        );
     }
 
     function _executeGovernanceProposal(uint256 _proposalId, bytes memory _parameters) internal {
@@ -352,7 +397,16 @@ contract NuvoDAOLogic is OwnableUpgradeable {
 
     // Automated Reporting and Visualization
 
-    function generateParticipationReport() public view returns (uint256 totalMembers, uint256 totalProposals, uint256 totalVotes, uint256 totalReputation) {
+    function generateParticipationReport()
+        public
+        view
+        returns (
+            uint256 totalMembers,
+            uint256 totalProposals,
+            uint256 totalVotes,
+            uint256 totalReputation
+        )
+    {
         totalMembers = proposalId; // Number of members who have created proposals
         totalProposals = proposalId;
         totalVotes = 0;
@@ -380,12 +434,19 @@ contract NuvoDAOLogic is OwnableUpgradeable {
 
         (totalMembers, totalProposals, totalVotes, totalReputation) = generateParticipationReport();
 
-        return string(abi.encodePacked(
-            "Total Members: ", uint2str(totalMembers), 
-            ", Total Proposals: ", uint2str(totalProposals), 
-            ", Total Votes: ", uint2str(totalVotes), 
-            ", Total Reputation: ", uint2str(totalReputation)
-        ));
+        return
+            string(
+                abi.encodePacked(
+                    "Total Members: ",
+                    uint2str(totalMembers),
+                    ", Total Proposals: ",
+                    uint2str(totalProposals),
+                    ", Total Votes: ",
+                    uint2str(totalVotes),
+                    ", Total Reputation: ",
+                    uint2str(totalReputation)
+                )
+            );
     }
 
     // Utility function to convert uint to string
@@ -402,8 +463,8 @@ contract NuvoDAOLogic is OwnableUpgradeable {
         bytes memory bstr = new bytes(len);
         uint k = len;
         while (_i != 0) {
-            k = k-1;
-            uint8 temp = (48 + uint8(_i - _i / 10 * 10));
+            k = k - 1;
+            uint8 temp = (48 + uint8(_i - (_i / 10) * 10));
             bytes1 b1 = bytes1(temp);
             bstr[k] = b1;
             _i /= 10;

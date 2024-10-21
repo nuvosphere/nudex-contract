@@ -2,21 +2,31 @@
 pragma solidity ^0.8.0;
 
 import "./interfaces/IAssetManager.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-contract AssetManager is IAssetManager {
-    
+contract AssetManagerUpgradeable is IAssetManager, OwnableUpgradeable {
     // Mapping from asset identifiers to their details
     mapping(bytes32 => Asset) public assets;
     // Array of asset identifiers
     bytes32[] public assetList;
 
     // Create a unique identifier for an asset based on its type, address, and chain ID
-    function getAssetIdentifier(AssetType assetType, address contractAddress, uint256 chainId) public pure returns (bytes32) {
+    function getAssetIdentifier(
+        AssetType assetType,
+        address contractAddress,
+        uint256 chainId
+    ) public pure returns (bytes32) {
         return keccak256(abi.encodePacked(assetType, contractAddress, chainId));
     }
 
     // List a new asset on the specified chain
-    function listAsset(string memory name, string memory nuDexName, AssetType assetType, address contractAddress, uint256 chainId) external {
+    function listAsset(
+        string memory name,
+        string memory nuDexName,
+        AssetType assetType,
+        address contractAddress,
+        uint256 chainId
+    ) external {
         bytes32 assetId = getAssetIdentifier(assetType, contractAddress, chainId);
         require(!assets[assetId].isListed, "Asset already listed");
 
@@ -46,7 +56,11 @@ contract AssetManager is IAssetManager {
     }
 
     // Check if an asset is listed
-    function isAssetListed(AssetType assetType, address contractAddress, uint256 chainId) external view returns (bool) {
+    function isAssetListed(
+        AssetType assetType,
+        address contractAddress,
+        uint256 chainId
+    ) external view returns (bool) {
         bytes32 assetId = getAssetIdentifier(assetType, contractAddress, chainId);
         return assets[assetId].isListed;
     }

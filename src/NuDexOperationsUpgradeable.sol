@@ -5,8 +5,7 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "./interfaces/INuDexOperations.sol";
 import "./interfaces/IParticipantManager.sol";
 
-contract NuDexOperations is INuDexOperations, OwnableUpgradeable {
-
+contract NuDexOperationsUpgradeable is INuDexOperations, OwnableUpgradeable {
     uint256 public nextTaskId;
     mapping(uint256 => Task) public tasks;
     IParticipantManager public participantManager;
@@ -72,5 +71,4 @@ contract NuDexOperations is INuDexOperations, OwnableUpgradeable {
     function isTaskCompleted(uint256 taskId) external view returns (bool) {
         return tasks[taskId].isCompleted;
     }
-
 }

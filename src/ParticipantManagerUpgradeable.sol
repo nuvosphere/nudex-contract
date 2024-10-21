@@ -5,7 +5,7 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "./interfaces/IParticipantManager.sol";
 import "./interfaces/INuvoLock.sol";
 
-contract ParticipantManager is IParticipantManager, OwnableUpgradeable {
+contract ParticipantManagerUpgradeable is IParticipantManager, OwnableUpgradeable {
     INuvoLock public nuvoLock;
     uint256 public minLockAmount;
     uint256 public minLockPeriod;
@@ -13,12 +13,18 @@ contract ParticipantManager is IParticipantManager, OwnableUpgradeable {
     address[] public participants;
     mapping(address => bool) public isParticipant;
 
-    function initialize(address _nuvoLock, uint256 _minLockAmount, uint256 _minLockPeriod, address _owner, address _initialParticipant) initializer public {
+    function initialize(
+        address _nuvoLock,
+        uint256 _minLockAmount,
+        uint256 _minLockPeriod,
+        address _owner,
+        address _initialParticipant
+    ) public initializer {
         __Ownable_init(_owner);
         nuvoLock = INuvoLock(_nuvoLock);
         minLockAmount = _minLockAmount;
         minLockPeriod = _minLockPeriod;
-        
+
         participants.push(_initialParticipant);
         isParticipant[_initialParticipant] = true;
     }
@@ -49,7 +55,7 @@ contract ParticipantManager is IParticipantManager, OwnableUpgradeable {
     }
 
     function isEligible(address participant) public view returns (bool) {
-        (uint256 amount, uint256 unlockTime, , , , , ,) = nuvoLock.getLockInfo(participant);
+        (uint256 amount, uint256 unlockTime, , , , , , ) = nuvoLock.getLockInfo(participant);
         return amount >= minLockAmount && unlockTime >= block.timestamp + minLockPeriod;
     }
 

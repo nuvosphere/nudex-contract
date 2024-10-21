@@ -10,7 +10,7 @@ import "./interfaces/IParticipantManager.sol";
 import "./interfaces/INuDexOperations.sol";
 import "./interfaces/INuvoLock.sol";
 
-contract VotingManager is OwnableUpgradeable, ReentrancyGuardUpgradeable {
+contract VotingManagerUpgradeable is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     IAccountManager public accountManager;
     IAssetManager public assetManager;
     IDepositManager public depositManager;
@@ -24,14 +24,25 @@ contract VotingManager is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     uint256 public constant taskCompletionThreshold = 1 hours;
 
     event SubmitterChosen(address indexed newSubmitter);
-    event DepositInfoSubmitted(address indexed targetAddress, uint256 amount, bytes txInfo, uint256 chainId, bytes extraInfo);
+    event DepositInfoSubmitted(
+        address indexed targetAddress,
+        uint256 amount,
+        bytes txInfo,
+        uint256 chainId,
+        bytes extraInfo
+    );
     event RewardPerPeriodVoted(uint256 newRewardPerPeriod);
     event ParticipantAdded(address indexed newParticipant);
     event ParticipantRemoved(address indexed participant);
     event SubmitterRotationRequested(address indexed requester, address indexed currentSubmitter);
     event AssetListed(bytes32 indexed assetId);
     event AssetDelisted(bytes32 indexed assetId);
-    event TaskCompleted(uint256 indexed taskId, address indexed submitter, uint256 completedAt, bytes taskResult);
+    event TaskCompleted(
+        uint256 indexed taskId,
+        address indexed submitter,
+        uint256 completedAt,
+        bytes taskResult
+    );
 
     modifier onlyParticipant() {
         require(participantManager.isParticipant(msg.sender), "Not a participant");
@@ -44,7 +55,15 @@ contract VotingManager is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         _;
     }
 
-    function initialize(address _accountManager, address _assetManager, address _depositManager, address _participantManager, address _nuDexOperations, address _nuvoLock, address _initialOwner) initializer public {
+    function initialize(
+        address _accountManager,
+        address _assetManager,
+        address _depositManager,
+        address _participantManager,
+        address _nuDexOperations,
+        address _nuvoLock,
+        address _initialOwner
+    ) public initializer {
         __Ownable_init(_initialOwner);
         __ReentrancyGuard_init();
         accountManager = IAccountManager(_accountManager);
@@ -56,7 +75,10 @@ contract VotingManager is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         lastSubmissionTime = block.timestamp;
     }
 
-    function addParticipant(address newParticipant, bytes memory signature) external onlyCurrentSubmitter nonReentrant {
+    function addParticipant(
+        address newParticipant,
+        bytes memory signature
+    ) external onlyCurrentSubmitter nonReentrant {
         require(verifySignature(abi.encodePacked(newParticipant), signature), "Invalid signature");
         participantManager.addParticipant(newParticipant);
         rotateSubmitter();
@@ -64,7 +86,10 @@ contract VotingManager is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         emit ParticipantAdded(newParticipant);
     }
 
-    function removeParticipant(address participant, bytes memory signature) external onlyCurrentSubmitter nonReentrant {
+    function removeParticipant(
+        address participant,
+        bytes memory signature
+    ) external onlyCurrentSubmitter nonReentrant {
         require(verifySignature(abi.encodePacked(participant), signature), "Invalid signature");
 
         participantManager.removeParticipant(participant);
@@ -73,10 +98,19 @@ contract VotingManager is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         emit ParticipantRemoved(participant);
     }
 
-    function chooseNewSubmitter(address currentSubmitter, bytes memory signature) external onlyParticipant nonReentrant {
-        require(verifySignature(abi.encodePacked(currentSubmitter), signature), "Invalid signature");
+    function chooseNewSubmitter(
+        address currentSubmitter,
+        bytes memory signature
+    ) external onlyParticipant nonReentrant {
+        require(
+            verifySignature(abi.encodePacked(currentSubmitter), signature),
+            "Invalid signature"
+        );
         require(currentSubmitter == getCurrentSubmitter(), "Incorrect current submitter");
-        require(block.timestamp >= lastSubmissionTime + forcedRotationWindow, "Submitter rotation not allowed yet");
+        require(
+            block.timestamp >= lastSubmissionTime + forcedRotationWindow,
+            "Submitter rotation not allowed yet"
+        );
 
         // Check for uncompleted tasks and apply demerit points if needed
         INuDexOperations.Task[] memory uncompletedTasks = nuDexOperations.getUncompletedTasks();
@@ -96,10 +130,16 @@ contract VotingManager is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         uint256 amount,
         bytes memory txInfo,
         uint256 chainId,
-        bytes memory extraInfo,  // Added extraInfo parameter
+        bytes memory extraInfo, // Added extraInfo parameter
         bytes memory signature
     ) external onlyCurrentSubmitter nonReentrant {
-        bytes memory encodedParams = abi.encodePacked(targetAddress, amount, txInfo, chainId, extraInfo);
+        bytes memory encodedParams = abi.encodePacked(
+            targetAddress,
+            amount,
+            txInfo,
+            chainId,
+            extraInfo
+        );
         require(verifySignature(encodedParams, signature), "Invalid signature");
 
         depositManager.recordDeposit(targetAddress, amount, txInfo, chainId, extraInfo);
@@ -107,10 +147,13 @@ contract VotingManager is OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
         rotateSubmitter();
 
-        emit DepositInfoSubmitted(targetAddress, amount, txInfo, chainId, extraInfo);  // Updated event
+        emit DepositInfoSubmitted(targetAddress, amount, txInfo, chainId, extraInfo); // Updated event
     }
 
-    function setRewardPerPeriod(uint256 newRewardPerPeriod, bytes memory signature) external onlyCurrentSubmitter nonReentrant {
+    function setRewardPerPeriod(
+        uint256 newRewardPerPeriod,
+        bytes memory signature
+    ) external onlyCurrentSubmitter nonReentrant {
         bytes memory encodedParams = abi.encodePacked(newRewardPerPeriod);
         require(verifySignature(encodedParams, signature), "Invalid signature");
 
@@ -128,7 +171,13 @@ contract VotingManager is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         uint256 chainId,
         bytes memory signature
     ) external onlyCurrentSubmitter nonReentrant {
-        bytes memory encodedParams = abi.encodePacked(name, nuDexName, assetType, contractAddress, chainId);
+        bytes memory encodedParams = abi.encodePacked(
+            name,
+            nuDexName,
+            assetType,
+            contractAddress,
+            chainId
+        );
         require(verifySignature(encodedParams, signature), "Invalid signature");
         assetManager.listAsset(name, nuDexName, assetType, contractAddress, chainId);
         bytes32 assetId = assetManager.getAssetIdentifier(assetType, contractAddress, chainId);
@@ -155,7 +204,11 @@ contract VotingManager is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         emit AssetDelisted(assetId);
     }
 
-    function submitTaskReceipt(uint256 taskId, bytes memory result, bytes memory signature) external onlyCurrentSubmitter nonReentrant {
+    function submitTaskReceipt(
+        uint256 taskId,
+        bytes memory result,
+        bytes memory signature
+    ) external onlyCurrentSubmitter nonReentrant {
         require(!nuDexOperations.isTaskCompleted(taskId), "Task already completed");
         bytes memory encodedParams = abi.encodePacked(taskId, result);
         require(verifySignature(encodedParams, signature), "Invalid signature");
@@ -168,7 +221,14 @@ contract VotingManager is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         rotateSubmitter();
     }
 
-    function registerAccount(address _user, uint _account, IAccountManager.Chain _chain, uint _index, address _address, bytes memory _signature) external onlyCurrentSubmitter nonReentrant {
+    function registerAccount(
+        address _user,
+        uint _account,
+        IAccountManager.Chain _chain,
+        uint _index,
+        address _address,
+        bytes memory _signature
+    ) external onlyCurrentSubmitter nonReentrant {
         bytes memory encodedParams = abi.encodePacked(_user, _account, _chain, _index, _address);
         require(verifySignature(encodedParams, _signature), "Invalid signature");
         accountManager.registerNewAddress(_user, _account, _chain, _index, _address);
@@ -181,19 +241,28 @@ contract VotingManager is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         require(participants.length > 0, "No participants available");
         nuvoLock.accumulateBonusPoints(msg.sender);
 
-        uint256 randomIndex = uint256(keccak256(abi.encodePacked(
-            block.prevrandao, // instead of difficulty in PoS
-            block.timestamp,
-            blockhash(block.number - 1),
-            lastSubmitterIndex
-        ))) % participants.length;
+        uint256 randomIndex = uint256(
+            keccak256(
+                abi.encodePacked(
+                    block.prevrandao, // instead of difficulty in PoS
+                    block.timestamp,
+                    blockhash(block.number - 1),
+                    lastSubmitterIndex
+                )
+            )
+        ) % participants.length;
 
         lastSubmitterIndex = randomIndex;
         emit SubmitterChosen(participants[lastSubmitterIndex]);
     }
 
-    function verifySignature(bytes memory encodedParams, bytes memory signature) internal view returns (bool) {  
-        bytes32 hash = keccak256(abi.encodePacked(uint256ToString(encodedParams.length), encodedParams));
+    function verifySignature(
+        bytes memory encodedParams,
+        bytes memory signature
+    ) internal view returns (bool) {
+        bytes32 hash = keccak256(
+            abi.encodePacked(uint256ToString(encodedParams.length), encodedParams)
+        );
         bytes32 messageHash = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", hash));
         (bytes32 r, bytes32 s, uint8 v) = splitSignature(signature);
         address signer = ecrecover(messageHash, v, r, s);
@@ -201,7 +270,9 @@ contract VotingManager is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         return participantManager.isParticipant(signer);
     }
 
-    function splitSignature(bytes memory sig) internal pure returns (bytes32 r, bytes32 s, uint8 v) {
+    function splitSignature(
+        bytes memory sig
+    ) internal pure returns (bytes32 r, bytes32 s, uint8 v) {
         require(sig.length == 65, "Invalid signature length");
 
         assembly {
