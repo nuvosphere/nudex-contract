@@ -276,7 +276,7 @@ contract NuvoDAOUpgradeable is OwnableUpgradeable {
             if (proposal.proposalType == ProposalType.Funding) {
                 _executeFundingProposal(_proposalId);
             } else if (proposal.proposalType == ProposalType.Governance) {
-                _executeGovernanceProposal(_proposalId, proposal.parameters);
+                _executeGovernanceProposal(proposal.parameters);
             } else if (proposal.proposalType == ProposalType.Bundle) {
                 _executeBundleProposal(_proposalId);
             } else if (proposal.proposalType == ProposalType.Upgrade) {
@@ -319,7 +319,7 @@ contract NuvoDAOUpgradeable is OwnableUpgradeable {
         );
     }
 
-    function _executeGovernanceProposal(uint256 _proposalId, bytes memory _parameters) internal {
+    function _executeGovernanceProposal(bytes memory _parameters) internal {
         // Decode the parameters and adjust the DAO settings accordingly
         (
             uint256 newQuorumPercentage,

@@ -6,6 +6,10 @@ contract MockParticipantManager {
     address[] public participants;
     mapping(address => bool) public isParticipant;
 
+    constructor(address _participant) {
+        addParticipant(_participant);
+    }
+
     function getParticipants() external view returns (address[] memory) {
         return participants;
     }
@@ -14,7 +18,7 @@ contract MockParticipantManager {
         participants[_index] = _addr;
     }
 
-    function addParticipant(address newParticipant) external {
+    function addParticipant(address newParticipant) public {
         require(!isParticipant[newParticipant], "Already a participant");
         participants.push(newParticipant);
         isParticipant[newParticipant] = true;

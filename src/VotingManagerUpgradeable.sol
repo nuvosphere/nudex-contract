@@ -9,6 +9,7 @@ import "./interfaces/IDepositManager.sol";
 import "./interfaces/IParticipantManager.sol";
 import "./interfaces/INuDexOperations.sol";
 import "./interfaces/INuvoLock.sol";
+import {console} from "forge-std/console.sol";
 
 contract VotingManagerUpgradeable is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     IAccountManager public accountManager;

@@ -28,8 +28,12 @@ contract Proxy {
             returndatacopy(ptr, 0, size)
 
             switch result
-            case 0 { revert(ptr, size) }
-            default { return(ptr, size) }
+            case 0 {
+                revert(ptr, size)
+            }
+            default {
+                return(ptr, size)
+            }
         }
     }
 }
