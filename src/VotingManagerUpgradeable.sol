@@ -36,14 +36,6 @@ contract VotingManagerUpgradeable is OwnableUpgradeable, ReentrancyGuardUpgradea
     event ParticipantAdded(address indexed newParticipant);
     event ParticipantRemoved(address indexed participant);
     event SubmitterRotationRequested(address indexed requester, address indexed currentSubmitter);
-    event AssetListed(bytes32 indexed assetId);
-    event AssetDelisted(bytes32 indexed assetId);
-    event TaskCompleted(
-        uint256 indexed taskId,
-        address indexed submitter,
-        uint256 completedAt,
-        bytes taskResult
-    );
 
     modifier onlyParticipant() {
         require(participantManager.isParticipant(msg.sender), "Not a participant");
@@ -181,11 +173,8 @@ contract VotingManagerUpgradeable is OwnableUpgradeable, ReentrancyGuardUpgradea
         );
         require(verifySignature(encodedParams, signature), "Invalid signature");
         assetManager.listAsset(name, nuDexName, assetType, contractAddress, chainId);
-        bytes32 assetId = assetManager.getAssetIdentifier(assetType, contractAddress, chainId);
 
         rotateSubmitter();
-
-        emit AssetListed(assetId);
     }
 
     function delistAsset(
@@ -196,13 +185,9 @@ contract VotingManagerUpgradeable is OwnableUpgradeable, ReentrancyGuardUpgradea
     ) external onlyCurrentSubmitter nonReentrant {
         bytes memory encodedParams = abi.encodePacked(assetType, contractAddress, chainId);
         require(verifySignature(encodedParams, signature), "Invalid signature");
-
         assetManager.delistAsset(assetType, contractAddress, chainId);
-        bytes32 assetId = assetManager.getAssetIdentifier(assetType, contractAddress, chainId);
 
         rotateSubmitter();
-
-        emit AssetDelisted(assetId);
     }
 
     function submitTaskReceipt(
@@ -213,10 +198,7 @@ contract VotingManagerUpgradeable is OwnableUpgradeable, ReentrancyGuardUpgradea
         require(!nuDexOperations.isTaskCompleted(taskId), "Task already completed");
         bytes memory encodedParams = abi.encodePacked(taskId, result);
         require(verifySignature(encodedParams, signature), "Invalid signature");
-
         nuDexOperations.markTaskCompleted(taskId, result);
-
-        emit TaskCompleted(taskId, msg.sender, block.timestamp, result);
 
         // Rotate the submitter
         rotateSubmitter();

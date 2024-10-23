@@ -15,6 +15,7 @@ contract NuDexOperationsUpgradeable is INuDexOperations, OwnableUpgradeable {
         _;
     }
 
+    // _initialOwner: votingManager
     function initialize(address _participantManager, address _initialOwner) public initializer {
         __Ownable_init(_initialOwner);
         participantManager = IParticipantManager(_participantManager);
@@ -45,7 +46,7 @@ contract NuDexOperationsUpgradeable is INuDexOperations, OwnableUpgradeable {
         task.isCompleted = true;
         task.completedAt = block.timestamp;
         task.result = result;
-        emit TaskCompleted(taskId, task.submitter, task.completedAt);
+        emit TaskCompleted(taskId, task.submitter, block.timestamp, result);
     }
 
     function getUncompletedTasks() external view returns (Task[] memory) {

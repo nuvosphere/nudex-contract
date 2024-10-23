@@ -13,7 +13,12 @@ interface INuDexOperations {
     }
 
     event TaskSubmitted(uint256 indexed taskId, string description, address indexed submitter);
-    event TaskCompleted(uint256 indexed taskId, address indexed submitter, uint256 completedAt);
+    event TaskCompleted(
+        uint256 indexed taskId,
+        address indexed submitter,
+        uint256 indexed completedAt,
+        bytes result
+    );
 
     function submitTask(string memory description) external;
 
@@ -24,5 +29,4 @@ interface INuDexOperations {
     function getUncompletedTasks() external view returns (Task[] memory);
 
     function isTaskCompleted(uint256 taskId) external view returns (bool);
-
 }

@@ -25,7 +25,7 @@ contract AccountManagerUpgradeable is IAccountManager, OwnableUpgradeable {
             addressRecord[abi.encodePacked(_user, _account, _chain, _index)] == address(0),
             "already registered"
         );
-        require(_account > 10000);
+        require(_account > 10000, "invalid account");
         addressRecord[abi.encodePacked(_user, _account, _chain, _index)] = _address;
         userMapping[_address][_chain] = _user;
         emit AddressRegistered(_user, _account, _chain, _index, _address);
