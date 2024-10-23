@@ -16,8 +16,8 @@ contract NuDexOperationsUpgradeable is INuDexOperations, OwnableUpgradeable {
     }
 
     // _initialOwner: votingManager
-    function initialize(address _participantManager, address _initialOwner) public initializer {
-        __Ownable_init(_initialOwner);
+    function initialize(address _participantManager, address _owner) public initializer {
+        __Ownable_init(_owner);
         participantManager = IParticipantManager(_participantManager);
     }
 

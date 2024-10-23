@@ -1,14 +1,19 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "./interfaces/IAssetManager.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "./interfaces/IAssetManager.sol";
 
 contract AssetManagerUpgradeable is IAssetManager, OwnableUpgradeable {
     // Mapping from asset identifiers to their details
     mapping(bytes32 => Asset) public assets;
     // Array of asset identifiers
     bytes32[] public assetList;
+
+    // _owner: Voting Manager contract
+    function initialize(address _owner) public initializer {
+        __Ownable_init(_owner);
+    }
 
     // Create a unique identifier for an asset based on its type, address, and chain ID
     function getAssetIdentifier(
@@ -26,7 +31,7 @@ contract AssetManagerUpgradeable is IAssetManager, OwnableUpgradeable {
         AssetType assetType,
         address contractAddress,
         uint256 chainId
-    ) external {
+    ) external onlyOwner {
         bytes32 assetId = getAssetIdentifier(assetType, contractAddress, chainId);
         require(!assets[assetId].isListed, "Asset already listed");
 
@@ -46,7 +51,11 @@ contract AssetManagerUpgradeable is IAssetManager, OwnableUpgradeable {
     }
 
     // Delist an existing asset
-    function delistAsset(AssetType assetType, address contractAddress, uint256 chainId) external {
+    function delistAsset(
+        AssetType assetType,
+        address contractAddress,
+        uint256 chainId
+    ) external onlyOwner {
         bytes32 assetId = getAssetIdentifier(assetType, contractAddress, chainId);
         require(assets[assetId].isListed, "Asset not listed");
 

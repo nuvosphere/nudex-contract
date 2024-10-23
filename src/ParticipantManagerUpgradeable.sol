@@ -40,6 +40,7 @@ contract ParticipantManagerUpgradeable is IParticipantManager, OwnableUpgradeabl
     }
 
     function removeParticipant(address participant) external onlyOwner {
+        require(participants.length > 1, "Need have at least 1 participant");
         require(isParticipant[participant], "Not a participant");
 
         isParticipant[participant] = false;

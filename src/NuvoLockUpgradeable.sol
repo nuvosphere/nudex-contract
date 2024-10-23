@@ -24,8 +24,12 @@ contract NuvoLockUpgradeable is INuvoLock, UUPSUpgradeable, OwnableUpgradeable {
         _;
     }
 
-    function initialize(address _nuvoToken, address _rewardSource, address _initialOwner) initializer public {
-        __Ownable_init(_initialOwner);
+    function initialize(
+        address _nuvoToken,
+        address _rewardSource,
+        address _owner
+    ) public initializer {
+        __Ownable_init(_owner);
         __UUPSUpgradeable_init();
 
         nuvoToken = INuvoToken(_nuvoToken);
@@ -127,13 +131,16 @@ contract NuvoLockUpgradeable is INuvoLock, UUPSUpgradeable, OwnableUpgradeable {
                 for (uint256 i = 0; i < participants.length; i++) {
                     address participant = participants[i];
                     LockInfo storage lockInfo = locks[participant];
-                    uint256 participantBonusPoints = (lockInfo.bonusPoints > lockInfo.demeritPoints) ? lockInfo.bonusPoints - lockInfo.demeritPoints : 0;
+                    uint256 participantBonusPoints = (lockInfo.bonusPoints > lockInfo.demeritPoints)
+                        ? lockInfo.bonusPoints - lockInfo.demeritPoints
+                        : 0;
                     if (lockInfo.demeritPoints > 0) {
                         lockInfo.demeritPoints--;
                     }
 
                     if (participantBonusPoints > 0) {
-                        uint256 participantReward = (rewardPerPeriod[currentPeriod] * participantBonusPoints) / totalBonusPoints;
+                        uint256 participantReward = (rewardPerPeriod[currentPeriod] *
+                            participantBonusPoints) / totalBonusPoints;
                         lockInfo.accumulatedRewards += participantReward;
 
                         emit RewardsAccumulated(participant, participantReward);
@@ -142,16 +149,15 @@ contract NuvoLockUpgradeable is INuvoLock, UUPSUpgradeable, OwnableUpgradeable {
                     // Reset bonus points for the participant during the same loop
                     lockInfo.bonusPoints = 0;
                 }
-                
+
                 // Reset the total bonus points for the next period
                 totalBonusPoints = 0;
                 // Update the current period and its start time
                 currentPeriod = currentPeriodNumber;
                 currentPeriodStart += (currentPeriodNumber - currentPeriod) * 1 weeks;
-            } 
+            }
         }
     }
-
 
     function claimRewards() external onlyParticipant {
         LockInfo storage lockInfo = locks[msg.sender];
@@ -159,7 +165,10 @@ contract NuvoLockUpgradeable is INuvoLock, UUPSUpgradeable, OwnableUpgradeable {
         require(rewards > 0, "No rewards to claim");
 
         lockInfo.accumulatedRewards = 0;
-        require(nuvoToken.transferFrom(rewardSource, msg.sender, rewards), "Reward transfer failed");
+        require(
+            nuvoToken.transferFrom(rewardSource, msg.sender, rewards),
+            "Reward transfer failed"
+        );
 
         emit RewardsClaimed(msg.sender, rewards);
     }
@@ -170,19 +179,19 @@ contract NuvoLockUpgradeable is INuvoLock, UUPSUpgradeable, OwnableUpgradeable {
 
     function getLockInfo(
         address participant
-    ) 
-        public 
-        view 
+    )
+        public
+        view
         returns (
-            uint256 amount, 
-            uint256 unlockTime, 
-            uint256 originalLockTime, 
+            uint256 amount,
+            uint256 unlockTime,
+            uint256 originalLockTime,
             uint256 startTime,
             uint256 bonusPoints,
             uint256 accumulatedRewards,
             uint256 lastClaimedPeriod,
             uint256 demeritPoints // TODO: this was not added, is it intended?
-        ) 
+        )
     {
         LockInfo storage lockInfo = locks[participant];
         return (
@@ -197,11 +206,11 @@ contract NuvoLockUpgradeable is INuvoLock, UUPSUpgradeable, OwnableUpgradeable {
         );
     }
 
-    function lockedBalanceOf(address participant) external view returns(uint256) {
+    function lockedBalanceOf(address participant) external view returns (uint256) {
         return locks[participant].amount;
     }
 
-    function lockedTime(address participant) external view returns(uint256) {
+    function lockedTime(address participant) external view returns (uint256) {
         return block.timestamp - locks[participant].startTime;
     }
 

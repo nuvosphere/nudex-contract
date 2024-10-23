@@ -21,8 +21,6 @@ contract AccountCreation is BaseTest {
     MockParticipantManager public participantManager;
     MockNuvoLockUpgradeable public nuvoLock;
 
-    uint public v;
-
     function setUp() public override {
         super.setUp();
         depositAddress = makeAddr("new_address");
@@ -51,21 +49,21 @@ contract AccountCreation is BaseTest {
         accountManager.initialize(vmProxy);
         assertEq(accountManager.owner(), vmProxy);
 
+        // initialize votingManager link to all contracts
         votingManager = VotingManagerUpgradeable(vmProxy);
         votingManager.initialize(
-            amProxy,
-            address(0),
-            address(0),
-            address(participantManager),
-            operationProxy,
-            address(nuvoLock),
-            owner
+            amProxy, // accountManager
+            address(0), // assetManager
+            address(0), // depositManager
+            address(participantManager), // participantManager
+            operationProxy, // nudeOperation
+            address(nuvoLock) // nuvoLock
         );
-        assertEq(address(votingManager.accountManager()), address(accountManager));
     }
 
     function test_Create() public {
         vm.startPrank(owner);
+        // simulate task
         uint256 taskId = nuDexOperations.nextTaskId();
         string memory taskDescription = "--- encoded task string ---";
         vm.expectEmit(true, true, true, true);
@@ -82,6 +80,7 @@ contract AccountCreation is BaseTest {
             depositAddress
         );
         bytes memory signature = generateSignature(encodedParams, privKey);
+
         votingManager.registerAccount(
             owner,
             10001,

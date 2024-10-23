@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import "./interfaces/IAccountManager.sol";
 import "./interfaces/IAssetManager.sol";
@@ -11,7 +11,7 @@ import "./interfaces/INuDexOperations.sol";
 import "./interfaces/INuvoLock.sol";
 import {console} from "forge-std/console.sol";
 
-contract VotingManagerUpgradeable is OwnableUpgradeable, ReentrancyGuardUpgradeable {
+contract VotingManagerUpgradeable is Initializable, ReentrancyGuardUpgradeable {
     IAccountManager public accountManager;
     IAssetManager public assetManager;
     IDepositManager public depositManager;
@@ -25,13 +25,6 @@ contract VotingManagerUpgradeable is OwnableUpgradeable, ReentrancyGuardUpgradea
     uint256 public constant taskCompletionThreshold = 1 hours;
 
     event SubmitterChosen(address indexed newSubmitter);
-    event DepositInfoSubmitted(
-        address indexed targetAddress,
-        uint256 amount,
-        bytes txInfo,
-        uint256 chainId,
-        bytes extraInfo
-    );
     event RewardPerPeriodVoted(uint256 newRewardPerPeriod);
     event ParticipantAdded(address indexed newParticipant);
     event ParticipantRemoved(address indexed participant);
@@ -54,10 +47,8 @@ contract VotingManagerUpgradeable is OwnableUpgradeable, ReentrancyGuardUpgradea
         address _depositManager,
         address _participantManager,
         address _nuDexOperations,
-        address _nuvoLock,
-        address _initialOwner
+        address _nuvoLock
     ) public initializer {
-        __Ownable_init(_initialOwner);
         __ReentrancyGuard_init();
         accountManager = IAccountManager(_accountManager);
         assetManager = IAssetManager(_assetManager);
@@ -114,33 +105,41 @@ contract VotingManagerUpgradeable is OwnableUpgradeable, ReentrancyGuardUpgradea
             }
         }
         rotateSubmitter();
-
         emit SubmitterRotationRequested(msg.sender, currentSubmitter);
+    }
+
+    function registerAccount(
+        address _user,
+        uint _account,
+        IAccountManager.Chain _chain,
+        uint _index,
+        address _address,
+        bytes memory _signature
+    ) external onlyCurrentSubmitter nonReentrant {
+        bytes memory encodedParams = abi.encodePacked(_user, _account, _chain, _index, _address);
+        require(verifySignature(encodedParams, _signature), "Invalid signature");
+        accountManager.registerNewAddress(_user, _account, _chain, _index, _address);
+        rotateSubmitter();
     }
 
     function submitDepositInfo(
         address targetAddress,
         uint256 amount,
-        bytes memory txInfo,
         uint256 chainId,
-        bytes memory extraInfo, // Added extraInfo parameter
+        bytes memory txInfo,
+        bytes memory extraInfo,
         bytes memory signature
     ) external onlyCurrentSubmitter nonReentrant {
         bytes memory encodedParams = abi.encodePacked(
             targetAddress,
             amount,
-            txInfo,
             chainId,
+            txInfo,
             extraInfo
         );
         require(verifySignature(encodedParams, signature), "Invalid signature");
-
-        depositManager.recordDeposit(targetAddress, amount, txInfo, chainId, extraInfo);
-        lastSubmissionTime = block.timestamp;
-
+        depositManager.recordDeposit(targetAddress, amount, chainId, txInfo, extraInfo);
         rotateSubmitter();
-
-        emit DepositInfoSubmitted(targetAddress, amount, txInfo, chainId, extraInfo); // Updated event
     }
 
     function setRewardPerPeriod(
@@ -152,7 +151,6 @@ contract VotingManagerUpgradeable is OwnableUpgradeable, ReentrancyGuardUpgradea
 
         nuvoLock.setRewardPerPeriod(newRewardPerPeriod);
         emit RewardPerPeriodVoted(newRewardPerPeriod);
-
         rotateSubmitter();
     }
 
@@ -199,23 +197,6 @@ contract VotingManagerUpgradeable is OwnableUpgradeable, ReentrancyGuardUpgradea
         bytes memory encodedParams = abi.encodePacked(taskId, result);
         require(verifySignature(encodedParams, signature), "Invalid signature");
         nuDexOperations.markTaskCompleted(taskId, result);
-
-        // Rotate the submitter
-        rotateSubmitter();
-    }
-
-    function registerAccount(
-        address _user,
-        uint _account,
-        IAccountManager.Chain _chain,
-        uint _index,
-        address _address,
-        bytes memory _signature
-    ) external onlyCurrentSubmitter nonReentrant {
-        bytes memory encodedParams = abi.encodePacked(_user, _account, _chain, _index, _address);
-        require(verifySignature(encodedParams, _signature), "Invalid signature");
-        accountManager.registerNewAddress(_user, _account, _chain, _index, _address);
-
         rotateSubmitter();
     }
 
@@ -236,6 +217,7 @@ contract VotingManagerUpgradeable is OwnableUpgradeable, ReentrancyGuardUpgradea
         ) % participants.length;
 
         lastSubmitterIndex = randomIndex;
+        lastSubmissionTime = block.timestamp;
         emit SubmitterChosen(participants[lastSubmitterIndex]);
     }
 
@@ -249,8 +231,12 @@ contract VotingManagerUpgradeable is OwnableUpgradeable, ReentrancyGuardUpgradea
         bytes32 messageHash = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", hash));
         (bytes32 r, bytes32 s, uint8 v) = splitSignature(signature);
         address signer = ecrecover(messageHash, v, r, s);
-
         return participantManager.isParticipant(signer);
+    }
+
+    function getCurrentSubmitter() public view returns (address) {
+        address[] memory participants = participantManager.getParticipants();
+        return participants[lastSubmitterIndex];
     }
 
     function splitSignature(
@@ -288,10 +274,5 @@ contract VotingManagerUpgradeable is OwnableUpgradeable, ReentrancyGuardUpgradea
             value /= 10;
         }
         return string(buffer);
-    }
-
-    function getCurrentSubmitter() public view returns (address) {
-        address[] memory participants = participantManager.getParticipants();
-        return participants[lastSubmitterIndex];
     }
 }
