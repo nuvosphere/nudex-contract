@@ -19,10 +19,11 @@ contract VotingManagerUpgradeable is Initializable, ReentrancyGuardUpgradeable {
     INuDexOperations public nuDexOperations;
     INuvoLock public nuvoLock;
 
-    uint256 public lastSubmitterIndex;
     uint256 public lastSubmissionTime;
     uint256 public constant forcedRotationWindow = 1 minutes;
     uint256 public constant taskCompletionThreshold = 1 hours;
+
+    address public nextSubmitter;
 
     event SubmitterChosen(address indexed newSubmitter);
     event RewardPerPeriodVoted(uint256 newRewardPerPeriod);
@@ -41,8 +42,7 @@ contract VotingManagerUpgradeable is Initializable, ReentrancyGuardUpgradeable {
     }
 
     modifier onlyCurrentSubmitter() {
-        address[] memory participants = participantManager.getParticipants();
-        require(participants[lastSubmitterIndex] == msg.sender, IncorrectSubmitter());
+        require(msg.sender == nextSubmitter, IncorrectSubmitter());
         _;
     }
 
@@ -62,6 +62,7 @@ contract VotingManagerUpgradeable is Initializable, ReentrancyGuardUpgradeable {
         nuDexOperations = INuDexOperations(_nuDexOperations);
         nuvoLock = INuvoLock(_nuvoLock);
         lastSubmissionTime = block.timestamp;
+        nextSubmitter = participantManager.getRandomParticipant(nextSubmitter);
     }
 
     function addParticipant(
@@ -87,27 +88,22 @@ contract VotingManagerUpgradeable is Initializable, ReentrancyGuardUpgradeable {
         emit ParticipantRemoved(participant);
     }
 
-    function chooseNewSubmitter(
-        address currentSubmitter,
-        bytes memory signature
-    ) external onlyParticipant nonReentrant {
-        require(currentSubmitter == getCurrentSubmitter(), IncorrectSubmitter());
+    function chooseNewSubmitter() external onlyParticipant nonReentrant {
         require(
             block.timestamp >= lastSubmissionTime + forcedRotationWindow,
             RotationWindowNotPassed()
         );
-        require(verifySignature(abi.encodePacked(currentSubmitter), signature), InvalidSigner());
 
         // Check for uncompleted tasks and apply demerit points if needed
         INuDexOperations.Task[] memory uncompletedTasks = nuDexOperations.getUncompletedTasks();
         for (uint256 i = 0; i < uncompletedTasks.length; i++) {
             if (block.timestamp > uncompletedTasks[i].createdAt + taskCompletionThreshold) {
                 //uncompleted tasks
-                nuvoLock.accumulateDemeritPoints(currentSubmitter);
+                nuvoLock.accumulateDemeritPoints(nextSubmitter);
             }
         }
+        emit SubmitterRotationRequested(msg.sender, nextSubmitter);
         rotateSubmitter();
-        emit SubmitterRotationRequested(msg.sender, currentSubmitter);
     }
 
     function registerAccount(
@@ -203,23 +199,10 @@ contract VotingManagerUpgradeable is Initializable, ReentrancyGuardUpgradeable {
     }
 
     function rotateSubmitter() internal {
-        address[] memory participants = participantManager.getParticipants();
         nuvoLock.accumulateBonusPoints(msg.sender);
-
-        uint256 randomIndex = uint256(
-            keccak256(
-                abi.encodePacked(
-                    block.prevrandao, // instead of difficulty in PoS
-                    block.timestamp,
-                    blockhash(block.number - 1),
-                    lastSubmitterIndex
-                )
-            )
-        ) % participants.length;
-
-        lastSubmitterIndex = randomIndex;
         lastSubmissionTime = block.timestamp;
-        emit SubmitterChosen(participants[lastSubmitterIndex]);
+        nextSubmitter = participantManager.getRandomParticipant(nextSubmitter);
+        emit SubmitterChosen(nextSubmitter);
     }
 
     function verifySignature(
@@ -233,11 +216,6 @@ contract VotingManagerUpgradeable is Initializable, ReentrancyGuardUpgradeable {
         (bytes32 r, bytes32 s, uint8 v) = splitSignature(signature);
         address signer = ecrecover(messageHash, v, r, s);
         return participantManager.isParticipant(signer);
-    }
-
-    function getCurrentSubmitter() public view returns (address) {
-        address[] memory participants = participantManager.getParticipants();
-        return participants[lastSubmitterIndex];
     }
 
     function splitSignature(

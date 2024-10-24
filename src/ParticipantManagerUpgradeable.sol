@@ -63,4 +63,18 @@ contract ParticipantManagerUpgradeable is IParticipantManager, OwnableUpgradeabl
     function getParticipants() external view returns (address[] memory) {
         return participants;
     }
+
+    function getRandomParticipant(address _salt) external view returns (address randParticipant) {
+        uint256 randomIndex = uint256(
+            keccak256(
+                abi.encodePacked(
+                    block.prevrandao, // instead of difficulty in PoS
+                    block.timestamp,
+                    blockhash(block.number - 1),
+                    _salt
+                )
+            )
+        ) % participants.length;
+        randParticipant = participants[randomIndex];
+    }
 }

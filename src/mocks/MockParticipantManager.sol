@@ -2,16 +2,11 @@
 pragma solidity ^0.8.0;
 
 contract MockParticipantManager {
-    // mapping(address => bool) private participants;
     address[] public participants;
     mapping(address => bool) public isParticipant;
 
     constructor(address _participant) {
         addParticipant(_participant);
-    }
-
-    function getParticipants() external view returns (address[] memory) {
-        return participants;
     }
 
     function setParticipant(uint _index, address _addr) external {
@@ -36,8 +31,25 @@ contract MockParticipantManager {
         }
     }
 
-    // Optionally: Function to simulate participant checks for more advanced tests
     function simulateCheck(address participant, bool expected) external view {
         require(isParticipant[participant] == expected, "Participant status mismatch");
+    }
+
+    function getParticipants() external view returns (address[] memory) {
+        return participants;
+    }
+
+    function getRandomParticipant(address _salt) external view returns (address randParticipant) {
+        uint256 randomIndex = uint256(
+            keccak256(
+                abi.encodePacked(
+                    block.prevrandao, // instead of difficulty in PoS
+                    block.timestamp,
+                    blockhash(block.number - 1),
+                    _salt
+                )
+            )
+        ) % participants.length;
+        randParticipant = participants[randomIndex];
     }
 }
