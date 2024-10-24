@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "./interfaces/IParticipantManager.sol";
-import "./interfaces/INuvoLock.sol";
+import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {IParticipantManager} from "./interfaces/IParticipantManager.sol";
+import {INuvoLock} from "./interfaces/INuvoLock.sol";
 
 contract ParticipantManagerUpgradeable is IParticipantManager, OwnableUpgradeable {
     INuvoLock public nuvoLock;
@@ -30,8 +30,8 @@ contract ParticipantManagerUpgradeable is IParticipantManager, OwnableUpgradeabl
     }
 
     function addParticipant(address newParticipant) external onlyOwner {
-        require(!isParticipant[newParticipant], "Already a participant");
-        require(isEligible(newParticipant), "Participant not eligible");
+        require(!isParticipant[newParticipant], AlreadyParticipant());
+        require(isEligible(newParticipant), NotEligible());
 
         participants.push(newParticipant);
         isParticipant[newParticipant] = true;
@@ -40,8 +40,8 @@ contract ParticipantManagerUpgradeable is IParticipantManager, OwnableUpgradeabl
     }
 
     function removeParticipant(address participant) external onlyOwner {
-        require(participants.length > 1, "Need have at least 1 participant");
-        require(isParticipant[participant], "Not a participant");
+        require(participants.length > 1, NotEnoughParticipant());
+        require(isParticipant[participant], NotParticipant());
 
         isParticipant[participant] = false;
         for (uint256 i = 0; i < participants.length; i++) {

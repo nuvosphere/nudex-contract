@@ -20,6 +20,8 @@ interface INuDexOperations {
         bytes result
     );
 
+    error EmptyTask();
+
     function submitTask(string memory description) external;
 
     function getLatestTask() external view returns (Task memory);

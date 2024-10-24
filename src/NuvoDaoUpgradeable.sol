@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "./interfaces/INuvoLock.sol";
-import "./interfaces/IProxy.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {INuvoLock} from "./interfaces/INuvoLock.sol";
+import {IProxy} from "./interfaces/IProxy.sol";
 
 contract NuvoDAOUpgradeable is OwnableUpgradeable {
     event ProposalCreated(

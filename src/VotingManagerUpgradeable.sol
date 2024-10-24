@@ -2,13 +2,13 @@
 pragma solidity ^0.8.0;
 
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
-import "./interfaces/IAccountManager.sol";
-import "./interfaces/IAssetManager.sol";
-import "./interfaces/IDepositManager.sol";
-import "./interfaces/IParticipantManager.sol";
-import "./interfaces/INuDexOperations.sol";
-import "./interfaces/INuvoLock.sol";
+import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
+import {IAccountManager} from "./interfaces/IAccountManager.sol";
+import {IAssetManager} from "./interfaces/IAssetManager.sol";
+import {IDepositManager} from "./interfaces/IDepositManager.sol";
+import {IParticipantManager} from "./interfaces/IParticipantManager.sol";
+import {INuDexOperations} from "./interfaces/INuDexOperations.sol";
+import {INuvoLock} from "./interfaces/INuvoLock.sol";
 import {console} from "forge-std/console.sol";
 
 contract VotingManagerUpgradeable is Initializable, ReentrancyGuardUpgradeable {
@@ -30,14 +30,19 @@ contract VotingManagerUpgradeable is Initializable, ReentrancyGuardUpgradeable {
     event ParticipantRemoved(address indexed participant);
     event SubmitterRotationRequested(address indexed requester, address indexed currentSubmitter);
 
+    error InvalidSigner();
+    error IncorrectSubmitter();
+    error RotationWindowNotPassed();
+    error TaskAlreadyCompleted();
+
     modifier onlyParticipant() {
-        require(participantManager.isParticipant(msg.sender), "Not a participant");
+        require(participantManager.isParticipant(msg.sender), IParticipantManager.NotParticipant());
         _;
     }
 
     modifier onlyCurrentSubmitter() {
         address[] memory participants = participantManager.getParticipants();
-        require(participants[lastSubmitterIndex] == msg.sender, "Not the current submitter");
+        require(participants[lastSubmitterIndex] == msg.sender, IncorrectSubmitter());
         _;
     }
 
@@ -63,7 +68,7 @@ contract VotingManagerUpgradeable is Initializable, ReentrancyGuardUpgradeable {
         address newParticipant,
         bytes memory signature
     ) external onlyCurrentSubmitter nonReentrant {
-        require(verifySignature(abi.encodePacked(newParticipant), signature), "Invalid signature");
+        require(verifySignature(abi.encodePacked(newParticipant), signature), InvalidSigner());
         participantManager.addParticipant(newParticipant);
         rotateSubmitter();
 
@@ -74,7 +79,7 @@ contract VotingManagerUpgradeable is Initializable, ReentrancyGuardUpgradeable {
         address participant,
         bytes memory signature
     ) external onlyCurrentSubmitter nonReentrant {
-        require(verifySignature(abi.encodePacked(participant), signature), "Invalid signature");
+        require(verifySignature(abi.encodePacked(participant), signature), InvalidSigner());
 
         participantManager.removeParticipant(participant);
         rotateSubmitter();
@@ -86,15 +91,12 @@ contract VotingManagerUpgradeable is Initializable, ReentrancyGuardUpgradeable {
         address currentSubmitter,
         bytes memory signature
     ) external onlyParticipant nonReentrant {
-        require(
-            verifySignature(abi.encodePacked(currentSubmitter), signature),
-            "Invalid signature"
-        );
-        require(currentSubmitter == getCurrentSubmitter(), "Incorrect current submitter");
+        require(currentSubmitter == getCurrentSubmitter(), IncorrectSubmitter());
         require(
             block.timestamp >= lastSubmissionTime + forcedRotationWindow,
-            "Submitter rotation not allowed yet"
+            RotationWindowNotPassed()
         );
+        require(verifySignature(abi.encodePacked(currentSubmitter), signature), InvalidSigner());
 
         // Check for uncompleted tasks and apply demerit points if needed
         INuDexOperations.Task[] memory uncompletedTasks = nuDexOperations.getUncompletedTasks();
@@ -117,7 +119,7 @@ contract VotingManagerUpgradeable is Initializable, ReentrancyGuardUpgradeable {
         bytes memory _signature
     ) external onlyCurrentSubmitter nonReentrant {
         bytes memory encodedParams = abi.encodePacked(_user, _account, _chain, _index, _address);
-        require(verifySignature(encodedParams, _signature), "Invalid signature");
+        require(verifySignature(encodedParams, _signature), InvalidSigner());
         accountManager.registerNewAddress(_user, _account, _chain, _index, _address);
         rotateSubmitter();
     }
@@ -137,7 +139,7 @@ contract VotingManagerUpgradeable is Initializable, ReentrancyGuardUpgradeable {
             txInfo,
             extraInfo
         );
-        require(verifySignature(encodedParams, signature), "Invalid signature");
+        require(verifySignature(encodedParams, signature), InvalidSigner());
         depositManager.recordDeposit(targetAddress, amount, chainId, txInfo, extraInfo);
         rotateSubmitter();
     }
@@ -147,7 +149,7 @@ contract VotingManagerUpgradeable is Initializable, ReentrancyGuardUpgradeable {
         bytes memory signature
     ) external onlyCurrentSubmitter nonReentrant {
         bytes memory encodedParams = abi.encodePacked(newRewardPerPeriod);
-        require(verifySignature(encodedParams, signature), "Invalid signature");
+        require(verifySignature(encodedParams, signature), InvalidSigner());
 
         nuvoLock.setRewardPerPeriod(newRewardPerPeriod);
         emit RewardPerPeriodVoted(newRewardPerPeriod);
@@ -169,7 +171,7 @@ contract VotingManagerUpgradeable is Initializable, ReentrancyGuardUpgradeable {
             contractAddress,
             chainId
         );
-        require(verifySignature(encodedParams, signature), "Invalid signature");
+        require(verifySignature(encodedParams, signature), InvalidSigner());
         assetManager.listAsset(name, nuDexName, assetType, contractAddress, chainId);
 
         rotateSubmitter();
@@ -182,7 +184,7 @@ contract VotingManagerUpgradeable is Initializable, ReentrancyGuardUpgradeable {
         bytes memory signature
     ) external onlyCurrentSubmitter nonReentrant {
         bytes memory encodedParams = abi.encodePacked(assetType, contractAddress, chainId);
-        require(verifySignature(encodedParams, signature), "Invalid signature");
+        require(verifySignature(encodedParams, signature), InvalidSigner());
         assetManager.delistAsset(assetType, contractAddress, chainId);
 
         rotateSubmitter();
@@ -193,16 +195,15 @@ contract VotingManagerUpgradeable is Initializable, ReentrancyGuardUpgradeable {
         bytes memory result,
         bytes memory signature
     ) external onlyCurrentSubmitter nonReentrant {
-        require(!nuDexOperations.isTaskCompleted(taskId), "Task already completed");
+        require(!nuDexOperations.isTaskCompleted(taskId), TaskAlreadyCompleted());
         bytes memory encodedParams = abi.encodePacked(taskId, result);
-        require(verifySignature(encodedParams, signature), "Invalid signature");
+        require(verifySignature(encodedParams, signature), InvalidSigner());
         nuDexOperations.markTaskCompleted(taskId, result);
         rotateSubmitter();
     }
 
     function rotateSubmitter() internal {
         address[] memory participants = participantManager.getParticipants();
-        require(participants.length > 0, "No participants available");
         nuvoLock.accumulateBonusPoints(msg.sender);
 
         uint256 randomIndex = uint256(

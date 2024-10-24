@@ -10,6 +10,8 @@ interface IDepositManager {
         bytes extraInfo
     );
 
+    error InvalidAmount();
+
     struct DepositInfo {
         address targetAddress;
         uint256 amount;

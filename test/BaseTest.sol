@@ -21,6 +21,10 @@ contract BaseTest is Test {
         console.log("Addresses: ", address(this), owner);
     }
 
+    function deployProxy(address _logic, address _admin) internal returns (address) {
+        return address(new TransparentUpgradeableProxy(_logic, _admin, ""));
+    }
+
     function generateSignature(
         bytes memory _encodedParams,
         uint256 _privateKey

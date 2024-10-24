@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "./interfaces/IAccountManager.sol";
+import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {IAccountManager} from "./interfaces/IAccountManager.sol";
 
 contract AccountManagerUpgradeable is IAccountManager, OwnableUpgradeable {
     mapping(bytes => address) public addressRecord;
@@ -21,11 +21,12 @@ contract AccountManagerUpgradeable is IAccountManager, OwnableUpgradeable {
         uint _index,
         address _address
     ) external onlyOwner {
+        require(_address != address(0), InvalidAddress());
+        require(_account > 10000, InvalidAccountNumber());
         require(
             addressRecord[abi.encodePacked(_user, _account, _chain, _index)] == address(0),
-            "already registered"
+            RegisteredAccount()
         );
-        require(_account > 10000, "invalid account");
         addressRecord[abi.encodePacked(_user, _account, _chain, _index)] = _address;
         userMapping[_address][_chain] = _user;
         emit AddressRegistered(_user, _account, _chain, _index, _address);

@@ -2,9 +2,13 @@
 pragma solidity ^0.8.0;
 
 interface IParticipantManager {
-
     event ParticipantAdded(address indexed participant);
     event ParticipantRemoved(address indexed participant);
+
+    error AlreadyParticipant();
+    error NotEligible();
+    error NotParticipant();
+    error NotEnoughParticipant();
 
     function isParticipant(address) external view returns (bool);
 

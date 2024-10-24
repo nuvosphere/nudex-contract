@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "./interfaces/INuDexOperations.sol";
-import "./interfaces/IParticipantManager.sol";
+import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {INuDexOperations} from "./interfaces/INuDexOperations.sol";
+import {IParticipantManager} from "./interfaces/IParticipantManager.sol";
 
 contract NuDexOperationsUpgradeable is INuDexOperations, OwnableUpgradeable {
     uint256 public nextTaskId;
@@ -11,11 +11,11 @@ contract NuDexOperationsUpgradeable is INuDexOperations, OwnableUpgradeable {
     IParticipantManager public participantManager;
 
     modifier onlyParticipant() {
-        require(participantManager.isParticipant(msg.sender), "Not a participant");
+        require(participantManager.isParticipant(msg.sender), IParticipantManager.NotParticipant());
         _;
     }
 
-    // _initialOwner: votingManager
+    // _owner: votingManager
     function initialize(address _participantManager, address _owner) public initializer {
         __Ownable_init(_owner);
         participantManager = IParticipantManager(_participantManager);
@@ -37,7 +37,7 @@ contract NuDexOperationsUpgradeable is INuDexOperations, OwnableUpgradeable {
     }
 
     function getLatestTask() external view onlyParticipant returns (Task memory) {
-        require(nextTaskId > 0, "No tasks available");
+        require(nextTaskId > 0, EmptyTask());
         return tasks[nextTaskId - 1];
     }
 

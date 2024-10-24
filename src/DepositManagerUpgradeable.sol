@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "./interfaces/IDepositManager.sol";
+import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {IDepositManager} from "./interfaces/IDepositManager.sol";
 
 contract DepositManagerUpgradeable is IDepositManager, OwnableUpgradeable {
     mapping(address => DepositInfo[]) public deposits;
@@ -19,6 +19,7 @@ contract DepositManagerUpgradeable is IDepositManager, OwnableUpgradeable {
         bytes memory txInfo,
         bytes memory extraInfo
     ) external onlyOwner {
+        require(amount > 0, InvalidAmount());
         DepositInfo memory newDeposit = DepositInfo({
             targetAddress: targetAddress,
             amount: amount,

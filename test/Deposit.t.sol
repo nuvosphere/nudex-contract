@@ -12,7 +12,7 @@ import {VotingManagerUpgradeable} from "../src/VotingManagerUpgradeable.sol";
 import {MockParticipantManager} from "../src/mocks/MockParticipantManager.sol";
 import {MockNuvoLockUpgradeable} from "../src/mocks/MockNuvoLockUpgradeable.sol";
 
-contract AccountCreation is BaseTest {
+contract Deposit is BaseTest {
     address public depositAddress;
     address public user;
 
@@ -31,22 +31,20 @@ contract AccountCreation is BaseTest {
         participantManager = new MockParticipantManager(owner);
         nuvoLock = new MockNuvoLockUpgradeable();
 
-        // deploy votingManager
-        address vmLogic = address(new VotingManagerUpgradeable());
-        address vmProxy = address(new TransparentUpgradeableProxy(vmLogic, daoContract, ""));
+        // deploy votingManager proxy
+        address vmProxy = deployProxy(address(new VotingManagerUpgradeable()), daoContract);
 
         // deploy nuDexOperations
-        address operationLogic = address(new NuDexOperationsUpgradeable());
-        address operationProxy = address(
-            new TransparentUpgradeableProxy(operationLogic, daoContract, "")
+        address operationProxy = deployProxy(
+            address(new NuDexOperationsUpgradeable()),
+            daoContract
         );
         nuDexOperations = NuDexOperationsUpgradeable(operationProxy);
         nuDexOperations.initialize(address(participantManager), vmProxy);
         assertEq(nuDexOperations.owner(), vmProxy);
 
         // deploy depositManager
-        address dmLogic = address(new DepositManagerUpgradeable());
-        address dmProxy = address(new TransparentUpgradeableProxy(dmLogic, daoContract, ""));
+        address dmProxy = deployProxy(address(new DepositManagerUpgradeable()), daoContract);
         depositManager = DepositManagerUpgradeable(dmProxy);
         depositManager.initialize(vmProxy);
         assertEq(depositManager.owner(), vmProxy);
@@ -131,6 +129,7 @@ contract AccountCreation is BaseTest {
     }
 
     function testFuzz_DepositFuzz(address _user, uint256 _amount, bytes memory _txInfo) public {
+        vm.assume(_amount > 0);
         // setup deposit info
         uint256 depositIndex = depositManager.getDeposits(user).length;
         uint256 chainId = 0;

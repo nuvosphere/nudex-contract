@@ -29,22 +29,20 @@ contract AccountCreation is BaseTest {
         participantManager = new MockParticipantManager(owner);
         nuvoLock = new MockNuvoLockUpgradeable();
 
-        // deploy votingManager
-        address vmLogic = address(new VotingManagerUpgradeable());
-        address vmProxy = address(new TransparentUpgradeableProxy(vmLogic, daoContract, ""));
+        // deploy votingManager proxy
+        address vmProxy = deployProxy(address(new VotingManagerUpgradeable()), daoContract);
 
         // deploy nuDexOperations
-        address operationLogic = address(new NuDexOperationsUpgradeable());
-        address operationProxy = address(
-            new TransparentUpgradeableProxy(operationLogic, daoContract, "")
+        address operationProxy = deployProxy(
+            address(new NuDexOperationsUpgradeable()),
+            daoContract
         );
         nuDexOperations = NuDexOperationsUpgradeable(operationProxy);
         nuDexOperations.initialize(address(participantManager), vmProxy);
         assertEq(nuDexOperations.owner(), vmProxy);
 
         // deploy accountManager
-        address amLogic = address(new AccountManagerUpgradeable());
-        address amProxy = address(new TransparentUpgradeableProxy(amLogic, daoContract, ""));
+        address amProxy = deployProxy(address(new AccountManagerUpgradeable()), daoContract);
         accountManager = AccountManagerUpgradeable(amProxy);
         accountManager.initialize(vmProxy);
         assertEq(accountManager.owner(), vmProxy);
@@ -98,7 +96,7 @@ contract AccountCreation is BaseTest {
             depositAddress
         );
         assertEq(accountManager.userMapping(depositAddress, IAccountManager.Chain.BTC), owner);
-        vm.expectRevert("already registered");
+        vm.expectRevert(IAccountManager.RegisteredAccount.selector);
         votingManager.registerAccount(
             owner,
             10001,
@@ -144,7 +142,7 @@ contract AccountCreation is BaseTest {
         );
         bytes memory signature = generateSignature(encodedParams, privKey);
         vm.prank(owner);
-        vm.expectRevert("invalid account");
+        vm.expectRevert(IAccountManager.InvalidAccountNumber.selector);
         votingManager.registerAccount(
             owner,
             9999,
