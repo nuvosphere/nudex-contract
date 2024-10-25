@@ -3,13 +3,17 @@ pragma solidity ^0.8.0;
 
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {IDepositManager} from "./interfaces/IDepositManager.sol";
+import {INIP20} from "./interfaces/INIP20.sol";
 
 contract DepositManagerUpgradeable is IDepositManager, OwnableUpgradeable {
+    INIP20 public nip20Contract;
+
     mapping(address => DepositInfo[]) public deposits;
 
     // _owner: Voting Manager contract
-    function initialize(address _owner) public initializer {
+    function initialize(address _owner, address _nip20Contract) public initializer {
         __Ownable_init(_owner);
+        nip20Contract = INIP20(_nip20Contract);
     }
 
     function recordDeposit(
@@ -27,9 +31,10 @@ contract DepositManagerUpgradeable is IDepositManager, OwnableUpgradeable {
             txInfo: txInfo,
             extraInfo: extraInfo
         });
-
         deposits[targetAddress].push(newDeposit);
 
+        // mint inscription
+        nip20Contract.mint(targetAddress, amount);
         emit DepositRecorded(targetAddress, amount, chainId, txInfo, extraInfo);
     }
 

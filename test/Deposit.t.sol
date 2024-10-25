@@ -5,6 +5,7 @@ import "./BaseTest.sol";
 import {Proxy} from "../src/Proxy.sol";
 import {DepositManagerUpgradeable} from "../src/DepositManagerUpgradeable.sol";
 import {IDepositManager} from "../src/interfaces/IDepositManager.sol";
+import {NIP20Upgradeable} from "../src/NIP20Upgradeable.sol";
 import {NuDexOperationsUpgradeable} from "../src/NuDexOperationsUpgradeable.sol";
 import {INuDexOperations} from "../src/interfaces/INuDexOperations.sol";
 import {VotingManagerUpgradeable} from "../src/VotingManagerUpgradeable.sol";
@@ -17,6 +18,7 @@ contract Deposit is BaseTest {
     address public user;
 
     DepositManagerUpgradeable public depositManager;
+    NIP20Upgradeable public nip20;
     NuDexOperationsUpgradeable public nuDexOperations;
     VotingManagerUpgradeable public votingManager;
     MockParticipantManager public participantManager;
@@ -43,10 +45,14 @@ contract Deposit is BaseTest {
         nuDexOperations.initialize(address(participantManager), vmProxy);
         assertEq(nuDexOperations.owner(), vmProxy);
 
-        // deploy depositManager
+        // deploy depositManager and NIP20 contract
         address dmProxy = deployProxy(address(new DepositManagerUpgradeable()), daoContract);
+        address nip20Proxy = deployProxy(address(new NIP20Upgradeable()), daoContract);
+        nip20 = NIP20Upgradeable(nip20Proxy);
+        nip20.initialize(dmProxy);
+        assertEq(nip20.owner(), dmProxy);
         depositManager = DepositManagerUpgradeable(dmProxy);
-        depositManager.initialize(vmProxy);
+        depositManager.initialize(vmProxy, nip20Proxy);
         assertEq(depositManager.owner(), vmProxy);
 
         // initialize votingManager link to all contracts

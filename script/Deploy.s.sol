@@ -6,6 +6,7 @@ import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transpa
 
 import {AccountManagerUpgradeable} from "../src/AccountManagerUpgradeable.sol";
 import {DepositManagerUpgradeable} from "../src/DepositManagerUpgradeable.sol";
+import {NIP20Upgradeable} from "../src/NIP20Upgradeable.sol";
 import {NuDexOperationsUpgradeable} from "../src/NuDexOperationsUpgradeable.sol";
 import {ParticipantManagerUpgradeable} from "../src/ParticipantManagerUpgradeable.sol";
 import {VotingManagerUpgradeable} from "../src/VotingManagerUpgradeable.sol";
@@ -42,10 +43,13 @@ contract Deploy is Script {
         AccountManagerUpgradeable accountManager = AccountManagerUpgradeable(amProxy);
         accountManager.initialize(vmProxy);
 
-        // deploy depositManager
+        // deploy depositManager and NIP20 contract
         address dmProxy = deployProxy(address(new DepositManagerUpgradeable()), daoContract);
+        address nip20Proxy = deployProxy(address(new NIP20Upgradeable()), daoContract);
+        NIP20Upgradeable nip20 = NIP20Upgradeable(nip20Proxy);
+        nip20.initialize(dmProxy);
         DepositManagerUpgradeable depositManager = DepositManagerUpgradeable(dmProxy);
-        depositManager.initialize(vmProxy);
+        depositManager.initialize(vmProxy, nip20Proxy);
 
         // initialize votingManager link to all contracts
         VotingManagerUpgradeable votingManager = VotingManagerUpgradeable(vmProxy);
