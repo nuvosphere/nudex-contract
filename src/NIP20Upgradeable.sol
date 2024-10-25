@@ -17,11 +17,11 @@ contract NIP20Upgradeable is INIP20, OwnableUpgradeable {
         emit NIP20TokenEvent_mint(msg.sender, _recipient, TICKER, ++id, _amount);
     }
 
-    function transfer(address _to, bytes32 _txhash) public {
+    function transfer(address _to, bytes32 _txhash) external {
         emit NIP20TokenEvent_transfer(msg.sender, _to, TICKER, _txhash);
     }
 
-    function burn(bytes32 _txHash) public {
+    function burn(bytes32 _txHash) external {
         emit NIP20TokenEvent_burn(msg.sender, TICKER, _txHash);
     }
 }

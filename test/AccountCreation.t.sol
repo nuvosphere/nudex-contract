@@ -63,10 +63,10 @@ contract AccountCreation is BaseTest {
         vm.startPrank(owner);
         // simulate task
         uint256 taskId = nuDexOperations.nextTaskId();
-        string memory taskDescription = "--- encoded task string ---";
+        bytes memory taskContext = "--- encoded task context ---";
         vm.expectEmit(true, true, true, true);
-        emit INuDexOperations.TaskSubmitted(taskId, taskDescription, owner);
-        nuDexOperations.submitTask(taskDescription);
+        emit INuDexOperations.TaskSubmitted(taskId, taskContext, owner);
+        nuDexOperations.submitTask(taskContext);
         assertEq(taskId, nuDexOperations.nextTaskId() - 1);
 
         // process after tss picked up the task

@@ -9,6 +9,7 @@ contract DepositManagerUpgradeable is IDepositManager, OwnableUpgradeable {
     INIP20 public nip20Contract;
 
     mapping(address => DepositInfo[]) public deposits;
+    mapping(address => WithdrawalInfo[]) public withdrawals;
 
     // _owner: Voting Manager contract
     function initialize(address _owner, address _nip20Contract) public initializer {
@@ -16,12 +17,23 @@ contract DepositManagerUpgradeable is IDepositManager, OwnableUpgradeable {
         nip20Contract = INIP20(_nip20Contract);
     }
 
+    function getDeposits(address targetAddress) external view returns (DepositInfo[] memory) {
+        return deposits[targetAddress];
+    }
+
+    function getDeposit(
+        address targetAddress,
+        uint256 index
+    ) external view returns (DepositInfo memory) {
+        return deposits[targetAddress][index];
+    }
+
     function recordDeposit(
         address targetAddress,
         uint256 amount,
         uint256 chainId,
-        bytes memory txInfo,
-        bytes memory extraInfo
+        bytes calldata txInfo,
+        bytes calldata extraInfo
     ) external onlyOwner {
         require(amount > 0, InvalidAmount());
         DepositInfo memory newDeposit = DepositInfo({
@@ -38,14 +50,24 @@ contract DepositManagerUpgradeable is IDepositManager, OwnableUpgradeable {
         emit DepositRecorded(targetAddress, amount, chainId, txInfo, extraInfo);
     }
 
-    function getDeposits(address targetAddress) external view returns (DepositInfo[] memory) {
-        return deposits[targetAddress];
-    }
-
-    function getDeposit(
+    function recordWithdrawal(
         address targetAddress,
-        uint256 index
-    ) external view returns (DepositInfo memory) {
-        return deposits[targetAddress][index];
+        uint256 amount,
+        uint256 chainId,
+        bytes calldata txInfo,
+        bytes calldata extraInfo
+    ) external onlyOwner {
+        require(amount > 0, InvalidAmount());
+        WithdrawalInfo memory newWithdrawal = WithdrawalInfo({
+            targetAddress: targetAddress,
+            amount: amount,
+            chainId: chainId,
+            txInfo: txInfo,
+            extraInfo: extraInfo
+        });
+        withdrawals[targetAddress].push(newWithdrawal);
+
+        // TODO: burn inscription?
+        emit WithdrawalRecorded(targetAddress, amount, chainId, txInfo, extraInfo);
     }
 }

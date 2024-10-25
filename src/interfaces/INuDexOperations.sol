@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 interface INuDexOperations {
     struct Task {
         uint256 id;
-        string description;
+        bytes context;
         address submitter;
         bool isCompleted;
         uint256 createdAt;
@@ -12,7 +12,7 @@ interface INuDexOperations {
         bytes result;
     }
 
-    event TaskSubmitted(uint256 indexed taskId, string description, address indexed submitter);
+    event TaskSubmitted(uint256 indexed taskId, bytes context, address indexed submitter);
     event TaskCompleted(
         uint256 indexed taskId,
         address indexed submitter,
@@ -22,11 +22,20 @@ interface INuDexOperations {
 
     error EmptyTask();
 
-    function submitTask(string memory description) external;
+    function submitTask(bytes memory _context) external;
 
     function getLatestTask() external view returns (Task memory);
 
     function markTaskCompleted(uint256 taskId, bytes calldata result) external;
+
+    function markTaskCompleted_Batch(
+        uint256[] calldata _taskIds,
+        bytes[] calldata _results
+    ) external;
+
+    function preconfirmTask(uint256 _taskId, bytes calldata _result) external;
+
+    function confirmAllTasks() external;
 
     function getUncompletedTasks() external view returns (Task[] memory);
 

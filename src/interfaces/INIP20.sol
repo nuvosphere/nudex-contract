@@ -27,4 +27,5 @@ interface INIP20 {
     event NIP721TokenEvent_mint(address sender, address recipient, bytes32 ticker, string message);
 
     function mint(address _recipient, uint256 _amount) external;
+    function burn(bytes32 _txHash) external;
 }
