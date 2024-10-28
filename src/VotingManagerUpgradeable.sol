@@ -196,6 +196,19 @@ contract VotingManagerUpgradeable is Initializable, ReentrancyGuardUpgradeable {
         rotateSubmitter();
     }
 
+    function addBonusPoints(
+        address[] calldata _voters,
+        bytes calldata _signature
+    ) external onlyCurrentSubmitter nonReentrant {
+        bytes memory encodedParams = abi.encodePacked(_voters);
+        require(_verifySignature(encodedParams, _signature), InvalidSigner());
+        require(_voters.length < type(uint16).max, "overflow");
+        for (uint16 i; i < _voters.length; ++i) {
+            nuvoLock.accumulateBonusPoints(_voters[i]);
+        }
+        rotateSubmitter();
+    }
+
     function listAsset(
         string memory name,
         string memory nuDexName,

@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {INuvoLock, INuvoToken} from "./interfaces/INuvoLock.sol";
 
-contract NuvoLockUpgradeable is INuvoLock, UUPSUpgradeable, OwnableUpgradeable {
+contract NuvoLockUpgradeable is INuvoLock, OwnableUpgradeable {
     INuvoToken public nuvoToken;
     address public rewardSource;
     uint256 public minLockPeriod;
@@ -26,14 +25,15 @@ contract NuvoLockUpgradeable is INuvoLock, UUPSUpgradeable, OwnableUpgradeable {
     function initialize(
         address _nuvoToken,
         address _rewardSource,
-        address _owner
+        address _owner,
+        uint256 _minLockPeriod
     ) public initializer {
         __Ownable_init(_owner);
-        __UUPSUpgradeable_init();
 
         nuvoToken = INuvoToken(_nuvoToken);
         rewardSource = _rewardSource;
         currentPeriodStart = block.timestamp;
+        minLockPeriod = _minLockPeriod;
     }
 
     function setMinLockPeriod(uint256 _minLockPeriod) public onlyOwner {
@@ -84,8 +84,7 @@ contract NuvoLockUpgradeable is INuvoLock, UUPSUpgradeable, OwnableUpgradeable {
         require(locks[_participant].amount > 0, NotParticipant());
 
         // Check if the reward period has ended and accumulate rewards if necessary
-        uint256 currentPeriodNumber = getCurrentPeriod();
-        if (currentPeriodNumber > lastPeriodNumber) {
+        if (getCurrentPeriod() > lastPeriodNumber) {
             accumulateRewards();
         }
 
@@ -98,8 +97,7 @@ contract NuvoLockUpgradeable is INuvoLock, UUPSUpgradeable, OwnableUpgradeable {
         require(locks[_participant].amount > 0, NotParticipant());
 
         // Check if the reward period has ended and accumulate rewards if necessary
-        uint256 currentPeriodNumber = getCurrentPeriod();
-        if (currentPeriodNumber > lastPeriodNumber) {
+        if (getCurrentPeriod() > lastPeriodNumber) {
             accumulateRewards();
         }
 
@@ -117,16 +115,16 @@ contract NuvoLockUpgradeable is INuvoLock, UUPSUpgradeable, OwnableUpgradeable {
         emit RewardPerPeriodUpdated(newRewardPerPeriod, lastPeriodNumber);
     }
 
-    // FIXME: this function was set to internal, but was largely used in the tests
     function accumulateRewards() public {
         uint256 currentPeriodNumber = getCurrentPeriod();
 
         if (currentPeriodNumber > lastPeriodNumber) {
             if (totalBonusPoints > 0 && rewardPerPeriod[lastPeriodNumber] > 0) {
                 address participant;
+                LockInfo storage lockInfo;
                 for (uint256 i = 0; i < participants.length; i++) {
                     participant = participants[i];
-                    LockInfo storage lockInfo = locks[participant];
+                    lockInfo = locks[participant];
                     uint256 participantBonusPoints = (lockInfo.bonusPoints > lockInfo.demeritPoints)
                         ? lockInfo.bonusPoints - lockInfo.demeritPoints
                         : 0;
@@ -206,6 +204,4 @@ contract NuvoLockUpgradeable is INuvoLock, UUPSUpgradeable, OwnableUpgradeable {
     function lockedTime(address participant) external view returns (uint256) {
         return block.timestamp - locks[participant].startTime;
     }
-
-    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 }
