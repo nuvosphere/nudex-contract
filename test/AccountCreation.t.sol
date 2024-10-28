@@ -26,7 +26,7 @@ contract AccountCreation is BaseTest {
         depositAddress = makeAddr("new_address");
 
         // deploy mock contract
-        participantManager = new MockParticipantManager(owner);
+        participantManager = new MockParticipantManager(msgSender);
         nuvoLock = new MockNuvoLockUpgradeable();
 
         // deploy votingManager proxy
@@ -60,18 +60,18 @@ contract AccountCreation is BaseTest {
     }
 
     function test_Create() public {
-        vm.startPrank(owner);
-        // simulate task
+        vm.startPrank(msgSender);
+        // submit task
         uint256 taskId = nuDexOperations.nextTaskId();
-        bytes memory taskContext = "--- encoded task context ---";
+        bytes memory taskContext = "--- encoded account creation task context ---";
         vm.expectEmit(true, true, true, true);
-        emit INuDexOperations.TaskSubmitted(taskId, taskContext, owner);
+        emit INuDexOperations.TaskSubmitted(taskId, taskContext, msgSender);
         nuDexOperations.submitTask(taskContext);
         assertEq(taskId, nuDexOperations.nextTaskId() - 1);
 
         // process after tss picked up the task
         bytes memory encodedParams = abi.encodePacked(
-            owner,
+            msgSender,
             uint(10001),
             IAccountManager.Chain.BTC,
             uint(0),
@@ -80,7 +80,7 @@ contract AccountCreation is BaseTest {
         bytes memory signature = generateSignature(encodedParams, privKey);
 
         votingManager.registerAccount(
-            owner,
+            msgSender,
             10001,
             IAccountManager.Chain.BTC,
             0,
@@ -91,14 +91,14 @@ contract AccountCreation is BaseTest {
         // check mappings|reverseMapping
         assertEq(
             accountManager.addressRecord(
-                abi.encodePacked(owner, uint(10001), IAccountManager.Chain.BTC, uint(0))
+                abi.encodePacked(msgSender, uint(10001), IAccountManager.Chain.BTC, uint(0))
             ),
             depositAddress
         );
-        assertEq(accountManager.userMapping(depositAddress, IAccountManager.Chain.BTC), owner);
+        assertEq(accountManager.userMapping(depositAddress, IAccountManager.Chain.BTC), msgSender);
         vm.expectRevert(IAccountManager.RegisteredAccount.selector);
         votingManager.registerAccount(
-            owner,
+            msgSender,
             10001,
             IAccountManager.Chain.BTC,
             0,
@@ -111,7 +111,7 @@ contract AccountCreation is BaseTest {
         encodedParams = abi.encodePacked(taskId, taskResult);
         signature = generateSignature(encodedParams, privKey);
         vm.expectEmit(true, true, true, true);
-        emit INuDexOperations.TaskCompleted(taskId, owner, block.timestamp, taskResult);
+        emit INuDexOperations.TaskCompleted(taskId, msgSender, block.timestamp, taskResult);
         votingManager.submitTaskReceipt(taskId, taskResult, signature);
         vm.stopPrank();
     }
@@ -125,7 +125,7 @@ contract AccountCreation is BaseTest {
             )
         );
         accountManager.registerNewAddress(
-            owner,
+            msgSender,
             10001,
             IAccountManager.Chain.BTC,
             0,
@@ -134,17 +134,17 @@ contract AccountCreation is BaseTest {
 
         // fail case: account number less than 10000
         bytes memory encodedParams = abi.encodePacked(
-            owner,
+            msgSender,
             uint(9999),
             IAccountManager.Chain.BTC,
             uint(0),
             depositAddress
         );
         bytes memory signature = generateSignature(encodedParams, privKey);
-        vm.prank(owner);
+        vm.prank(msgSender);
         vm.expectRevert(IAccountManager.InvalidAccountNumber.selector);
         votingManager.registerAccount(
-            owner,
+            msgSender,
             9999,
             IAccountManager.Chain.BTC,
             0,

@@ -52,4 +52,5 @@ interface IDepositManager {
     ) external;
 
     function getDeposits(address targetAddress) external view returns (DepositInfo[] memory);
+    function getWithdrawals(address targetAddress) external view returns (WithdrawalInfo[] memory);
 }

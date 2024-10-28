@@ -30,7 +30,7 @@ contract Deposit is BaseTest {
         user = makeAddr("user");
 
         // deploy mock contract
-        participantManager = new MockParticipantManager(owner);
+        participantManager = new MockParticipantManager(msgSender);
         nuvoLock = new MockNuvoLockUpgradeable();
 
         // deploy votingManager proxy
@@ -68,8 +68,18 @@ contract Deposit is BaseTest {
     }
 
     function test_Deposit() public {
-        vm.startPrank(owner);
+        vm.startPrank(msgSender);
         // first deposit
+        // submit task
+        uint256 taskId = nuDexOperations.nextTaskId();
+        bytes memory taskContext = "--- encoded deposit task context ---";
+        vm.expectEmit(true, true, true, true);
+        emit INuDexOperations.TaskSubmitted(taskId, taskContext, msgSender);
+        nuDexOperations.submitTask(taskContext);
+        assertEq(taskId, nuDexOperations.nextTaskId() - 1);
+
+        // --- tss verify deposit ---
+
         // setup deposit info
         uint256 depositIndex = depositManager.getDeposits(user).length;
         assertEq(depositIndex, 0);
@@ -85,7 +95,6 @@ contract Deposit is BaseTest {
             extraInfo
         );
         bytes memory signature = generateSignature(encodedParams, privKey);
-
         // check event and result
         vm.expectEmit(true, true, true, true);
         emit IDepositManager.DepositRecorded(user, depositAmount, chainId, txInfo, extraInfo);
@@ -106,6 +115,16 @@ contract Deposit is BaseTest {
         );
 
         // second deposit
+        // submit task
+        taskId = nuDexOperations.nextTaskId();
+        taskContext = "--- encoded deposit task context 2 ---";
+        vm.expectEmit(true, true, true, true);
+        emit INuDexOperations.TaskSubmitted(taskId, taskContext, msgSender);
+        nuDexOperations.submitTask(taskContext);
+        assertEq(taskId, nuDexOperations.nextTaskId() - 1);
+
+        // --- tss verify deposit ---
+
         // setup deposit info
         depositIndex = depositManager.getDeposits(user).length;
         assertEq(depositIndex, 1); // should have increased by 1
@@ -144,7 +163,7 @@ contract Deposit is BaseTest {
         bytes memory signature = generateSignature(encodedParams, privKey);
 
         // check event and result
-        vm.prank(owner);
+        vm.prank(msgSender);
         vm.expectEmit(true, true, true, true);
         emit IDepositManager.DepositRecorded(_user, _amount, chainId, _txInfo, extraInfo);
         votingManager.submitDepositInfo(_user, _amount, chainId, _txInfo, extraInfo, signature);
@@ -162,5 +181,62 @@ contract Deposit is BaseTest {
                 depositInfo.extraInfo
             )
         );
+    }
+
+    function test_Withdraw() public {
+        vm.startPrank(msgSender);
+        // first withdrawal
+        // --- user burn the inscription ---
+        // submit task
+        uint256 taskId = nuDexOperations.nextTaskId();
+        bytes memory taskContext = "--- encoded withdraw task context ---";
+        vm.expectEmit(true, true, true, true);
+        emit INuDexOperations.TaskSubmitted(taskId, taskContext, msgSender);
+        nuDexOperations.submitTask(taskContext);
+        assertEq(taskId, nuDexOperations.nextTaskId() - 1);
+
+        // --- tss verify withdrawal ---
+
+        // setup withdrawal info
+        uint256 withdrawIndex = depositManager.getWithdrawals(user).length;
+        assertEq(withdrawIndex, 0);
+        uint256 withdrawAmount = 1 ether;
+        uint256 chainId = 0;
+        bytes memory txInfo = "--- encoded tx info ---";
+        bytes memory extraInfo = "--- extra info ---";
+        bytes memory encodedParams = abi.encodePacked(
+            user,
+            withdrawAmount,
+            chainId,
+            txInfo,
+            extraInfo
+        );
+        bytes memory signature = generateSignature(encodedParams, privKey);
+        // check event and result
+        vm.expectEmit(true, true, true, true);
+        emit IDepositManager.DepositRecorded(user, withdrawAmount, chainId, txInfo, extraInfo);
+        votingManager.submitDepositInfo(
+            user,
+            withdrawAmount,
+            chainId,
+            txInfo,
+            extraInfo,
+            signature
+        );
+        IDepositManager.DepositInfo memory withdrawInfo = depositManager.getDeposit(
+            user,
+            withdrawIndex
+        );
+        assertEq(
+            encodedParams,
+            abi.encodePacked(
+                withdrawInfo.targetAddress,
+                withdrawInfo.amount,
+                withdrawInfo.chainId,
+                withdrawInfo.txInfo,
+                withdrawInfo.extraInfo
+            )
+        );
+        vm.stopPrank();
     }
 }

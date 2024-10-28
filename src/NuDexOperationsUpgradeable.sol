@@ -34,7 +34,7 @@ contract NuDexOperationsUpgradeable is INuDexOperations, OwnableUpgradeable {
 
     function getUncompletedTasks() external view returns (Task[] memory) {
         Task[] memory tempTasks = new Task[](nextTaskId);
-        uint256 count = 0;`
+        uint256 count = 0;
 
         for (uint256 i = 0; i < nextTaskId; i++) {
             if (!tasks[i].isCompleted) {

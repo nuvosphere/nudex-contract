@@ -28,6 +28,17 @@ contract DepositManagerUpgradeable is IDepositManager, OwnableUpgradeable {
         return deposits[targetAddress][index];
     }
 
+    function getWithdrawals(address targetAddress) external view returns (WithdrawalInfo[] memory) {
+        return withdrawals[targetAddress];
+    }
+
+    function getWithdrawal(
+        address targetAddress,
+        uint256 index
+    ) external view returns (WithdrawalInfo memory) {
+        return withdrawals[targetAddress][index];
+    }
+
     function recordDeposit(
         address targetAddress,
         uint256 amount,

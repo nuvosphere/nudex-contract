@@ -11,14 +11,14 @@ contract BaseTest is Test {
 
     address public daoContract;
     address public thisAddr;
-    address public owner;
+    address public msgSender;
     uint256 public privKey;
 
     function setUp() public virtual {
-        (owner, privKey) = makeAddrAndKey("owner");
+        (msgSender, privKey) = makeAddrAndKey("msgSender");
         daoContract = makeAddr("dao");
         thisAddr = address(this);
-        console.log("Addresses: ", address(this), owner);
+        console.log("Addresses: ", address(this), msgSender);
     }
 
     function deployProxy(address _logic, address _admin) internal returns (address) {
