@@ -2,18 +2,29 @@
 pragma solidity ^0.8.0;
 
 interface INuvoToken {
-    function transferFrom(address sender, address recipient, uint256 amount) external returns (bool);
+    function transferFrom(
+        address sender,
+        address recipient,
+        uint256 amount
+    ) external returns (bool);
     function transfer(address recipient, uint256 amount) external returns (bool);
 }
 
 interface INuvoLock {
-
     event Locked(address indexed user, uint256 amount, uint256 unlockTime);
     event Unlocked(address indexed user, uint256 amount);
     event RewardsAccumulated(address indexed user, uint256 rewards);
     event RewardsClaimed(address indexed user, uint256 rewards);
     event RewardPerPeriodUpdated(uint256 newRewardPerPeriod, uint256 period);
     event DemeritPointsIncreased(address indexed submitter, uint256 points);
+
+    error AlreadyLocked();
+    error InvalidAmount();
+    error LockedTimeNotReached();
+    error NotParticipant();
+    error NothingToClaim();
+    error TimePeriodBelowMin();
+    error TransaferFailed();
 
     struct LockInfo {
         uint256 amount;
@@ -44,22 +55,21 @@ interface INuvoLock {
 
     function getLockInfo(
         address participant
-    ) 
-        external 
-        view 
+    )
+        external
+        view
         returns (
-            uint256 amount, 
-            uint256 unlockTime, 
-            uint256 originalLockTime, 
+            uint256 amount,
+            uint256 unlockTime,
+            uint256 originalLockTime,
             uint256 startTime,
             uint256 bonusPoints,
             uint256 accumulatedRewards,
             uint256 lastClaimedPeriod,
             uint256 demeritPoints
-        ) 
-   ;
+        );
 
-    function lockedBalanceOf(address participant) external view returns(uint256);
+    function lockedBalanceOf(address participant) external view returns (uint256);
 
-    function lockedTime(address participant) external view returns(uint256);
+    function lockedTime(address participant) external view returns (uint256);
 }

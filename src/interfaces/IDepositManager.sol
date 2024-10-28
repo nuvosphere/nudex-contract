@@ -2,8 +2,6 @@
 pragma solidity ^0.8.0;
 
 interface IDepositManager {
-    error InvalidAmount();
-
     struct DepositInfo {
         address targetAddress;
         uint256 amount;
@@ -34,6 +32,8 @@ interface IDepositManager {
         bytes txInfo,
         bytes extraInfo
     );
+
+    error InvalidAmount();
 
     function recordDeposit(
         address targetAddress,

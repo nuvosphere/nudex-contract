@@ -132,15 +132,35 @@ contract AccountCreation is BaseTest {
             depositAddress
         );
 
-        // fail case: account number less than 10000
+        // fail case: deposit address as address zero
         bytes memory encodedParams = abi.encodePacked(
+            msgSender,
+            uint(10001),
+            IAccountManager.Chain.BTC,
+            uint(0),
+            address(0)
+        );
+        bytes memory signature = generateSignature(encodedParams, privKey);
+        vm.prank(msgSender);
+        vm.expectRevert(IAccountManager.InvalidAddress.selector);
+        votingManager.registerAccount(
+            msgSender,
+            10001,
+            IAccountManager.Chain.BTC,
+            0,
+            address(0),
+            signature
+        );
+
+        // fail case: account number less than 10000
+        encodedParams = abi.encodePacked(
             msgSender,
             uint(9999),
             IAccountManager.Chain.BTC,
             uint(0),
             depositAddress
         );
-        bytes memory signature = generateSignature(encodedParams, privKey);
+        signature = generateSignature(encodedParams, privKey);
         vm.prank(msgSender);
         vm.expectRevert(IAccountManager.InvalidAccountNumber.selector);
         votingManager.registerAccount(

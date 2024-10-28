@@ -18,7 +18,7 @@ contract BaseTest is Test {
         (msgSender, privKey) = makeAddrAndKey("msgSender");
         daoContract = makeAddr("dao");
         thisAddr = address(this);
-        console.log("Addresses: ", address(this), msgSender);
+        // console.log("Addresses: ", address(this), msgSender);
     }
 
     function deployProxy(address _logic, address _admin) internal returns (address) {

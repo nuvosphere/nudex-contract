@@ -153,6 +153,31 @@ contract Deposit is BaseTest {
         vm.stopPrank();
     }
 
+    function test_DepositRevert() public {
+        vm.startPrank(msgSender);
+        // --- submit task ---
+
+        // --- tss verify deposit ---
+
+        // setup deposit info
+        uint256 depositAmount = 0; // invalid amount
+        uint256 chainId = 0;
+        bytes memory txInfo = "--- encoded tx info ---";
+        bytes memory extraInfo = "--- extra info ---";
+        bytes memory encodedParams = abi.encodePacked(
+            user,
+            depositAmount,
+            chainId,
+            txInfo,
+            extraInfo
+        );
+        bytes memory signature = generateSignature(encodedParams, privKey);
+        // fail case: invalid amount
+        vm.expectRevert(IDepositManager.InvalidAmount.selector);
+        votingManager.submitDepositInfo(user, depositAmount, chainId, txInfo, extraInfo, signature);
+        vm.stopPrank();
+    }
+
     function testFuzz_DepositFuzz(address _user, uint256 _amount, bytes memory _txInfo) public {
         vm.assume(_amount > 0);
         // setup deposit info
@@ -214,8 +239,8 @@ contract Deposit is BaseTest {
         bytes memory signature = generateSignature(encodedParams, privKey);
         // check event and result
         vm.expectEmit(true, true, true, true);
-        emit IDepositManager.DepositRecorded(user, withdrawAmount, chainId, txInfo, extraInfo);
-        votingManager.submitDepositInfo(
+        emit IDepositManager.WithdrawalRecorded(user, withdrawAmount, chainId, txInfo, extraInfo);
+        votingManager.submitWithdrawalInfo(
             user,
             withdrawAmount,
             chainId,
@@ -223,7 +248,7 @@ contract Deposit is BaseTest {
             extraInfo,
             signature
         );
-        IDepositManager.DepositInfo memory withdrawInfo = depositManager.getDeposit(
+        IDepositManager.WithdrawalInfo memory withdrawInfo = depositManager.getWithdrawal(
             user,
             withdrawIndex
         );
@@ -236,6 +261,38 @@ contract Deposit is BaseTest {
                 withdrawInfo.txInfo,
                 withdrawInfo.extraInfo
             )
+        );
+        vm.stopPrank();
+    }
+
+    function test_withdrawRevert() public {
+        vm.startPrank(msgSender);
+        // --- submit task ---
+
+        // --- tss verify withdraw ---
+
+        // setup withdraw info
+        uint256 withdrawAmount = 0; // invalid amount
+        uint256 chainId = 0;
+        bytes memory txInfo = "--- encoded tx info ---";
+        bytes memory extraInfo = "--- extra info ---";
+        bytes memory encodedParams = abi.encodePacked(
+            user,
+            withdrawAmount,
+            chainId,
+            txInfo,
+            extraInfo
+        );
+        bytes memory signature = generateSignature(encodedParams, privKey);
+        // fail case: invalid amount
+        vm.expectRevert(IDepositManager.InvalidAmount.selector);
+        votingManager.submitWithdrawalInfo(
+            user,
+            withdrawAmount,
+            chainId,
+            txInfo,
+            extraInfo,
+            signature
         );
         vm.stopPrank();
     }
