@@ -22,8 +22,13 @@ interface IAccountManager {
 
     function addressRecord(bytes calldata _input) external view returns (address);
     function userMapping(address _addr, Chain _chain) external view returns (address);
+    function getAddressRecord(
+        address _user,
+        uint256 _account,
+        Chain _chain,
+        uint256 _index
+    ) external view returns (address);
 
-    // register new deposit address for user
     function registerNewAddress(
         address _user,
         uint _account,

@@ -16,6 +16,7 @@ contract NuvoLockUpgradeable is INuvoLock, OwnableUpgradeable {
     mapping(address => LockInfo) public locks;
     mapping(uint256 => uint256) public rewardPerPeriod; // Maps period number to its reward amount
     address[] public participants;
+    mapping(address => uint256) public participantIndex;
 
     modifier onlyParticipant() {
         require(locks[msg.sender].amount > 0, NotParticipant());
@@ -34,6 +35,48 @@ contract NuvoLockUpgradeable is INuvoLock, OwnableUpgradeable {
         rewardSource = _rewardSource;
         currentPeriodStart = block.timestamp;
         minLockPeriod = _minLockPeriod;
+        lastPeriodNumber = getCurrentPeriod();
+    }
+
+    function getCurrentPeriod() public view returns (uint256) {
+        return (block.timestamp - currentPeriodStart) / 1 weeks;
+    }
+
+    function getLockInfo(
+        address participant
+    )
+        external
+        view
+        returns (
+            uint256 amount,
+            uint256 unlockTime,
+            uint256 originalLockTime,
+            uint256 startTime,
+            uint256 bonusPoints,
+            uint256 accumulatedRewards,
+            uint256 lastClaimedPeriod,
+            uint256 demeritPoints // TODO: this was not added, is it intended?
+        )
+    {
+        LockInfo memory lockInfo = locks[participant];
+        return (
+            lockInfo.amount,
+            lockInfo.unlockTime,
+            lockInfo.originalLockTime,
+            lockInfo.startTime,
+            lockInfo.bonusPoints,
+            lockInfo.accumulatedRewards,
+            lockInfo.lastClaimedPeriod,
+            lockInfo.demeritPoints
+        );
+    }
+
+    function lockedBalanceOf(address participant) external view returns (uint256) {
+        return locks[participant].amount;
+    }
+
+    function lockedTime(address participant) external view returns (uint256) {
+        return block.timestamp - locks[participant].startTime;
     }
 
     function setMinLockPeriod(uint256 _minLockPeriod) public onlyOwner {
@@ -42,8 +85,8 @@ contract NuvoLockUpgradeable is INuvoLock, OwnableUpgradeable {
 
     function lock(uint256 _amount, uint256 _period) external {
         require(_amount > 0, InvalidAmount());
-        require(locks[msg.sender].amount == 0, AlreadyLocked());
         require(_period >= minLockPeriod, TimePeriodBelowMin());
+        require(locks[msg.sender].amount == 0, AlreadyLocked());
 
         uint256 unlockTime = block.timestamp + _period;
         locks[msg.sender] = LockInfo({
@@ -60,6 +103,8 @@ contract NuvoLockUpgradeable is INuvoLock, OwnableUpgradeable {
         // Transfer NUVO tokens from the user to the contract
         require(nuvoToken.transferFrom(msg.sender, address(this), _amount), TransaferFailed());
         totalLocked += _amount;
+        // record participant
+        participantIndex[msg.sender] = participants.length;
         participants.push(msg.sender);
 
         emit Locked(msg.sender, _amount, unlockTime);
@@ -72,6 +117,10 @@ contract NuvoLockUpgradeable is INuvoLock, OwnableUpgradeable {
         uint256 amount = lockInfo.amount;
         lockInfo.amount = 0;
         totalLocked -= amount;
+        // remove participant
+        participants[participantIndex[msg.sender]] = participants[participants.length - 1];
+        participants.pop();
+        participantIndex[msg.sender] = 0;
 
         // Accumulate rewards for all unaccounted periods before unlocking
         accumulateRewards();
@@ -115,6 +164,7 @@ contract NuvoLockUpgradeable is INuvoLock, OwnableUpgradeable {
         emit RewardPerPeriodUpdated(newRewardPerPeriod, lastPeriodNumber);
     }
 
+    // calculate reward of every participant for the last period
     function accumulateRewards() public {
         uint256 currentPeriodNumber = getCurrentPeriod();
 
@@ -162,46 +212,5 @@ contract NuvoLockUpgradeable is INuvoLock, OwnableUpgradeable {
         require(nuvoToken.transferFrom(rewardSource, msg.sender, rewards), TransaferFailed());
 
         emit RewardsClaimed(msg.sender, rewards);
-    }
-
-    function getCurrentPeriod() public view returns (uint256) {
-        return (block.timestamp - currentPeriodStart) / 1 weeks;
-    }
-
-    function getLockInfo(
-        address participant
-    )
-        public
-        view
-        returns (
-            uint256 amount,
-            uint256 unlockTime,
-            uint256 originalLockTime,
-            uint256 startTime,
-            uint256 bonusPoints,
-            uint256 accumulatedRewards,
-            uint256 lastClaimedPeriod,
-            uint256 demeritPoints // TODO: this was not added, is it intended?
-        )
-    {
-        LockInfo memory lockInfo = locks[participant];
-        return (
-            lockInfo.amount,
-            lockInfo.unlockTime,
-            lockInfo.originalLockTime,
-            lockInfo.startTime,
-            lockInfo.bonusPoints,
-            lockInfo.accumulatedRewards,
-            lockInfo.lastClaimedPeriod,
-            lockInfo.demeritPoints
-        );
-    }
-
-    function lockedBalanceOf(address participant) external view returns (uint256) {
-        return locks[participant].amount;
-    }
-
-    function lockedTime(address participant) external view returns (uint256) {
-        return block.timestamp - locks[participant].startTime;
     }
 }

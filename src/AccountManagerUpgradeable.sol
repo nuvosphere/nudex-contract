@@ -13,12 +13,21 @@ contract AccountManagerUpgradeable is IAccountManager, OwnableUpgradeable {
         __Ownable_init(_owner);
     }
 
+    function getAddressRecord(
+        address _user,
+        uint256 _account,
+        Chain _chain,
+        uint256 _index
+    ) external view returns (address) {
+        return addressRecord[abi.encodePacked(_user, _account, _chain, _index)];
+    }
+
     // register new deposit address for user
     function registerNewAddress(
         address _user,
-        uint _account,
+        uint256 _account,
         Chain _chain,
-        uint _index,
+        uint256 _index,
         address _address
     ) external onlyOwner {
         require(_address != address(0), InvalidAddress());
