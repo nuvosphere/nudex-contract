@@ -11,6 +11,7 @@ extra_output = ["storageLayout"]
 solc_version='0.8.27'
 optimizer = true
 optimizer-runs = 200
+via_ir = true
 
 [rpc_endpoints]
 sepolia = "${SEPOLIA_RPC_URL}"

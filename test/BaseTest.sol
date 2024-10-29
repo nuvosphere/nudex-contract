@@ -6,8 +6,13 @@ import {console} from "forge-std/console.sol";
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 
+import {VotingManagerUpgradeable} from "../src/VotingManagerUpgradeable.sol";
+
 contract BaseTest is Test {
     using MessageHashUtils for bytes32;
+
+    address public vmProxy;
+    VotingManagerUpgradeable public votingManager;
 
     address public daoContract;
     address public thisAddr;
@@ -19,6 +24,9 @@ contract BaseTest is Test {
         daoContract = makeAddr("dao");
         thisAddr = address(this);
         // console.log("Addresses: ", address(this), msgSender);
+
+        // deploy votingManager proxy
+        vmProxy = deployProxy(address(new VotingManagerUpgradeable()), daoContract);
     }
 
     function deployProxy(address _logic, address _admin) internal returns (address) {
@@ -28,7 +36,7 @@ contract BaseTest is Test {
     function generateSignature(
         bytes memory _encodedParams,
         uint256 _privateKey
-    ) internal view returns (bytes memory) {
+    ) internal pure returns (bytes memory) {
         bytes32 digest = keccak256(
             abi.encodePacked(uint256ToString(_encodedParams.length), _encodedParams)
         ).toEthSignedMessageHash();

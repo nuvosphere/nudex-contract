@@ -1,8 +1,7 @@
 pragma solidity ^0.8.0;
 
-import "./BaseTest.sol";
+import {BaseTest} from "./BaseTest.sol";
 
-import {Proxy} from "../src/Proxy.sol";
 import {AccountManagerUpgradeable} from "../src/AccountManagerUpgradeable.sol";
 import {IAccountManager} from "../src/interfaces/IAccountManager.sol";
 import {NuDexOperationsUpgradeable} from "../src/NuDexOperationsUpgradeable.sol";
@@ -17,7 +16,6 @@ contract AccountCreation is BaseTest {
 
     AccountManagerUpgradeable public accountManager;
     NuDexOperationsUpgradeable public nuDexOperations;
-    VotingManagerUpgradeable public votingManager;
     MockParticipantManager public participantManager;
     MockNuvoLockUpgradeable public nuvoLock;
 
@@ -89,6 +87,15 @@ contract AccountCreation is BaseTest {
         );
 
         // check mappings|reverseMapping
+        assertEq(
+            accountManager.getAddressRecord(
+                msgSender,
+                uint(10001),
+                IAccountManager.Chain.BTC,
+                uint(0)
+            ),
+            depositAddress
+        );
         assertEq(
             accountManager.addressRecord(
                 abi.encodePacked(msgSender, uint(10001), IAccountManager.Chain.BTC, uint(0))
