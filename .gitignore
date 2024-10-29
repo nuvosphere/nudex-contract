@@ -5,11 +5,17 @@ node_modules
 # formatter
 .prettierrc
 
+# remixd
+/.states
+
 # cache files
 /cache
 /cache_forge
 /artifacts
 /out
+
+# Foundry
+/broadcast
 
 # TypeChain files
 /typechain

@@ -2,6 +2,12 @@
 pragma solidity ^0.8.0;
 
 interface IAccountManager {
+    enum Chain {
+        BTC,
+        EVM,
+        EVM_TSS
+    }
+
     event AddressRegistered(
         address indexed user,
         uint account,
@@ -13,12 +19,6 @@ interface IAccountManager {
     error RegisteredAccount();
     error InvalidAccountNumber();
     error InvalidAddress();
-
-    enum Chain {
-        BTC,
-        EVM,
-        EVM_TSS
-    }
 
     function addressRecord(bytes calldata _input) external view returns (address);
     function userMapping(address _addr, Chain _chain) external view returns (address);

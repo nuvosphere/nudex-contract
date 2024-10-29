@@ -16,11 +16,15 @@ contract Deploy is Script {
 
     function setUp() public {
         // TODO: temporary dao contract
-        daoContract = makeAddr("new_address");
+        daoContract = vm.envAddress("DAO_CONTRACT_ADDR");
+        console.log("DAO contract addr: ", daoContract);
     }
 
     function run() public {
-        vm.startBroadcast();
+        uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
+        address deployer = vm.createWallet(deployerPrivateKey).addr;
+        console.log("Deployer address: ", deployer);
+        vm.startBroadcast(deployerPrivateKey);
 
         // deploy votingManager proxy
         address vmProxy = deployProxy(address(new VotingManagerUpgradeable()), daoContract);
@@ -28,7 +32,7 @@ contract Deploy is Script {
         // deploy participantManager
         address pmProxy = deployProxy(address(new ParticipantManagerUpgradeable()), daoContract);
         ParticipantManagerUpgradeable participantManager = ParticipantManagerUpgradeable(pmProxy);
-        participantManager.initialize(address(0), 0, 0, vmProxy, address(this));
+        participantManager.initialize(address(0), 0, 0, vmProxy, deployer);
 
         // deploy nuDexOperations
         address operationProxy = deployProxy(

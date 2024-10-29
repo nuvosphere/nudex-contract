@@ -7,3 +7,13 @@ ffi = true
 ast = true
 build_info = true
 extra_output = ["storageLayout"]
+
+solc_version='0.8.27'
+optimizer = true
+optimizer-runs = 200
+
+[rpc_endpoints]
+sepolia = "${SEPOLIA_RPC_URL}"
+
+[etherscan]
+sepolia = { key = "${SEPOLIA_ETHERSCAN_API_KEY}" }
