@@ -7,6 +7,7 @@ import {INuvoLock, INuvoToken} from "./interfaces/INuvoLock.sol";
 contract NuvoLockUpgradeable is INuvoLock, OwnableUpgradeable {
     INuvoToken public nuvoToken;
     address public rewardSource;
+    uint256 public minLockAmount;
     uint256 public minLockPeriod;
     uint256 public currentPeriodStart;
     uint256 public totalBonusPoints;
@@ -15,11 +16,11 @@ contract NuvoLockUpgradeable is INuvoLock, OwnableUpgradeable {
 
     mapping(address => LockInfo) public locks;
     mapping(uint256 => uint256) public rewardPerPeriod; // Maps period number to its reward amount
-    address[] public participants;
-    mapping(address => uint256) public participantIndex;
+    address[] public users;
+    mapping(address => uint256) public userIndex;
 
     modifier onlyParticipant() {
-        require(locks[msg.sender].amount > 0, NotParticipant());
+        require(locks[msg.sender].amount > 0, NotAUser());
         _;
     }
 
@@ -27,6 +28,7 @@ contract NuvoLockUpgradeable is INuvoLock, OwnableUpgradeable {
         address _nuvoToken,
         address _rewardSource,
         address _owner,
+        uint256 _minLockAmount,
         uint256 _minLockPeriod
     ) public initializer {
         __Ownable_init(_owner);
@@ -35,6 +37,7 @@ contract NuvoLockUpgradeable is INuvoLock, OwnableUpgradeable {
         rewardSource = _rewardSource;
         currentPeriodStart = block.timestamp;
         minLockPeriod = _minLockPeriod;
+        minLockAmount = _minLockAmount;
         lastPeriodNumber = getCurrentPeriod();
     }
 
@@ -43,7 +46,7 @@ contract NuvoLockUpgradeable is INuvoLock, OwnableUpgradeable {
     }
 
     function getLockInfo(
-        address participant
+        address userAddr
     )
         external
         view
@@ -58,7 +61,7 @@ contract NuvoLockUpgradeable is INuvoLock, OwnableUpgradeable {
             uint256 demeritPoints // TODO: this was not added, is it intended?
         )
     {
-        LockInfo memory lockInfo = locks[participant];
+        LockInfo memory lockInfo = locks[userAddr];
         return (
             lockInfo.amount,
             lockInfo.unlockTime,
@@ -71,12 +74,16 @@ contract NuvoLockUpgradeable is INuvoLock, OwnableUpgradeable {
         );
     }
 
-    function lockedBalanceOf(address participant) external view returns (uint256) {
-        return locks[participant].amount;
+    function lockedBalanceOf(address userAddr) external view returns (uint256) {
+        return locks[userAddr].amount;
     }
 
-    function lockedTime(address participant) external view returns (uint256) {
-        return block.timestamp - locks[participant].startTime;
+    function lockedTime(address userAddr) external view returns (uint256) {
+        return block.timestamp - locks[userAddr].startTime;
+    }
+
+    function setMinLockAmount(uint256 _minLockAmount) public onlyOwner {
+        minLockAmount = _minLockAmount;
     }
 
     function setMinLockPeriod(uint256 _minLockPeriod) public onlyOwner {
@@ -84,7 +91,7 @@ contract NuvoLockUpgradeable is INuvoLock, OwnableUpgradeable {
     }
 
     function lock(uint256 _amount, uint256 _period) external {
-        require(_amount > 0, InvalidAmount());
+        require(_amount >= minLockAmount, InvalidAmount());
         require(_period >= minLockPeriod, TimePeriodBelowMin());
         require(locks[msg.sender].amount == 0, AlreadyLocked());
 
@@ -103,9 +110,9 @@ contract NuvoLockUpgradeable is INuvoLock, OwnableUpgradeable {
         // Transfer NUVO tokens from the user to the contract
         require(nuvoToken.transferFrom(msg.sender, address(this), _amount), TransaferFailed());
         totalLocked += _amount;
-        // record participant
-        participantIndex[msg.sender] = participants.length;
-        participants.push(msg.sender);
+        // record userAddr
+        userIndex[msg.sender] = users.length;
+        users.push(msg.sender);
 
         emit Locked(msg.sender, _amount, unlockTime);
     }
@@ -119,16 +126,16 @@ contract NuvoLockUpgradeable is INuvoLock, OwnableUpgradeable {
         uint256 amount = lockInfo.amount;
         lockInfo.amount = 0;
         totalLocked -= amount;
-        // remove participant
-        participants[participantIndex[msg.sender]] = participants[participants.length - 1];
-        participants.pop();
+        // remove userAddr
+        users[userIndex[msg.sender]] = users[users.length - 1];
+        users.pop();
         require(nuvoToken.transfer(msg.sender, amount), TransaferFailed());
 
         emit Unlocked(msg.sender, amount);
     }
 
-    function accumulateBonusPoints(address _participant) external onlyOwner {
-        require(locks[_participant].amount > 0, NotParticipant());
+    function accumulateBonusPoints(address _userAddr) external onlyOwner {
+        require(locks[_userAddr].amount > 0, NotAUser());
 
         // Check if the reward period has ended and accumulate rewards if necessary
         if (getCurrentPeriod() > lastPeriodNumber) {
@@ -136,12 +143,12 @@ contract NuvoLockUpgradeable is INuvoLock, OwnableUpgradeable {
         }
 
         // Accumulate points
-        locks[_participant].bonusPoints++;
+        locks[_userAddr].bonusPoints++;
         totalBonusPoints++;
     }
 
-    function accumulateDemeritPoints(address _participant) external onlyOwner {
-        require(locks[_participant].amount > 0, NotParticipant());
+    function accumulateDemeritPoints(address _userAddr) external onlyOwner {
+        require(locks[_userAddr].amount > 0, NotAUser());
 
         // Check if the reward period has ended and accumulate rewards if necessary
         if (getCurrentPeriod() > lastPeriodNumber) {
@@ -149,7 +156,7 @@ contract NuvoLockUpgradeable is INuvoLock, OwnableUpgradeable {
         }
 
         // Accumulate points
-        locks[_participant].demeritPoints++;
+        locks[_userAddr].demeritPoints++;
     }
 
     function setRewardPerPeriod(uint256 newRewardPerPeriod) external onlyOwner {
@@ -162,33 +169,33 @@ contract NuvoLockUpgradeable is INuvoLock, OwnableUpgradeable {
         emit RewardPerPeriodUpdated(newRewardPerPeriod, lastPeriodNumber);
     }
 
-    // calculate reward of every participant for the last period
+    // calculate reward of every user for the last period
     function accumulateRewards() public {
         uint256 currentPeriodNumber = getCurrentPeriod();
 
         if (currentPeriodNumber > lastPeriodNumber) {
             if (totalBonusPoints > 0 && rewardPerPeriod[lastPeriodNumber] > 0) {
-                address participant;
+                address userAddr;
                 LockInfo storage lockInfo;
-                for (uint256 i = 0; i < participants.length; i++) {
-                    participant = participants[i];
-                    lockInfo = locks[participant];
-                    uint256 participantBonusPoints = (lockInfo.bonusPoints > lockInfo.demeritPoints)
+                for (uint256 i = 0; i < users.length; i++) {
+                    userAddr = users[i];
+                    lockInfo = locks[userAddr];
+                    uint256 userBonusPoints = (lockInfo.bonusPoints > lockInfo.demeritPoints)
                         ? lockInfo.bonusPoints - lockInfo.demeritPoints
                         : 0;
                     if (lockInfo.demeritPoints > 0) {
                         lockInfo.demeritPoints--;
                     }
 
-                    if (participantBonusPoints > 0) {
-                        uint256 participantReward = (rewardPerPeriod[lastPeriodNumber] *
-                            participantBonusPoints) / totalBonusPoints;
-                        lockInfo.accumulatedRewards += participantReward;
+                    if (userBonusPoints > 0) {
+                        uint256 userReward = (rewardPerPeriod[lastPeriodNumber] * userBonusPoints) /
+                            totalBonusPoints;
+                        lockInfo.accumulatedRewards += userReward;
 
-                        emit RewardsAccumulated(participant, participantReward);
+                        emit RewardsAccumulated(userAddr, userReward);
                     }
 
-                    // Reset bonus points for the participant during the same loop
+                    // Reset bonus points for the user during the same loop
                     lockInfo.bonusPoints = 0;
                 }
 

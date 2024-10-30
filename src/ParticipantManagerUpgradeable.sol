@@ -7,23 +7,18 @@ import {INuvoLock} from "./interfaces/INuvoLock.sol";
 
 contract ParticipantManagerUpgradeable is IParticipantManager, OwnableUpgradeable {
     INuvoLock public nuvoLock;
-    uint256 public minLockAmount;
-    uint256 public minLockPeriod;
 
     address[] public participants;
     mapping(address => bool) public isParticipant;
 
+    // _owner: votingManager
     function initialize(
         address _nuvoLock,
-        uint256 _minLockAmount,
-        uint256 _minLockPeriod,
         address _owner,
         address[] calldata _initialParticipants
     ) public initializer {
         __Ownable_init(_owner);
         nuvoLock = INuvoLock(_nuvoLock);
-        minLockAmount = _minLockAmount;
-        minLockPeriod = _minLockPeriod;
 
         // FIXME: do we check the eligibility of these address?
         require(_initialParticipants.length > 2, NotEnoughParticipant());
@@ -35,7 +30,7 @@ contract ParticipantManagerUpgradeable is IParticipantManager, OwnableUpgradeabl
 
     function addParticipant(address newParticipant) external onlyOwner {
         require(!isParticipant[newParticipant], AlreadyParticipant());
-        require(isEligible(newParticipant), NotEligible());
+        require(nuvoLock.lockedBalanceOf(newParticipant) > 0, NotEligible());
 
         participants.push(newParticipant);
         isParticipant[newParticipant] = true;
@@ -57,11 +52,6 @@ contract ParticipantManagerUpgradeable is IParticipantManager, OwnableUpgradeabl
         }
 
         emit ParticipantRemoved(participant);
-    }
-
-    function isEligible(address participant) public view returns (bool) {
-        (uint256 amount, uint256 unlockTime, , , , , , ) = nuvoLock.getLockInfo(participant);
-        return amount >= minLockAmount && unlockTime >= block.timestamp + minLockPeriod;
     }
 
     function getParticipants() external view returns (address[] memory) {

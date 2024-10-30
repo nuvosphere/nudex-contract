@@ -16,8 +16,6 @@ interface IParticipantManager {
 
     function removeParticipant(address participant) external;
 
-    function isEligible(address participant) external view returns (bool);
-
     function getParticipants() external view returns (address[] memory);
 
     function getRandomParticipant(address _salt) external view returns (address randParticipant);

@@ -21,7 +21,7 @@ interface INuvoLock {
     error AlreadyLocked();
     error InvalidAmount();
     error UnlockedTimeNotReached();
-    error NotParticipant();
+    error NotAUser();
     error NothingToClaim();
     error TimePeriodBelowMin();
     error TransaferFailed();
