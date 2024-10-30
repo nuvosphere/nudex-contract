@@ -40,7 +40,7 @@ contract Deploy is Script {
         pmProxy = deployProxy(address(new ParticipantManagerUpgradeable()), daoContract);
         ParticipantManagerUpgradeable participantManager = ParticipantManagerUpgradeable(pmProxy);
         // FIXME: initialize participant
-        // participantManager.initialize(address(0), 0, 0, vmProxy, deployer);
+        // participantManager.initialize(address(0), vmProxy, deployer);
 
         // deploy nuDexOperations
         operationProxy = deployProxy(address(new NuDexOperationsUpgradeable()), daoContract);

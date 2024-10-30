@@ -37,7 +37,7 @@ contract DeployTest is Script {
         initParticipant[0] = deployer;
         initParticipant[1] = deployer;
         initParticipant[2] = deployer;
-        participantManager.initialize(address(0), 0, 0, address(votingManager), initParticipant);
+        participantManager.initialize(address(0), address(votingManager), initParticipant);
         console.log("participantManager: ", address(participantManager));
 
         // deploy nuDexOperations

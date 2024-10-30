@@ -1,6 +1,6 @@
 pragma solidity ^0.8.0;
 
-import {BaseTest} from "./BaseTest.sol";
+import {BaseTest, console} from "./BaseTest.sol";
 
 import {DepositManagerUpgradeable} from "../src/DepositManagerUpgradeable.sol";
 import {IDepositManager} from "../src/interfaces/IDepositManager.sol";
@@ -18,16 +18,10 @@ contract Deposit is BaseTest {
     DepositManagerUpgradeable public depositManager;
     NIP20Upgradeable public nip20;
     NuDexOperationsUpgradeable public nuDexOperations;
-    MockParticipantManager public participantManager;
-    MockNuvoLockUpgradeable public nuvoLock;
 
     function setUp() public override {
         super.setUp();
         user = makeAddr("user");
-
-        // deploy mock contract
-        participantManager = new MockParticipantManager(msgSender);
-        nuvoLock = new MockNuvoLockUpgradeable();
 
         // deploy nuDexOperations
         address operationProxy = deployProxy(

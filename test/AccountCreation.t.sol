@@ -1,6 +1,6 @@
 pragma solidity ^0.8.0;
 
-import {BaseTest} from "./BaseTest.sol";
+import {BaseTest, console} from "./BaseTest.sol";
 
 import {AccountManagerUpgradeable} from "../src/AccountManagerUpgradeable.sol";
 import {IAccountManager} from "../src/interfaces/IAccountManager.sol";
@@ -8,27 +8,15 @@ import {NuDexOperationsUpgradeable} from "../src/NuDexOperationsUpgradeable.sol"
 import {INuDexOperations} from "../src/interfaces/INuDexOperations.sol";
 import {VotingManagerUpgradeable} from "../src/VotingManagerUpgradeable.sol";
 
-import {MockParticipantManager} from "../src/mocks/MockParticipantManager.sol";
-import {MockNuvoLockUpgradeable} from "../src/mocks/MockNuvoLockUpgradeable.sol";
-
 contract AccountCreation is BaseTest {
     address public depositAddress;
 
     AccountManagerUpgradeable public accountManager;
     NuDexOperationsUpgradeable public nuDexOperations;
-    MockParticipantManager public participantManager;
-    MockNuvoLockUpgradeable public nuvoLock;
 
     function setUp() public override {
         super.setUp();
         depositAddress = makeAddr("new_address");
-
-        // deploy mock contract
-        participantManager = new MockParticipantManager(msgSender);
-        nuvoLock = new MockNuvoLockUpgradeable();
-
-        // deploy votingManager proxy
-        address vmProxy = deployProxy(address(new VotingManagerUpgradeable()), daoContract);
 
         // deploy nuDexOperations
         address operationProxy = deployProxy(

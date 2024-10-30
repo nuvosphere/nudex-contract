@@ -7,31 +7,25 @@ import {INuvoLock} from "../src/interfaces/INuvoLock.sol";
 import {VotingManagerUpgradeable} from "../src/VotingManagerUpgradeable.sol";
 
 import {MockParticipantManager} from "../src/mocks/MockParticipantManager.sol";
-import {MockNuvoLockUpgradeable} from "../src/mocks/MockNuvoLockUpgradeable.sol";
-import {MockNuvoToken} from "../src/mocks/MockNuvoToken.sol";
 
 contract NuvoLockTest is BaseTest {
     address public user;
 
     uint256 public constant ONE_WEEK = 1 weeks;
 
-    MockNuvoToken public nuvoToken;
-    MockParticipantManager public participantManager;
-
-    NuvoLockUpgradeable public nuvoLock;
-
     function setUp() public override {
         super.setUp();
-
-        // deploy mock contract
-        participantManager = new MockParticipantManager(msgSender);
-        vm.prank(msgSender);
-        nuvoToken = new MockNuvoToken();
 
         // deploy NuvoLockUpgradeable
         address nuvoLockProxy = deployProxy(address(new NuvoLockUpgradeable()), daoContract);
         nuvoLock = NuvoLockUpgradeable(nuvoLockProxy);
-        nuvoLock.initialize(address(nuvoToken), msgSender, vmProxy, ONE_WEEK);
+        nuvoLock.initialize(
+            address(nuvoToken),
+            msgSender,
+            vmProxy,
+            MIN_LOCK_AMOUNT,
+            MIN_LOCK_PERIOD
+        );
         assertEq(nuvoLock.owner(), vmProxy);
 
         // initialize votingManager link to all contracts
@@ -63,7 +57,7 @@ contract NuvoLockTest is BaseTest {
 
         assertEq(nuvoToken.balanceOf(address(nuvoLock)), totalAmount);
         assertEq(nuvoLock.totalLocked(), totalAmount);
-        assertEq(nuvoLock.participants(0), msgSender);
+        assertEq(nuvoLock.users(0), msgSender);
         INuvoLock.LockInfo memory expectedLockInfo = INuvoLock.LockInfo({
             amount: lockAmount,
             unlockTime: block.timestamp + ONE_WEEK,
@@ -113,7 +107,7 @@ contract NuvoLockTest is BaseTest {
 
         assertEq(nuvoToken.balanceOf(address(nuvoLock)), totalAmount);
         assertEq(nuvoLock.totalLocked(), totalAmount);
-        assertEq(nuvoLock.participants(1), user2);
+        assertEq(nuvoLock.users(1), user2);
         expectedLockInfo = INuvoLock.LockInfo({
             amount: lockAmount,
             unlockTime: block.timestamp + ONE_WEEK,
@@ -149,6 +143,7 @@ contract NuvoLockTest is BaseTest {
                 )
             );
         }
+        vm.stopPrank();
     }
 
     function test_LockRevert() public {
@@ -191,6 +186,7 @@ contract NuvoLockTest is BaseTest {
         // fail case: already locked
         vm.expectRevert(INuvoLock.AlreadyLocked.selector);
         nuvoLock.lock(lockAmount, ONE_WEEK);
+        vm.stopPrank();
     }
 
     function test_Unlock() public {
@@ -207,6 +203,7 @@ contract NuvoLockTest is BaseTest {
         emit INuvoLock.Unlocked(msgSender, lockAmount);
         nuvoLock.unlock();
         assertEq(nuvoLock.lockedBalanceOf(msgSender), 0);
+        vm.stopPrank();
     }
 
     function test_UnlockRevert() public {
