@@ -14,6 +14,13 @@ import {VotingManagerUpgradeable} from "../src/VotingManagerUpgradeable.sol";
 contract Deploy is Script {
     address daoContract;
 
+    address vmProxy;
+    address pmProxy;
+    address operationProxy;
+    address amProxy;
+    address dmProxy;
+    address nip20Proxy;
+
     function setUp() public {
         // TODO: temporary dao contract
         daoContract = vm.envAddress("DAO_CONTRACT_ADDR");
@@ -27,30 +34,27 @@ contract Deploy is Script {
         vm.startBroadcast(deployerPrivateKey);
 
         // deploy votingManager proxy
-        address vmProxy = deployProxy(address(new VotingManagerUpgradeable()), daoContract);
+        vmProxy = deployProxy(address(new VotingManagerUpgradeable()), daoContract);
 
         // deploy participantManager
-        address pmProxy = deployProxy(address(new ParticipantManagerUpgradeable()), daoContract);
+        pmProxy = deployProxy(address(new ParticipantManagerUpgradeable()), daoContract);
         ParticipantManagerUpgradeable participantManager = ParticipantManagerUpgradeable(pmProxy);
         // FIXME: initialize participant
         // participantManager.initialize(address(0), 0, 0, vmProxy, deployer);
 
         // deploy nuDexOperations
-        address operationProxy = deployProxy(
-            address(new NuDexOperationsUpgradeable()),
-            daoContract
-        );
+        operationProxy = deployProxy(address(new NuDexOperationsUpgradeable()), daoContract);
         NuDexOperationsUpgradeable nuDexOperations = NuDexOperationsUpgradeable(operationProxy);
         nuDexOperations.initialize(address(participantManager), vmProxy);
 
         // deploy accountManager
-        address amProxy = deployProxy(address(new AccountManagerUpgradeable()), daoContract);
+        amProxy = deployProxy(address(new AccountManagerUpgradeable()), daoContract);
         AccountManagerUpgradeable accountManager = AccountManagerUpgradeable(amProxy);
         accountManager.initialize(vmProxy);
 
         // deploy depositManager and NIP20 contract
-        address dmProxy = deployProxy(address(new DepositManagerUpgradeable()), daoContract);
-        address nip20Proxy = deployProxy(address(new NIP20Upgradeable()), daoContract);
+        dmProxy = deployProxy(address(new DepositManagerUpgradeable()), daoContract);
+        nip20Proxy = deployProxy(address(new NIP20Upgradeable()), daoContract);
         NIP20Upgradeable nip20 = NIP20Upgradeable(nip20Proxy);
         nip20.initialize(dmProxy);
         DepositManagerUpgradeable depositManager = DepositManagerUpgradeable(dmProxy);

@@ -74,29 +74,31 @@ contract NuvoLockTest is BaseTest {
             lastClaimedPeriod: lastPeriodNumber,
             demeritPoints: 0
         });
-        (
-            uint256 amount,
-            uint256 unlockTime,
-            uint256 originalLockTime,
-            uint256 startTime,
-            uint256 bonusPoints,
-            uint256 accumulatedRewards,
-            uint256 lastClaimedPeriod,
-            uint256 demeritPoints
-        ) = nuvoLock.locks(msgSender);
-        assertEq(
-            abi.encode(expectedLockInfo),
-            abi.encode(
-                amount,
-                unlockTime,
-                originalLockTime,
-                startTime,
-                bonusPoints,
-                accumulatedRewards,
-                lastClaimedPeriod,
-                demeritPoints
-            )
-        );
+        {
+            (
+                uint256 amount,
+                uint256 unlockTime,
+                uint256 originalLockTime,
+                uint256 startTime,
+                uint256 bonusPoints,
+                uint256 accumulatedRewards,
+                uint256 lastClaimedPeriod,
+                uint256 demeritPoints
+            ) = nuvoLock.locks(msgSender);
+            assertEq(
+                abi.encode(expectedLockInfo),
+                abi.encode(
+                    amount,
+                    unlockTime,
+                    originalLockTime,
+                    startTime,
+                    bonusPoints,
+                    accumulatedRewards,
+                    lastClaimedPeriod,
+                    demeritPoints
+                )
+            );
+        }
 
         // second participant
         address user2 = makeAddr("user2");
@@ -122,29 +124,31 @@ contract NuvoLockTest is BaseTest {
             lastClaimedPeriod: lastPeriodNumber,
             demeritPoints: 0
         });
-        (
-            amount,
-            unlockTime,
-            originalLockTime,
-            startTime,
-            bonusPoints,
-            accumulatedRewards,
-            lastClaimedPeriod,
-            demeritPoints
-        ) = nuvoLock.locks(user2);
-        assertEq(
-            abi.encode(expectedLockInfo),
-            abi.encode(
-                amount,
-                unlockTime,
-                originalLockTime,
-                startTime,
-                bonusPoints,
-                accumulatedRewards,
-                lastClaimedPeriod,
-                demeritPoints
-            )
-        );
+        {
+            (
+                uint256 amount,
+                uint256 unlockTime,
+                uint256 originalLockTime,
+                uint256 startTime,
+                uint256 bonusPoints,
+                uint256 accumulatedRewards,
+                uint256 lastClaimedPeriod,
+                uint256 demeritPoints
+            ) = nuvoLock.locks(user2);
+            assertEq(
+                abi.encode(expectedLockInfo),
+                abi.encode(
+                    amount,
+                    unlockTime,
+                    originalLockTime,
+                    startTime,
+                    bonusPoints,
+                    accumulatedRewards,
+                    lastClaimedPeriod,
+                    demeritPoints
+                )
+            );
+        }
         vm.stopPrank();
     }
 
