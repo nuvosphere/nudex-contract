@@ -32,7 +32,8 @@ contract Deploy is Script {
         // deploy participantManager
         address pmProxy = deployProxy(address(new ParticipantManagerUpgradeable()), daoContract);
         ParticipantManagerUpgradeable participantManager = ParticipantManagerUpgradeable(pmProxy);
-        participantManager.initialize(address(0), 0, 0, vmProxy, deployer);
+        // FIXME: initialize participant
+        // participantManager.initialize(address(0), 0, 0, vmProxy, deployer);
 
         // deploy nuDexOperations
         address operationProxy = deployProxy(
@@ -58,6 +59,7 @@ contract Deploy is Script {
         // initialize votingManager link to all contracts
         VotingManagerUpgradeable votingManager = VotingManagerUpgradeable(vmProxy);
         votingManager.initialize(
+            deployer,
             amProxy, // accountManager
             address(0), // assetManager
             dmProxy, // depositManager

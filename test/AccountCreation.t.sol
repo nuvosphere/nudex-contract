@@ -48,6 +48,7 @@ contract AccountCreation is BaseTest {
         // initialize votingManager link to all contracts
         votingManager = VotingManagerUpgradeable(vmProxy);
         votingManager.initialize(
+            tssSigner,
             amProxy, // accountManager
             address(0), // assetManager
             address(0), // depositManager
@@ -75,7 +76,7 @@ contract AccountCreation is BaseTest {
             uint(0),
             depositAddress
         );
-        bytes memory signature = generateSignature(encodedParams, privKey);
+        bytes memory signature = generateSignature(encodedParams, tssKey);
 
         votingManager.registerAccount(
             msgSender,
@@ -116,7 +117,7 @@ contract AccountCreation is BaseTest {
         // finialize task
         bytes memory taskResult = "--- encoded task result ---";
         encodedParams = abi.encodePacked(taskId, taskResult);
-        signature = generateSignature(encodedParams, privKey);
+        signature = generateSignature(encodedParams, tssKey);
         vm.expectEmit(true, true, true, true);
         emit INuDexOperations.TaskCompleted(taskId, msgSender, block.timestamp, taskResult);
         votingManager.submitTaskReceipt(taskId, taskResult, signature);
@@ -147,7 +148,7 @@ contract AccountCreation is BaseTest {
             uint(0),
             address(0)
         );
-        bytes memory signature = generateSignature(encodedParams, privKey);
+        bytes memory signature = generateSignature(encodedParams, tssKey);
         vm.prank(msgSender);
         vm.expectRevert(IAccountManager.InvalidAddress.selector);
         votingManager.registerAccount(
@@ -167,7 +168,7 @@ contract AccountCreation is BaseTest {
             uint(0),
             depositAddress
         );
-        signature = generateSignature(encodedParams, privKey);
+        signature = generateSignature(encodedParams, tssKey);
         vm.prank(msgSender);
         vm.expectRevert(IAccountManager.InvalidAccountNumber.selector);
         votingManager.registerAccount(

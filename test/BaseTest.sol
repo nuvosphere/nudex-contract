@@ -17,10 +17,12 @@ contract BaseTest is Test {
     address public daoContract;
     address public thisAddr;
     address public msgSender;
-    uint256 public privKey;
+    address public tssSigner;
+    uint256 public tssKey;
 
     function setUp() public virtual {
-        (msgSender, privKey) = makeAddrAndKey("msgSender");
+        msgSender = makeAddr("msgSender");
+        (tssSigner, tssKey) = makeAddrAndKey("tss");
         daoContract = makeAddr("dao");
         thisAddr = address(this);
         // console.log("Addresses: ", address(this), msgSender);

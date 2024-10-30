@@ -23,6 +23,7 @@ contract VotingManagerUpgradeable is Initializable, ReentrancyGuardUpgradeable {
     uint256 public constant forcedRotationWindow = 1 minutes;
     uint256 public constant taskCompletionThreshold = 1 hours;
 
+    address public tssSigner;
     address public nextSubmitter;
 
     event SubmitterChosen(address indexed newSubmitter);
@@ -45,6 +46,7 @@ contract VotingManagerUpgradeable is Initializable, ReentrancyGuardUpgradeable {
     }
 
     function initialize(
+        address _tssSigner,
         address _accountManager,
         address _assetManager,
         address _depositManager,
@@ -53,17 +55,19 @@ contract VotingManagerUpgradeable is Initializable, ReentrancyGuardUpgradeable {
         address _nuvoLock
     ) public initializer {
         __ReentrancyGuard_init();
+
         accountManager = IAccountManager(_accountManager);
         assetManager = IAssetManager(_assetManager);
         depositManager = IDepositManager(_depositManager);
         participantManager = IParticipantManager(_participantManager);
         nuDexOperations = INuDexOperations(_nuDexOperations);
         nuvoLock = INuvoLock(_nuvoLock);
+
+        tssSigner = _tssSigner;
         lastSubmissionTime = block.timestamp;
         nextSubmitter = participantManager.getRandomParticipant(nextSubmitter);
     }
 
-    // FIXME: do we check signature here?
     function chooseNewSubmitter(bytes calldata _signature) external onlyParticipant nonReentrant {
         require(
             block.timestamp >= lastSubmissionTime + forcedRotationWindow,
@@ -259,8 +263,7 @@ contract VotingManagerUpgradeable is Initializable, ReentrancyGuardUpgradeable {
         );
         bytes32 messageHash = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", hash));
         (bytes32 r, bytes32 s, uint8 v) = _splitSignature(signature);
-        address signer = ecrecover(messageHash, v, r, s);
-        return participantManager.isParticipant(signer);
+        return tssSigner == ecrecover(messageHash, v, r, s);
     }
 
     function _splitSignature(

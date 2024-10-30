@@ -51,6 +51,7 @@ contract Deposit is BaseTest {
         // initialize votingManager link to all contracts
         votingManager = VotingManagerUpgradeable(vmProxy);
         votingManager.initialize(
+            tssSigner,
             address(0), // accountManager
             address(0), // assetManager
             dmProxy, // depositManager
@@ -87,7 +88,7 @@ contract Deposit is BaseTest {
             txInfo,
             extraInfo
         );
-        bytes memory signature = generateSignature(encodedParams, privKey);
+        bytes memory signature = generateSignature(encodedParams, tssKey);
         // check event and result
         vm.expectEmit(true, true, true, true);
         emit IDepositManager.DepositRecorded(user, depositAmount, chainId, txInfo, extraInfo);
@@ -126,7 +127,7 @@ contract Deposit is BaseTest {
         txInfo = "--- encoded tx info 2 ---";
         extraInfo = "--- extra info 2 ---";
         encodedParams = abi.encodePacked(user, depositAmount, chainId, txInfo, extraInfo);
-        signature = generateSignature(encodedParams, privKey);
+        signature = generateSignature(encodedParams, tssKey);
 
         // check event and result
         vm.expectEmit(true, true, true, true);
@@ -164,7 +165,7 @@ contract Deposit is BaseTest {
             txInfo,
             extraInfo
         );
-        bytes memory signature = generateSignature(encodedParams, privKey);
+        bytes memory signature = generateSignature(encodedParams, tssKey);
         // fail case: invalid amount
         vm.expectRevert(IDepositManager.InvalidAmount.selector);
         votingManager.submitDepositInfo(user, depositAmount, chainId, txInfo, extraInfo, signature);
@@ -178,7 +179,7 @@ contract Deposit is BaseTest {
         uint256 chainId = 0;
         bytes memory extraInfo = "--- extra info ---";
         bytes memory encodedParams = abi.encodePacked(_user, _amount, chainId, _txInfo, extraInfo);
-        bytes memory signature = generateSignature(encodedParams, privKey);
+        bytes memory signature = generateSignature(encodedParams, tssKey);
 
         // check event and result
         vm.prank(msgSender);
@@ -229,7 +230,7 @@ contract Deposit is BaseTest {
             txInfo,
             extraInfo
         );
-        bytes memory signature = generateSignature(encodedParams, privKey);
+        bytes memory signature = generateSignature(encodedParams, tssKey);
         // check event and result
         vm.expectEmit(true, true, true, true);
         emit IDepositManager.WithdrawalRecorded(user, withdrawAmount, chainId, txInfo, extraInfo);
@@ -276,7 +277,7 @@ contract Deposit is BaseTest {
             txInfo,
             extraInfo
         );
-        bytes memory signature = generateSignature(encodedParams, privKey);
+        bytes memory signature = generateSignature(encodedParams, tssKey);
         // fail case: invalid amount
         vm.expectRevert(IDepositManager.InvalidAmount.selector);
         votingManager.submitWithdrawalInfo(

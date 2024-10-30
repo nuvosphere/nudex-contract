@@ -18,15 +18,19 @@ contract ParticipantManagerUpgradeable is IParticipantManager, OwnableUpgradeabl
         uint256 _minLockAmount,
         uint256 _minLockPeriod,
         address _owner,
-        address _initialParticipant
+        address[] calldata _initialParticipants
     ) public initializer {
         __Ownable_init(_owner);
         nuvoLock = INuvoLock(_nuvoLock);
         minLockAmount = _minLockAmount;
         minLockPeriod = _minLockPeriod;
 
-        participants.push(_initialParticipant);
-        isParticipant[_initialParticipant] = true;
+        // FIXME: do we check the eligibility of these address?
+        require(_initialParticipants.length > 2, NotEnoughParticipant());
+        participants = _initialParticipants;
+        for (uint256 i; i < _initialParticipants.length; ++i) {
+            isParticipant[_initialParticipants[i]] = true;
+        }
     }
 
     function addParticipant(address newParticipant) external onlyOwner {
@@ -40,7 +44,7 @@ contract ParticipantManagerUpgradeable is IParticipantManager, OwnableUpgradeabl
     }
 
     function removeParticipant(address participant) external onlyOwner {
-        require(participants.length > 1, NotEnoughParticipant());
+        require(participants.length > 3, NotEnoughParticipant());
         require(isParticipant[participant], NotParticipant());
 
         isParticipant[participant] = false;

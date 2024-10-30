@@ -33,7 +33,11 @@ contract DeployTest is Script {
 
         // deploy participantManager
         ParticipantManagerUpgradeable participantManager = new ParticipantManagerUpgradeable();
-        participantManager.initialize(address(0), 0, 0, address(votingManager), deployer);
+        address[] memory initParticipant = new address[](3);
+        initParticipant[0] = deployer;
+        initParticipant[1] = deployer;
+        initParticipant[2] = deployer;
+        participantManager.initialize(address(0), 0, 0, address(votingManager), initParticipant);
         console.log("participantManager: ", address(participantManager));
 
         // deploy nuDexOperations
@@ -55,6 +59,7 @@ contract DeployTest is Script {
 
         // initialize votingManager link to all contracts
         votingManager.initialize(
+            deployer,
             address(accountManager), // accountManager
             address(0), // assetManager
             address(depositManager), // depositManager
