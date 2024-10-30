@@ -20,7 +20,7 @@ interface INuvoLock {
 
     error AlreadyLocked();
     error InvalidAmount();
-    error LockedTimeNotReached();
+    error UnlockedTimeNotReached();
     error NotParticipant();
     error NothingToClaim();
     error TimePeriodBelowMin();

@@ -149,7 +149,6 @@ contract NuvoLockTest is BaseTest {
                 )
             );
         }
-        vm.stopPrank();
     }
 
     function test_LockRevert() public {
@@ -192,7 +191,51 @@ contract NuvoLockTest is BaseTest {
         // fail case: already locked
         vm.expectRevert(INuvoLock.AlreadyLocked.selector);
         nuvoLock.lock(lockAmount, ONE_WEEK);
-
-        vm.stopPrank();
     }
+
+    function test_Unlock() public {
+        vm.startPrank(msgSender);
+        // setup
+        uint256 lockAmount = 1 ether;
+        nuvoToken.approve(address(nuvoLock), lockAmount);
+        nuvoLock.lock(lockAmount, ONE_WEEK);
+
+        // unlock
+        skip(ONE_WEEK);
+        assertEq(nuvoLock.lockedBalanceOf(msgSender), lockAmount);
+        vm.expectEmit(true, true, true, true);
+        emit INuvoLock.Unlocked(msgSender, lockAmount);
+        nuvoLock.unlock();
+        assertEq(nuvoLock.lockedBalanceOf(msgSender), 0);
+    }
+
+    function test_UnlockRevert() public {
+        vm.startPrank(msgSender);
+        // setup
+        uint256 lockAmount = 1 ether;
+        nuvoToken.approve(address(nuvoLock), lockAmount);
+        nuvoLock.lock(lockAmount, ONE_WEEK);
+
+        // fail case: have not pass the unlock time
+        vm.expectRevert(INuvoLock.UnlockedTimeNotReached.selector);
+        nuvoLock.unlock();
+        vm.stopPrank();
+
+        skip(ONE_WEEK);
+        // fail case: insuficient token
+        vm.prank(address(nuvoLock));
+        nuvoToken.transfer(thisAddr, lockAmount);
+        vm.prank(msgSender);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                bytes4(keccak256("ERC20InsufficientBalance(address,uint256,uint256)")),
+                address(nuvoLock),
+                0,
+                lockAmount
+            )
+        );
+        nuvoLock.unlock();
+    }
+
+    function test_RewardPoint() public {}
 }

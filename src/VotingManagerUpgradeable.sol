@@ -83,7 +83,7 @@ contract VotingManagerUpgradeable is Initializable, ReentrancyGuardUpgradeable {
             }
         }
         emit SubmitterRotationRequested(msg.sender, nextSubmitter);
-        rotateSubmitter();
+        _rotateSubmitter();
     }
 
     function addParticipant(
@@ -92,7 +92,7 @@ contract VotingManagerUpgradeable is Initializable, ReentrancyGuardUpgradeable {
     ) external onlyCurrentSubmitter nonReentrant {
         require(_verifySignature(abi.encodePacked(newParticipant), signature), InvalidSigner());
         participantManager.addParticipant(newParticipant);
-        rotateSubmitter();
+        _rotateSubmitter();
     }
 
     function removeParticipant(
@@ -101,7 +101,7 @@ contract VotingManagerUpgradeable is Initializable, ReentrancyGuardUpgradeable {
     ) external onlyCurrentSubmitter nonReentrant {
         require(_verifySignature(abi.encodePacked(participant), signature), InvalidSigner());
         participantManager.removeParticipant(participant);
-        rotateSubmitter();
+        _rotateSubmitter();
     }
 
     function submitTaskReceipt(
@@ -113,7 +113,7 @@ contract VotingManagerUpgradeable is Initializable, ReentrancyGuardUpgradeable {
         bytes memory encodedParams = abi.encodePacked(taskId, result);
         require(_verifySignature(encodedParams, signature), InvalidSigner());
         nuDexOperations.markTaskCompleted(taskId, result);
-        rotateSubmitter();
+        _rotateSubmitter();
     }
 
     function preconfirmTask(
@@ -125,13 +125,13 @@ contract VotingManagerUpgradeable is Initializable, ReentrancyGuardUpgradeable {
         bytes memory encodedParams = abi.encodePacked(_taskId, _result);
         require(_verifySignature(encodedParams, _signature), InvalidSigner());
         nuDexOperations.preconfirmTask(_taskId, _result);
-        rotateSubmitter();
+        _rotateSubmitter();
     }
 
     function confirmTasks(bytes calldata _signature) external onlyCurrentSubmitter nonReentrant {
         require(_verifySignature(bytes("confirmTasks"), _signature), InvalidSigner());
         nuDexOperations.confirmAllTasks();
-        rotateSubmitter();
+        _rotateSubmitter();
     }
 
     function registerAccount(
@@ -145,7 +145,7 @@ contract VotingManagerUpgradeable is Initializable, ReentrancyGuardUpgradeable {
         bytes memory encodedParams = abi.encodePacked(_user, _account, _chain, _index, _address);
         require(_verifySignature(encodedParams, _signature), InvalidSigner());
         accountManager.registerNewAddress(_user, _account, _chain, _index, _address);
-        rotateSubmitter();
+        _rotateSubmitter();
     }
 
     function submitDepositInfo(
@@ -165,7 +165,7 @@ contract VotingManagerUpgradeable is Initializable, ReentrancyGuardUpgradeable {
         );
         require(_verifySignature(encodedParams, signature), InvalidSigner());
         depositManager.recordDeposit(targetAddress, amount, chainId, txInfo, extraInfo);
-        rotateSubmitter();
+        _rotateSubmitter();
     }
 
     function submitWithdrawalInfo(
@@ -185,7 +185,7 @@ contract VotingManagerUpgradeable is Initializable, ReentrancyGuardUpgradeable {
         );
         require(_verifySignature(encodedParams, signature), InvalidSigner());
         depositManager.recordWithdrawal(targetAddress, amount, chainId, txInfo, extraInfo);
-        rotateSubmitter();
+        _rotateSubmitter();
     }
 
     function setRewardPerPeriod(
@@ -197,7 +197,7 @@ contract VotingManagerUpgradeable is Initializable, ReentrancyGuardUpgradeable {
 
         nuvoLock.setRewardPerPeriod(newRewardPerPeriod);
         emit RewardPerPeriodVoted(newRewardPerPeriod);
-        rotateSubmitter();
+        _rotateSubmitter();
     }
 
     function addBonusPoints(
@@ -210,7 +210,7 @@ contract VotingManagerUpgradeable is Initializable, ReentrancyGuardUpgradeable {
         for (uint16 i; i < _voters.length; ++i) {
             nuvoLock.accumulateBonusPoints(_voters[i]);
         }
-        rotateSubmitter();
+        _rotateSubmitter();
     }
 
     function listAsset(
@@ -231,7 +231,7 @@ contract VotingManagerUpgradeable is Initializable, ReentrancyGuardUpgradeable {
         require(_verifySignature(encodedParams, signature), InvalidSigner());
         assetManager.listAsset(name, nuDexName, assetType, contractAddress, chainId);
 
-        rotateSubmitter();
+        _rotateSubmitter();
     }
 
     function delistAsset(
@@ -244,10 +244,10 @@ contract VotingManagerUpgradeable is Initializable, ReentrancyGuardUpgradeable {
         require(_verifySignature(encodedParams, signature), InvalidSigner());
         assetManager.delistAsset(assetType, contractAddress, chainId);
 
-        rotateSubmitter();
+        _rotateSubmitter();
     }
 
-    function rotateSubmitter() internal {
+    function _rotateSubmitter() internal {
         nuvoLock.accumulateBonusPoints(msg.sender);
         lastSubmissionTime = block.timestamp;
         nextSubmitter = participantManager.getRandomParticipant(nextSubmitter);

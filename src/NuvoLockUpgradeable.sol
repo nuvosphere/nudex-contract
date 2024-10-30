@@ -112,7 +112,9 @@ contract NuvoLockUpgradeable is INuvoLock, OwnableUpgradeable {
 
     function unlock() external onlyParticipant {
         LockInfo storage lockInfo = locks[msg.sender];
-        require(block.timestamp >= lockInfo.unlockTime, LockedTimeNotReached());
+        require(block.timestamp >= lockInfo.unlockTime, UnlockedTimeNotReached());
+        // Accumulate rewards for all unaccounted periods before unlocking
+        accumulateRewards();
 
         uint256 amount = lockInfo.amount;
         lockInfo.amount = 0;
@@ -120,10 +122,6 @@ contract NuvoLockUpgradeable is INuvoLock, OwnableUpgradeable {
         // remove participant
         participants[participantIndex[msg.sender]] = participants[participants.length - 1];
         participants.pop();
-        participantIndex[msg.sender] = 0;
-
-        // Accumulate rewards for all unaccounted periods before unlocking
-        accumulateRewards();
         require(nuvoToken.transfer(msg.sender, amount), TransaferFailed());
 
         emit Unlocked(msg.sender, amount);
