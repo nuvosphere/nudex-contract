@@ -43,8 +43,9 @@ contract BaseTest is Test {
         // console.log("Addresses: ", address(this), msgSender);
 
         // deploy mock nuvoToken
-        vm.prank(msgSender);
+        // vm.prank(msgSender);
         nuvoToken = new MockNuvoToken();
+        nuvoToken.mint(msgSender, 100 ether);
 
         // deploy votingManager proxy
         vmProxy = deployProxy(address(new VotingManagerUpgradeable()), daoContract);

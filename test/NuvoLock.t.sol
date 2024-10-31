@@ -16,17 +16,21 @@ contract NuvoLockTest is BaseTest {
     function setUp() public override {
         super.setUp();
 
+        address rewardSource = makeAddr("rewardSource");
+        nuvoToken.mint(rewardSource, 100 ether);
         // deploy NuvoLockUpgradeable
         address nuvoLockProxy = deployProxy(address(new NuvoLockUpgradeable()), daoContract);
         nuvoLock = NuvoLockUpgradeable(nuvoLockProxy);
         nuvoLock.initialize(
             address(nuvoToken),
-            msgSender,
+            rewardSource,
             vmProxy,
             MIN_LOCK_AMOUNT,
             MIN_LOCK_PERIOD
         );
         assertEq(nuvoLock.owner(), vmProxy);
+        vm.prank(rewardSource);
+        nuvoToken.approve(nuvoLockProxy, 100 ether);
 
         // initialize votingManager link to all contracts
         votingManager = VotingManagerUpgradeable(vmProxy);
@@ -42,11 +46,11 @@ contract NuvoLockTest is BaseTest {
     }
 
     function test_Lock() public {
+        vm.startPrank(msgSender);
         // first participant
         uint256 totalAmount = nuvoLock.totalLocked();
         uint256 lockAmount = 1 ether;
         uint256 lastPeriodNumber = nuvoLock.lastPeriodNumber();
-        vm.startPrank(msgSender);
         assertEq(nuvoLock.lockedBalanceOf(msgSender), 0);
 
         nuvoToken.approve(address(nuvoLock), lockAmount);
@@ -143,6 +147,10 @@ contract NuvoLockTest is BaseTest {
                 )
             );
         }
+        // check locked time
+        skip(1 days);
+        assertEq(nuvoLock.lockedTime(msgSender), 1 days);
+
         vm.stopPrank();
     }
 
@@ -208,6 +216,9 @@ contract NuvoLockTest is BaseTest {
 
     function test_UnlockRevert() public {
         vm.startPrank(msgSender);
+        // fail case: unlock before lock, not a user
+        vm.expectRevert(abi.encodeWithSelector(INuvoLock.NotAUser.selector, msgSender, 0));
+        nuvoLock.unlock();
         // setup
         uint256 lockAmount = 1 ether;
         nuvoToken.approve(address(nuvoLock), lockAmount);
@@ -232,7 +243,137 @@ contract NuvoLockTest is BaseTest {
             )
         );
         nuvoLock.unlock();
+        vm.stopPrank();
     }
 
-    function test_RewardPoint() public {}
+    function test_OwnerFunction() public {
+        vm.startPrank(msgSender);
+        nuvoToken.approve(address(nuvoLock), MIN_LOCK_AMOUNT);
+        nuvoLock.lock(MIN_LOCK_AMOUNT, MIN_LOCK_PERIOD);
+
+        assertEq(nuvoLock.minLockAmount(), MIN_LOCK_AMOUNT);
+        assertEq(nuvoLock.minLockPeriod(), MIN_LOCK_PERIOD);
+        uint256 newLockAmount = 10 ether;
+        uint256 newLockPeriod = 10 days;
+        bytes memory encodedParams = abi.encodePacked(newLockAmount, newLockPeriod);
+        bytes memory signature = generateSignature(encodedParams, tssKey);
+
+        votingManager.setMinLockInfo(newLockAmount, newLockPeriod, signature);
+        assertEq(nuvoLock.minLockAmount(), newLockAmount);
+        assertEq(nuvoLock.minLockPeriod(), newLockPeriod);
+
+        vm.stopPrank();
+        skip(1 weeks);
+        vm.startPrank(vmProxy);
+        nuvoLock.accumulateBonusPoints(msgSender);
+        (, , , , uint256 bonusPoints, , , ) = nuvoLock.locks(msgSender);
+        assertEq(bonusPoints, 2);
+        skip(1 weeks);
+        nuvoLock.accumulateDemeritPoints(msgSender);
+        (, , , , , , , uint256 demeritPoint) = nuvoLock.locks(msgSender);
+        assertEq(demeritPoint, 1);
+    }
+
+    function test_RewardPoint() public {
+        vm.startPrank(msgSender);
+        nuvoToken.approve(address(nuvoLock), MIN_LOCK_AMOUNT);
+        nuvoLock.lock(MIN_LOCK_AMOUNT, MIN_LOCK_PERIOD);
+
+        uint256 lastPeriodNumber = nuvoLock.lastPeriodNumber();
+        assertEq(lastPeriodNumber, nuvoLock.getCurrentPeriod());
+        assertEq(nuvoLock.rewardPerPeriod(lastPeriodNumber), 0);
+        uint256 newRewardPerPeriod = 3 ether;
+        bytes memory encodedParams = abi.encodePacked(newRewardPerPeriod);
+        bytes memory signature = generateSignature(encodedParams, tssKey);
+
+        votingManager.setRewardPerPeriod(newRewardPerPeriod, signature);
+        assertEq(nuvoLock.rewardPerPeriod(lastPeriodNumber), newRewardPerPeriod);
+        {
+            (, , , , uint256 bonusPoints, , , ) = nuvoLock.locks(msgSender);
+            assertEq(bonusPoints, 1);
+            assertEq(nuvoLock.totalBonusPoints(), bonusPoints);
+        }
+        uint256 snapshot = vm.snapshot();
+
+        // get ready for accumulateRewards()
+        skip(2 weeks);
+        assert(
+            lastPeriodNumber < nuvoLock.getCurrentPeriod() &&
+                nuvoLock.totalBonusPoints() > 0 &&
+                nuvoLock.rewardPerPeriod(lastPeriodNumber) > 0
+        );
+
+        vm.expectEmit(true, true, true, true);
+        emit INuvoLock.RewardsAccumulated(msgSender, newRewardPerPeriod);
+        nuvoLock.accumulateRewards();
+        assert(lastPeriodNumber < nuvoLock.getCurrentPeriod());
+        assertEq(nuvoLock.lastPeriodNumber(), nuvoLock.getCurrentPeriod());
+        {
+            (, , , , uint256 bonusPoints, uint256 accumulatedRewards, , ) = nuvoLock.locks(
+                msgSender
+            );
+            assertEq(bonusPoints, 0);
+            assertEq(accumulatedRewards, newRewardPerPeriod);
+            assertEq(nuvoLock.totalBonusPoints(), 0);
+        }
+        uint256 initialBal = nuvoToken.balanceOf(msgSender);
+        nuvoLock.claimRewards();
+        assertEq(nuvoToken.balanceOf(msgSender), initialBal + newRewardPerPeriod);
+
+        vm.stopPrank();
+
+        // when demeritPoint is applied
+        vm.revertTo(snapshot);
+        vm.prank(vmProxy);
+        nuvoLock.accumulateDemeritPoints(msgSender);
+        {
+            (, , , , uint256 bonusPoints, , , uint256 demeritPoints) = nuvoLock.locks(msgSender);
+            assertEq(bonusPoints, 1);
+            assertEq(demeritPoints, 1);
+        }
+        skip(2 weeks);
+        vm.prank(msgSender);
+        nuvoLock.accumulateRewards();
+        {
+            (
+                ,
+                ,
+                ,
+                ,
+                uint256 bonusPoints,
+                uint256 accumulatedRewards,
+                ,
+                uint256 demeritPoints
+            ) = nuvoLock.locks(msgSender);
+            assertEq(bonusPoints, 0);
+            assertEq(accumulatedRewards, 0);
+            assertEq(demeritPoints, 0);
+        }
+    }
+
+    function test_RewardRevert() public {
+        uint256 newRewardPerPeriod = 3 ether;
+        bytes memory encodedParams = abi.encodePacked(newRewardPerPeriod);
+        bytes memory signature = generateSignature(encodedParams, tssKey);
+
+        vm.prank(msgSender);
+        vm.expectRevert(abi.encodeWithSelector(INuvoLock.NotAUser.selector, msgSender, 0));
+        votingManager.setRewardPerPeriod(newRewardPerPeriod, signature);
+
+        vm.prank(vmProxy);
+        vm.expectRevert(abi.encodeWithSelector(INuvoLock.NotAUser.selector, msgSender, 0));
+        nuvoLock.accumulateDemeritPoints(msgSender);
+
+        vm.startPrank(msgSender);
+        nuvoToken.approve(address(nuvoLock), MIN_LOCK_AMOUNT);
+        nuvoLock.lock(MIN_LOCK_AMOUNT, MIN_LOCK_PERIOD);
+
+        (, , , , , uint256 accumulatedRewards, , ) = nuvoLock.locks(msgSender);
+        assertEq(accumulatedRewards, 0);
+        vm.expectRevert(INuvoLock.NothingToClaim.selector);
+        nuvoLock.claimRewards();
+        // votingManager.setRewardPerPeriod(newRewardPerPeriod, signature);
+
+        vm.stopPrank();
+    }
 }
