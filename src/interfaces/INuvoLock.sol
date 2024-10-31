@@ -25,7 +25,6 @@ interface INuvoLock {
     error NotAUser(address user, uint256 amount);
     error NothingToClaim();
     error TimePeriodBelowMin();
-    error TransaferFailed();
 
     struct LockInfo {
         uint256 amount;
@@ -55,22 +54,6 @@ interface INuvoLock {
     function claimRewards() external;
 
     function getCurrentPeriod() external view returns (uint256);
-
-    function getLockInfo(
-        address participant
-    )
-        external
-        view
-        returns (
-            uint256 amount,
-            uint256 unlockTime,
-            uint256 originalLockTime,
-            uint256 startTime,
-            uint256 bonusPoints,
-            uint256 accumulatedRewards,
-            uint256 lastClaimedPeriod,
-            uint256 demeritPoints
-        );
 
     function lockedBalanceOf(address participant) external view returns (uint256);
 
