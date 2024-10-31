@@ -28,7 +28,6 @@ contract VotingManagerUpgradeable is Initializable, ReentrancyGuardUpgradeable {
 
     event SubmitterChosen(address indexed newSubmitter);
     event SubmitterRotationRequested(address indexed requester, address indexed currentSubmitter);
-    event RewardPerPeriodVoted(uint256 newRewardPerPeriod);
 
     error InvalidSigner();
     error IncorrectSubmitter();
@@ -66,6 +65,15 @@ contract VotingManagerUpgradeable is Initializable, ReentrancyGuardUpgradeable {
         tssSigner = _tssSigner;
         lastSubmissionTime = block.timestamp;
         nextSubmitter = participantManager.getRandomParticipant(nextSubmitter);
+    }
+
+    function setSignerAddress(
+        address _newSigner,
+        bytes calldata _signature
+    ) external onlyCurrentSubmitter nonReentrant {
+        require(_verifySignature(abi.encodePacked(_newSigner), _signature), InvalidSigner());
+        tssSigner = _newSigner;
+        _rotateSubmitter();
     }
 
     function chooseNewSubmitter(bytes calldata _signature) external onlyParticipant nonReentrant {
@@ -194,9 +202,7 @@ contract VotingManagerUpgradeable is Initializable, ReentrancyGuardUpgradeable {
     ) external onlyCurrentSubmitter nonReentrant {
         bytes memory encodedParams = abi.encodePacked(newRewardPerPeriod);
         require(_verifySignature(encodedParams, signature), InvalidSigner());
-
         nuvoLock.setRewardPerPeriod(newRewardPerPeriod);
-        emit RewardPerPeriodVoted(newRewardPerPeriod);
         _rotateSubmitter();
     }
 
@@ -210,6 +216,17 @@ contract VotingManagerUpgradeable is Initializable, ReentrancyGuardUpgradeable {
         for (uint16 i; i < _voters.length; ++i) {
             nuvoLock.accumulateBonusPoints(_voters[i]);
         }
+        _rotateSubmitter();
+    }
+
+    function setMinLockInfo(
+        uint256 _minLockAmount,
+        uint256 _minLockPeriod,
+        bytes calldata _signature
+    ) external onlyCurrentSubmitter nonReentrant {
+        bytes memory encodedParams = abi.encodePacked(_minLockAmount, _minLockPeriod);
+        require(_verifySignature(encodedParams, _signature), InvalidSigner());
+        nuvoLock.setMinLockInfo(_minLockAmount, _minLockPeriod);
         _rotateSubmitter();
     }
 

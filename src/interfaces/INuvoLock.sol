@@ -13,6 +13,7 @@ interface INuvoToken {
 interface INuvoLock {
     event Locked(address indexed user, uint256 amount, uint256 unlockTime);
     event Unlocked(address indexed user, uint256 amount);
+    event MinLockInfo(uint256 indexed amount, uint256 indexed period);
     event RewardsAccumulated(address indexed user, uint256 rewards);
     event RewardsClaimed(address indexed user, uint256 rewards);
     event RewardPerPeriodUpdated(uint256 newRewardPerPeriod, uint256 period);
@@ -21,7 +22,7 @@ interface INuvoLock {
     error AlreadyLocked();
     error InvalidAmount();
     error UnlockedTimeNotReached();
-    error NotAUser();
+    error NotAUser(address user, uint256 amount);
     error NothingToClaim();
     error TimePeriodBelowMin();
     error TransaferFailed();
@@ -46,6 +47,8 @@ interface INuvoLock {
     function accumulateBonusPoints(address participant) external;
 
     function accumulateDemeritPoints(address participant) external;
+
+    function setMinLockInfo(uint256 _minLockAmount, uint256 _minLockPeriod) external;
 
     function setRewardPerPeriod(uint256 newRewardPerPeriod) external;
 

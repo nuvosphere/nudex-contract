@@ -19,8 +19,8 @@ contract NuvoLockUpgradeable is INuvoLock, OwnableUpgradeable {
     address[] public users;
     mapping(address => uint256) public userIndex;
 
-    modifier onlyParticipant() {
-        require(locks[msg.sender].amount > 0, NotAUser());
+    modifier onlyUser() {
+        require(locks[msg.sender].amount > 0, NotAUser(msg.sender, locks[msg.sender].amount));
         _;
     }
 
@@ -82,12 +82,20 @@ contract NuvoLockUpgradeable is INuvoLock, OwnableUpgradeable {
         return block.timestamp - locks[userAddr].startTime;
     }
 
-    function setMinLockAmount(uint256 _minLockAmount) public onlyOwner {
+    function setMinLockInfo(uint256 _minLockAmount, uint256 _minLockPeriod) external onlyOwner {
         minLockAmount = _minLockAmount;
+        minLockPeriod = _minLockPeriod;
+        emit MinLockInfo(minLockAmount, minLockPeriod);
     }
 
-    function setMinLockPeriod(uint256 _minLockPeriod) public onlyOwner {
-        minLockPeriod = _minLockPeriod;
+    function setRewardPerPeriod(uint256 newRewardPerPeriod) external onlyOwner {
+        // Accumulate rewards for all previous periods before updating the reward per period
+        accumulateRewards();
+
+        // Update rewardPerPeriod for the current period
+        rewardPerPeriod[lastPeriodNumber] = newRewardPerPeriod;
+
+        emit RewardPerPeriodUpdated(newRewardPerPeriod, lastPeriodNumber);
     }
 
     function lock(uint256 _amount, uint256 _period) external {
@@ -117,7 +125,7 @@ contract NuvoLockUpgradeable is INuvoLock, OwnableUpgradeable {
         emit Locked(msg.sender, _amount, unlockTime);
     }
 
-    function unlock() external onlyParticipant {
+    function unlock() external onlyUser {
         LockInfo storage lockInfo = locks[msg.sender];
         require(block.timestamp >= lockInfo.unlockTime, UnlockedTimeNotReached());
         // Accumulate rewards for all unaccounted periods before unlocking
@@ -135,7 +143,7 @@ contract NuvoLockUpgradeable is INuvoLock, OwnableUpgradeable {
     }
 
     function accumulateBonusPoints(address _userAddr) external onlyOwner {
-        require(locks[_userAddr].amount > 0, NotAUser());
+        require(locks[_userAddr].amount > 0, NotAUser(_userAddr, locks[_userAddr].amount));
 
         // Check if the reward period has ended and accumulate rewards if necessary
         if (getCurrentPeriod() > lastPeriodNumber) {
@@ -148,7 +156,7 @@ contract NuvoLockUpgradeable is INuvoLock, OwnableUpgradeable {
     }
 
     function accumulateDemeritPoints(address _userAddr) external onlyOwner {
-        require(locks[_userAddr].amount > 0, NotAUser());
+        require(locks[_userAddr].amount > 0, NotAUser(_userAddr, locks[_userAddr].amount));
 
         // Check if the reward period has ended and accumulate rewards if necessary
         if (getCurrentPeriod() > lastPeriodNumber) {
@@ -157,16 +165,6 @@ contract NuvoLockUpgradeable is INuvoLock, OwnableUpgradeable {
 
         // Accumulate points
         locks[_userAddr].demeritPoints++;
-    }
-
-    function setRewardPerPeriod(uint256 newRewardPerPeriod) external onlyOwner {
-        // Accumulate rewards for all previous periods before updating the reward per period
-        accumulateRewards();
-
-        // Update rewardPerPeriod for the current period
-        rewardPerPeriod[lastPeriodNumber] = newRewardPerPeriod;
-
-        emit RewardPerPeriodUpdated(newRewardPerPeriod, lastPeriodNumber);
     }
 
     // calculate reward of every user for the last period
@@ -201,14 +199,13 @@ contract NuvoLockUpgradeable is INuvoLock, OwnableUpgradeable {
 
                 // Reset the total bonus points for the next period
                 totalBonusPoints = 0;
-                // Update the current period and its start time
+                // Update the last period
                 lastPeriodNumber = currentPeriodNumber;
-                currentPeriodStart += (currentPeriodNumber - lastPeriodNumber) * 1 weeks;
             }
         }
     }
 
-    function claimRewards() external onlyParticipant {
+    function claimRewards() external onlyUser {
         LockInfo storage lockInfo = locks[msg.sender];
         uint256 rewards = lockInfo.accumulatedRewards;
         require(rewards > 0, NothingToClaim());
