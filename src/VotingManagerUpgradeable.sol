@@ -23,6 +23,7 @@ contract VotingManagerUpgradeable is Initializable, ReentrancyGuardUpgradeable {
     uint256 public constant forcedRotationWindow = 1 minutes;
     uint256 public constant taskCompletionThreshold = 1 hours;
 
+    uint256 public tssNonce;
     address public tssSigner;
     address public nextSubmitter;
 
@@ -33,11 +34,6 @@ contract VotingManagerUpgradeable is Initializable, ReentrancyGuardUpgradeable {
     error IncorrectSubmitter();
     error RotationWindowNotPassed();
     error TaskAlreadyCompleted();
-
-    modifier onlyParticipant() {
-        require(participantManager.isParticipant(msg.sender), IParticipantManager.NotParticipant());
-        _;
-    }
 
     modifier onlyCurrentSubmitter() {
         require(msg.sender == nextSubmitter, IncorrectSubmitter());
@@ -76,7 +72,8 @@ contract VotingManagerUpgradeable is Initializable, ReentrancyGuardUpgradeable {
         _rotateSubmitter();
     }
 
-    function chooseNewSubmitter(bytes calldata _signature) external onlyParticipant nonReentrant {
+    function chooseNewSubmitter(bytes calldata _signature) external nonReentrant {
+        require(participantManager.isParticipant(msg.sender), IParticipantManager.NotParticipant());
         require(
             block.timestamp >= lastSubmissionTime + forcedRotationWindow,
             RotationWindowNotPassed()
@@ -264,6 +261,23 @@ contract VotingManagerUpgradeable is Initializable, ReentrancyGuardUpgradeable {
         _rotateSubmitter();
     }
 
+    function verifyAndCall(
+        address _target,
+        bytes calldata _data,
+        bytes calldata _signature
+    ) external onlyCurrentSubmitter nonReentrant {
+        require(_verifySignature(_data, _signature), InvalidSigner());
+        (bool success, bytes memory data) = _target.call(_data);
+        if (!success) {
+            assembly {
+                let revertStringLength := mload(data)
+                let revertStringPtr := add(data, 0x20)
+                revert(revertStringPtr, revertStringLength)
+            }
+        }
+        _rotateSubmitter();
+    }
+
     function _rotateSubmitter() internal {
         nuvoLock.accumulateBonusPoints(msg.sender);
         lastSubmissionTime = block.timestamp;
@@ -274,9 +288,9 @@ contract VotingManagerUpgradeable is Initializable, ReentrancyGuardUpgradeable {
     function _verifySignature(
         bytes memory encodedParams,
         bytes calldata signature
-    ) internal view returns (bool) {
+    ) internal returns (bool) {
         bytes32 hash = keccak256(
-            abi.encodePacked(_uint256ToString(encodedParams.length), encodedParams)
+            abi.encodePacked(tssNonce++, _uint256ToString(encodedParams.length), encodedParams)
         );
         bytes32 messageHash = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", hash));
         (bytes32 r, bytes32 s, uint8 v) = _splitSignature(signature);

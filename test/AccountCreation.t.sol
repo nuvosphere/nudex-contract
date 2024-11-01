@@ -57,23 +57,16 @@ contract AccountCreation is BaseTest {
         assertEq(taskId, nuDexOperations.nextTaskId() - 1);
 
         // process after tss picked up the task
-        bytes memory encodedParams = abi.encodePacked(
-            msgSender,
-            uint(10001),
-            IAccountManager.Chain.BTC,
-            uint(0),
-            depositAddress
-        );
-        bytes memory signature = generateSignature(encodedParams, tssKey);
-
-        votingManager.registerAccount(
+        bytes memory callData = abi.encodeWithSelector(
+            IAccountManager.registerNewAddress.selector,
             msgSender,
             10001,
             IAccountManager.Chain.BTC,
             0,
-            depositAddress,
-            signature
+            depositAddress
         );
+        bytes memory signature = generateSignature(callData, tssKey);
+        votingManager.verifyAndCall(address(accountManager), callData, signature);
 
         // check mappings|reverseMapping
         assertEq(
@@ -92,23 +85,26 @@ contract AccountCreation is BaseTest {
             depositAddress
         );
         assertEq(accountManager.userMapping(depositAddress, IAccountManager.Chain.BTC), msgSender);
+
+        // revert if using the same signature
+        vm.expectRevert(VotingManagerUpgradeable.InvalidSigner.selector);
+        votingManager.verifyAndCall(address(accountManager), callData, signature);
+
+        signature = generateSignature(callData, tssKey);
         vm.expectRevert(IAccountManager.RegisteredAccount.selector);
-        votingManager.registerAccount(
-            msgSender,
-            10001,
-            IAccountManager.Chain.BTC,
-            0,
-            depositAddress,
-            signature
-        );
+        votingManager.verifyAndCall(address(accountManager), callData, signature);
 
         // finialize task
         bytes memory taskResult = "--- encoded task result ---";
-        encodedParams = abi.encodePacked(taskId, taskResult);
-        signature = generateSignature(encodedParams, tssKey);
+        callData = abi.encodeWithSelector(
+            INuDexOperations.markTaskCompleted.selector,
+            taskId,
+            taskResult
+        );
+        signature = generateSignature(callData, tssKey);
         vm.expectEmit(true, true, true, true);
         emit INuDexOperations.TaskCompleted(taskId, msgSender, block.timestamp, taskResult);
-        votingManager.submitTaskReceipt(taskId, taskResult, signature);
+        votingManager.verifyAndCall(address(nuDexOperations), callData, signature);
         vm.stopPrank();
     }
 
@@ -129,43 +125,31 @@ contract AccountCreation is BaseTest {
         );
 
         // fail case: deposit address as address zero
-        bytes memory encodedParams = abi.encodePacked(
+        bytes memory callData = abi.encodeWithSelector(
+            IAccountManager.registerNewAddress.selector,
             msgSender,
             uint(10001),
             IAccountManager.Chain.BTC,
             uint(0),
             address(0)
         );
-        bytes memory signature = generateSignature(encodedParams, tssKey);
+        bytes memory signature = generateSignature(callData, tssKey);
         vm.prank(msgSender);
         vm.expectRevert(IAccountManager.InvalidAddress.selector);
-        votingManager.registerAccount(
-            msgSender,
-            10001,
-            IAccountManager.Chain.BTC,
-            0,
-            address(0),
-            signature
-        );
+        votingManager.verifyAndCall(address(accountManager), callData, signature);
 
         // fail case: account number less than 10000
-        encodedParams = abi.encodePacked(
+        callData = abi.encodeWithSelector(
+            IAccountManager.registerNewAddress.selector,
             msgSender,
             uint(9999),
             IAccountManager.Chain.BTC,
             uint(0),
             depositAddress
         );
-        signature = generateSignature(encodedParams, tssKey);
+        signature = generateSignature(callData, tssKey);
         vm.prank(msgSender);
         vm.expectRevert(IAccountManager.InvalidAccountNumber.selector);
-        votingManager.registerAccount(
-            msgSender,
-            9999,
-            IAccountManager.Chain.BTC,
-            0,
-            depositAddress,
-            signature
-        );
+        votingManager.verifyAndCall(address(accountManager), callData, signature);
     }
 }

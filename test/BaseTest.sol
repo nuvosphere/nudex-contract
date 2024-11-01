@@ -85,9 +85,13 @@ contract BaseTest is Test {
     function generateSignature(
         bytes memory _encodedParams,
         uint256 _privateKey
-    ) internal pure returns (bytes memory) {
+    ) internal view returns (bytes memory) {
         bytes32 digest = keccak256(
-            abi.encodePacked(uint256ToString(_encodedParams.length), _encodedParams)
+            abi.encodePacked(
+                votingManager.tssNonce(),
+                uint256ToString(_encodedParams.length),
+                _encodedParams
+            )
         ).toEthSignedMessageHash();
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(_privateKey, digest);
         return abi.encodePacked(r, s, v);
