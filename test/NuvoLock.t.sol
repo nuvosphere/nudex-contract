@@ -11,6 +11,8 @@ import {MockParticipantManager} from "../src/mocks/MockParticipantManager.sol";
 contract NuvoLockTest is BaseTest {
     address public user;
 
+    address public nuvoLockProxy;
+
     uint256 public constant ONE_WEEK = 1 weeks;
 
     function setUp() public override {
@@ -19,7 +21,7 @@ contract NuvoLockTest is BaseTest {
         address rewardSource = makeAddr("rewardSource");
         nuvoToken.mint(rewardSource, 100 ether);
         // deploy NuvoLockUpgradeable
-        address nuvoLockProxy = deployProxy(address(new NuvoLockUpgradeable()), daoContract);
+        nuvoLockProxy = deployProxy(address(new NuvoLockUpgradeable()), daoContract);
         nuvoLock = NuvoLockUpgradeable(nuvoLockProxy);
         nuvoLock.initialize(
             address(nuvoToken),
@@ -255,10 +257,13 @@ contract NuvoLockTest is BaseTest {
         assertEq(nuvoLock.minLockPeriod(), MIN_LOCK_PERIOD);
         uint256 newLockAmount = 10 ether;
         uint256 newLockPeriod = 10 days;
-        bytes memory encodedParams = abi.encodePacked(newLockAmount, newLockPeriod);
-        bytes memory signature = generateSignature(encodedParams, tssKey);
-
-        votingManager.setMinLockInfo(newLockAmount, newLockPeriod, signature);
+        bytes memory callData = abi.encodeWithSelector(
+            INuvoLock.setMinLockInfo.selector,
+            newLockAmount,
+            newLockPeriod
+        );
+        bytes memory signature = generateSignature(callData, tssKey);
+        votingManager.verifyAndCall(nuvoLockProxy, callData, signature);
         assertEq(nuvoLock.minLockAmount(), newLockAmount);
         assertEq(nuvoLock.minLockPeriod(), newLockPeriod);
 
@@ -283,10 +288,13 @@ contract NuvoLockTest is BaseTest {
         assertEq(lastPeriodNumber, nuvoLock.getCurrentPeriod());
         assertEq(nuvoLock.rewardPerPeriod(lastPeriodNumber), 0);
         uint256 newRewardPerPeriod = 3 ether;
-        bytes memory encodedParams = abi.encodePacked(newRewardPerPeriod);
-        bytes memory signature = generateSignature(encodedParams, tssKey);
+        bytes memory callData = abi.encodeWithSelector(
+            INuvoLock.setRewardPerPeriod.selector,
+            newRewardPerPeriod
+        );
+        bytes memory signature = generateSignature(callData, tssKey);
 
-        votingManager.setRewardPerPeriod(newRewardPerPeriod, signature);
+        votingManager.verifyAndCall(nuvoLockProxy, callData, signature);
         assertEq(nuvoLock.rewardPerPeriod(lastPeriodNumber), newRewardPerPeriod);
         {
             (, , , , uint256 bonusPoints, , , ) = nuvoLock.locks(msgSender);
@@ -353,12 +361,15 @@ contract NuvoLockTest is BaseTest {
 
     function test_RewardRevert() public {
         uint256 newRewardPerPeriod = 3 ether;
-        bytes memory encodedParams = abi.encodePacked(newRewardPerPeriod);
-        bytes memory signature = generateSignature(encodedParams, tssKey);
+        bytes memory callData = abi.encodeWithSelector(
+            INuvoLock.setRewardPerPeriod.selector,
+            newRewardPerPeriod
+        );
+        bytes memory signature = generateSignature(callData, tssKey);
 
         vm.prank(msgSender);
         vm.expectRevert(abi.encodeWithSelector(INuvoLock.NotAUser.selector, msgSender, 0));
-        votingManager.setRewardPerPeriod(newRewardPerPeriod, signature);
+        votingManager.verifyAndCall(nuvoLockProxy, callData, signature);
 
         vm.prank(vmProxy);
         vm.expectRevert(abi.encodeWithSelector(INuvoLock.NotAUser.selector, msgSender, 0));
@@ -372,7 +383,6 @@ contract NuvoLockTest is BaseTest {
         assertEq(accumulatedRewards, 0);
         vm.expectRevert(INuvoLock.NothingToClaim.selector);
         nuvoLock.claimRewards();
-        // votingManager.setRewardPerPeriod(newRewardPerPeriod, signature);
 
         vm.stopPrank();
     }

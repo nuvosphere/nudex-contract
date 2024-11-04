@@ -19,6 +19,8 @@ contract Deposit is BaseTest {
     NIP20Upgradeable public nip20;
     NuDexOperationsUpgradeable public nuDexOperations;
 
+    address public dmProxy;
+
     function setUp() public override {
         super.setUp();
         user = makeAddr("user");
@@ -33,7 +35,7 @@ contract Deposit is BaseTest {
         assertEq(nuDexOperations.owner(), vmProxy);
 
         // deploy depositManager and NIP20 contract
-        address dmProxy = deployProxy(address(new DepositManagerUpgradeable()), daoContract);
+        dmProxy = deployProxy(address(new DepositManagerUpgradeable()), daoContract);
         address nip20Proxy = deployProxy(address(new NIP20Upgradeable()), daoContract);
         nip20 = NIP20Upgradeable(nip20Proxy);
         nip20.initialize(dmProxy);
@@ -75,24 +77,26 @@ contract Deposit is BaseTest {
         uint256 chainId = 0;
         bytes memory txInfo = "--- encoded tx info ---";
         bytes memory extraInfo = "--- extra info ---";
-        bytes memory encodedParams = abi.encodePacked(
+        bytes memory callData = abi.encodeWithSelector(
+            IDepositManager.recordDeposit.selector,
             user,
             depositAmount,
             chainId,
             txInfo,
             extraInfo
         );
-        bytes memory signature = generateSignature(encodedParams, tssKey);
+        bytes memory signature = generateSignature(callData, tssKey);
         // check event and result
         vm.expectEmit(true, true, true, true);
         emit IDepositManager.DepositRecorded(user, depositAmount, chainId, txInfo, extraInfo);
-        votingManager.submitDepositInfo(user, depositAmount, chainId, txInfo, extraInfo, signature);
+        votingManager.verifyAndCall(dmProxy, callData, signature);
+
         IDepositManager.DepositInfo memory depositInfo = depositManager.getDeposit(
             user,
             depositIndex
         );
         assertEq(
-            encodedParams,
+            abi.encodePacked(user, depositAmount, chainId, txInfo, extraInfo),
             abi.encodePacked(
                 depositInfo.targetAddress,
                 depositInfo.amount,
@@ -120,16 +124,23 @@ contract Deposit is BaseTest {
         chainId = 10;
         txInfo = "--- encoded tx info 2 ---";
         extraInfo = "--- extra info 2 ---";
-        encodedParams = abi.encodePacked(user, depositAmount, chainId, txInfo, extraInfo);
-        signature = generateSignature(encodedParams, tssKey);
+        callData = abi.encodeWithSelector(
+            IDepositManager.recordDeposit.selector,
+            user,
+            depositAmount,
+            chainId,
+            txInfo,
+            extraInfo
+        );
+        signature = generateSignature(callData, tssKey);
 
         // check event and result
         vm.expectEmit(true, true, true, true);
         emit IDepositManager.DepositRecorded(user, depositAmount, chainId, txInfo, extraInfo);
-        votingManager.submitDepositInfo(user, depositAmount, chainId, txInfo, extraInfo, signature);
+        votingManager.verifyAndCall(dmProxy, callData, signature);
         depositInfo = depositManager.getDeposit(user, depositIndex);
         assertEq(
-            encodedParams,
+            abi.encodePacked(user, depositAmount, chainId, txInfo, extraInfo),
             abi.encodePacked(
                 depositInfo.targetAddress,
                 depositInfo.amount,
@@ -152,17 +163,18 @@ contract Deposit is BaseTest {
         uint256 chainId = 0;
         bytes memory txInfo = "--- encoded tx info ---";
         bytes memory extraInfo = "--- extra info ---";
-        bytes memory encodedParams = abi.encodePacked(
+        bytes memory callData = abi.encodeWithSelector(
+            IDepositManager.recordDeposit.selector,
             user,
             depositAmount,
             chainId,
             txInfo,
             extraInfo
         );
-        bytes memory signature = generateSignature(encodedParams, tssKey);
+        bytes memory signature = generateSignature(callData, tssKey);
         // fail case: invalid amount
         vm.expectRevert(IDepositManager.InvalidAmount.selector);
-        votingManager.submitDepositInfo(user, depositAmount, chainId, txInfo, extraInfo, signature);
+        votingManager.verifyAndCall(dmProxy, callData, signature);
         vm.stopPrank();
     }
 
@@ -172,20 +184,27 @@ contract Deposit is BaseTest {
         uint256 depositIndex = depositManager.getDeposits(user).length;
         uint256 chainId = 0;
         bytes memory extraInfo = "--- extra info ---";
-        bytes memory encodedParams = abi.encodePacked(_user, _amount, chainId, _txInfo, extraInfo);
-        bytes memory signature = generateSignature(encodedParams, tssKey);
+        bytes memory callData = abi.encodeWithSelector(
+            IDepositManager.recordDeposit.selector,
+            _user,
+            _amount,
+            chainId,
+            _txInfo,
+            extraInfo
+        );
+        bytes memory signature = generateSignature(callData, tssKey);
 
         // check event and result
         vm.prank(msgSender);
         vm.expectEmit(true, true, true, true);
         emit IDepositManager.DepositRecorded(_user, _amount, chainId, _txInfo, extraInfo);
-        votingManager.submitDepositInfo(_user, _amount, chainId, _txInfo, extraInfo, signature);
+        votingManager.verifyAndCall(dmProxy, callData, signature);
         IDepositManager.DepositInfo memory depositInfo = depositManager.getDeposit(
             _user,
             depositIndex
         );
         assertEq(
-            encodedParams,
+            abi.encodePacked(_user, _amount, chainId, _txInfo, extraInfo),
             abi.encodePacked(
                 depositInfo.targetAddress,
                 depositInfo.amount,
@@ -217,31 +236,25 @@ contract Deposit is BaseTest {
         uint256 chainId = 0;
         bytes memory txInfo = "--- encoded tx info ---";
         bytes memory extraInfo = "--- extra info ---";
-        bytes memory encodedParams = abi.encodePacked(
+        bytes memory callData = abi.encodeWithSelector(
+            IDepositManager.recordWithdrawal.selector,
             user,
             withdrawAmount,
             chainId,
             txInfo,
             extraInfo
         );
-        bytes memory signature = generateSignature(encodedParams, tssKey);
+        bytes memory signature = generateSignature(callData, tssKey);
         // check event and result
         vm.expectEmit(true, true, true, true);
         emit IDepositManager.WithdrawalRecorded(user, withdrawAmount, chainId, txInfo, extraInfo);
-        votingManager.submitWithdrawalInfo(
-            user,
-            withdrawAmount,
-            chainId,
-            txInfo,
-            extraInfo,
-            signature
-        );
+        votingManager.verifyAndCall(dmProxy, callData, signature);
         IDepositManager.WithdrawalInfo memory withdrawInfo = depositManager.getWithdrawal(
             user,
             withdrawIndex
         );
         assertEq(
-            encodedParams,
+            abi.encodePacked(user, withdrawAmount, chainId, txInfo, extraInfo),
             abi.encodePacked(
                 withdrawInfo.targetAddress,
                 withdrawInfo.amount,
@@ -264,24 +277,18 @@ contract Deposit is BaseTest {
         uint256 chainId = 0;
         bytes memory txInfo = "--- encoded tx info ---";
         bytes memory extraInfo = "--- extra info ---";
-        bytes memory encodedParams = abi.encodePacked(
+        bytes memory callData = abi.encodeWithSelector(
+            IDepositManager.recordWithdrawal.selector,
             user,
             withdrawAmount,
             chainId,
             txInfo,
             extraInfo
         );
-        bytes memory signature = generateSignature(encodedParams, tssKey);
+        bytes memory signature = generateSignature(callData, tssKey);
         // fail case: invalid amount
         vm.expectRevert(IDepositManager.InvalidAmount.selector);
-        votingManager.submitWithdrawalInfo(
-            user,
-            withdrawAmount,
-            chainId,
-            txInfo,
-            extraInfo,
-            signature
-        );
+        votingManager.verifyAndCall(dmProxy, callData, signature);
         vm.stopPrank();
     }
 }
