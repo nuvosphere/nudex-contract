@@ -12,6 +12,7 @@ contract Participant is BaseTest {
     address public participant1;
     address public participant2;
     address public participantManagerProxy;
+    address public nextSubmitter;
 
     function setUp() public override {
         super.setUp();
@@ -74,8 +75,11 @@ contract Participant is BaseTest {
             newParticipant
         );
         bytes memory signature = generateSignature(callData, tssKey);
-        vm.prank(votingManager.nextSubmitter());
-        vm.expectRevert(IParticipantManager.NotEligible.selector);
+        nextSubmitter = votingManager.nextSubmitter();
+        vm.expectRevert(
+            abi.encodeWithSelector(IParticipantManager.NotEligible.selector, newParticipant)
+        );
+        vm.prank(nextSubmitter);
         votingManager.verifyAndCall(participantManagerProxy, callData, signature);
 
         vm.startPrank(newParticipant);
@@ -106,8 +110,11 @@ contract Participant is BaseTest {
 
         // fail: adding the same user again
         signature = generateSignature(callData, tssKey);
-        vm.prank(votingManager.nextSubmitter());
-        vm.expectRevert(IParticipantManager.AlreadyParticipant.selector);
+        nextSubmitter = votingManager.nextSubmitter();
+        vm.prank(nextSubmitter);
+        vm.expectRevert(
+            abi.encodeWithSelector(IParticipantManager.AlreadyParticipant.selector, nextSubmitter)
+        );
         votingManager.verifyAndCall(participantManagerProxy, callData, signature);
     }
 
@@ -146,8 +153,11 @@ contract Participant is BaseTest {
         // fail: remove a non-participant user
         callData = abi.encodeWithSelector(IParticipantManager.removeParticipant.selector, thisAddr);
         signature = generateSignature(callData, tssKey);
-        vm.prank(votingManager.nextSubmitter());
-        vm.expectRevert(IParticipantManager.NotParticipant.selector);
+        nextSubmitter = votingManager.nextSubmitter();
+        vm.expectRevert(
+            abi.encodeWithSelector(IParticipantManager.NotParticipant.selector, thisAddr)
+        );
+        vm.prank(nextSubmitter);
         votingManager.verifyAndCall(participantManagerProxy, callData, signature);
     }
 
@@ -159,17 +169,17 @@ contract Participant is BaseTest {
         }
         assertEq(participantManager.getParticipants().length, 23);
         initNumOfParticipant = 23;
-        address submitter = votingManager.nextSubmitter();
+        nextSubmitter = votingManager.nextSubmitter();
         for (uint8 i; i < 20; ++i) {
             // removing a random participant
             bytes memory callData = abi.encodeWithSelector(
                 IParticipantManager.removeParticipant.selector,
-                participantManager.getRandomParticipant(submitter)
+                participantManager.getRandomParticipant(nextSubmitter)
             );
             bytes memory signature = generateSignature(callData, tssKey);
-            vm.prank(submitter);
+            vm.prank(nextSubmitter);
             votingManager.verifyAndCall(participantManagerProxy, callData, signature);
-            submitter = votingManager.nextSubmitter();
+            nextSubmitter = votingManager.nextSubmitter();
             assertEq(participantManager.getParticipants().length, initNumOfParticipant - i - 1);
         }
         assertEq(participantManager.getParticipants().length, 3);

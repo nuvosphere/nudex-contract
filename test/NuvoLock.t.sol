@@ -158,10 +158,12 @@ contract NuvoLockTest is BaseTest {
         vm.startPrank(msgSender);
         uint256 lockAmount = 1 ether;
         // fail case: amount = 0
-        vm.expectRevert(INuvoLock.InvalidAmount.selector);
+        vm.expectRevert(abi.encodeWithSelector(INuvoLock.AmountBelowMin.selector, 0));
         nuvoLock.lock(0, ONE_WEEK);
         // fail case: lock period less than the minLockPeriod
-        vm.expectRevert(INuvoLock.TimePeriodBelowMin.selector);
+        vm.expectRevert(
+            abi.encodeWithSelector(INuvoLock.TimePeriodBelowMin.selector, ONE_WEEK - 1)
+        );
         nuvoLock.lock(lockAmount, ONE_WEEK - 1);
         // fail case: did not approve before lock
         vm.expectRevert(
@@ -192,7 +194,7 @@ contract NuvoLockTest is BaseTest {
         nuvoLock.lock(lockAmount, ONE_WEEK);
 
         // fail case: already locked
-        vm.expectRevert(INuvoLock.AlreadyLocked.selector);
+        vm.expectRevert(abi.encodeWithSelector(INuvoLock.AlreadyLocked.selector, msgSender));
         nuvoLock.lock(lockAmount, ONE_WEEK);
         vm.stopPrank();
     }
@@ -217,7 +219,7 @@ contract NuvoLockTest is BaseTest {
     function test_UnlockRevert() public {
         vm.startPrank(msgSender);
         // fail case: unlock before lock, not a user
-        vm.expectRevert(abi.encodeWithSelector(INuvoLock.NotAUser.selector, msgSender, 0));
+        vm.expectRevert(abi.encodeWithSelector(INuvoLock.NotAUser.selector, msgSender));
         nuvoLock.unlock();
         // setup
         uint256 lockAmount = 1 ether;
@@ -225,7 +227,14 @@ contract NuvoLockTest is BaseTest {
         nuvoLock.lock(lockAmount, ONE_WEEK);
 
         // fail case: have not pass the unlock time
-        vm.expectRevert(INuvoLock.UnlockedTimeNotReached.selector);
+        (, uint256 unlockTime, , , , , , ) = nuvoLock.locks(msgSender);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                INuvoLock.UnlockedTimeNotReached.selector,
+                block.timestamp,
+                unlockTime
+            )
+        );
         nuvoLock.unlock();
         vm.stopPrank();
 
@@ -368,11 +377,11 @@ contract NuvoLockTest is BaseTest {
         bytes memory signature = generateSignature(callData, tssKey);
 
         vm.prank(msgSender);
-        vm.expectRevert(abi.encodeWithSelector(INuvoLock.NotAUser.selector, msgSender, 0));
+        vm.expectRevert(abi.encodeWithSelector(INuvoLock.NotAUser.selector, msgSender));
         votingManager.verifyAndCall(nuvoLockProxy, callData, signature);
 
         vm.prank(vmProxy);
-        vm.expectRevert(abi.encodeWithSelector(INuvoLock.NotAUser.selector, msgSender, 0));
+        vm.expectRevert(abi.encodeWithSelector(INuvoLock.NotAUser.selector, msgSender));
         nuvoLock.accumulateDemeritPoints(msgSender);
 
         vm.startPrank(msgSender);

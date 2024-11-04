@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.26;
 
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {INuDexOperations} from "./interfaces/INuDexOperations.sol";
@@ -13,7 +13,10 @@ contract NuDexOperationsUpgradeable is INuDexOperations, OwnableUpgradeable {
     IParticipantManager public participantManager;
 
     modifier onlyParticipant() {
-        require(participantManager.isParticipant(msg.sender), IParticipantManager.NotParticipant());
+        require(
+            participantManager.isParticipant(msg.sender),
+            IParticipantManager.NotParticipant(msg.sender)
+        );
         _;
     }
 

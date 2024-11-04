@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.26;
 
 contract MockAssetManager {
     struct Asset {
@@ -36,12 +36,20 @@ contract MockAssetManager {
         assets[assetId].isListed = false;
     }
 
-    function isAssetListed(uint8 assetType, address contractAddress, uint256 chainId) external view returns (bool) {
+    function isAssetListed(
+        uint8 assetType,
+        address contractAddress,
+        uint256 chainId
+    ) external view returns (bool) {
         bytes32 assetId = getAssetIdentifier(assetType, contractAddress, chainId);
         return assets[assetId].isListed;
     }
 
-    function getAssetIdentifier(uint8 assetType, address contractAddress, uint256 chainId) public pure returns (bytes32) {
+    function getAssetIdentifier(
+        uint8 assetType,
+        address contractAddress,
+        uint256 chainId
+    ) public pure returns (bytes32) {
         return keccak256(abi.encodePacked(assetType, contractAddress, chainId));
     }
 }

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.26;
 
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {IAccountManager} from "./interfaces/IAccountManager.sol";
@@ -31,10 +31,13 @@ contract AccountManagerUpgradeable is IAccountManager, OwnableUpgradeable {
         address _address
     ) external onlyOwner {
         require(_address != address(0), InvalidAddress());
-        require(_account > 10000, InvalidAccountNumber());
+        require(_account > 10000, InvalidAccountNumber(_account));
         require(
             addressRecord[abi.encodePacked(_user, _account, _chain, _index)] == address(0),
-            RegisteredAccount()
+            RegisteredAccount(
+                _user,
+                addressRecord[abi.encodePacked(_user, _account, _chain, _index)]
+            )
         );
         addressRecord[abi.encodePacked(_user, _account, _chain, _index)] = _address;
         userMapping[_address][_chain] = _user;

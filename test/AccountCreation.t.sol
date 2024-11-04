@@ -87,11 +87,19 @@ contract AccountCreation is BaseTest {
         assertEq(accountManager.userMapping(depositAddress, IAccountManager.Chain.BTC), msgSender);
 
         // revert if using the same signature
-        vm.expectRevert(VotingManagerUpgradeable.InvalidSigner.selector);
+        vm.expectPartialRevert(VotingManagerUpgradeable.InvalidSigner.selector);
         votingManager.verifyAndCall(address(accountManager), callData, signature);
 
         signature = generateSignature(callData, tssKey);
-        vm.expectRevert(IAccountManager.RegisteredAccount.selector);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAccountManager.RegisteredAccount.selector,
+                msgSender,
+                accountManager.addressRecord(
+                    abi.encodePacked(msgSender, uint(10001), IAccountManager.Chain.BTC, uint(0))
+                )
+            )
+        );
         votingManager.verifyAndCall(address(accountManager), callData, signature);
 
         // finialize task
@@ -149,7 +157,9 @@ contract AccountCreation is BaseTest {
         );
         signature = generateSignature(callData, tssKey);
         vm.prank(msgSender);
-        vm.expectRevert(IAccountManager.InvalidAccountNumber.selector);
+        vm.expectRevert(
+            abi.encodeWithSelector(IAccountManager.InvalidAccountNumber.selector, 9999)
+        );
         votingManager.verifyAndCall(address(accountManager), callData, signature);
     }
 }

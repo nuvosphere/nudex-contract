@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.26;
 
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -23,7 +23,7 @@ contract NuvoLockUpgradeable is INuvoLock, OwnableUpgradeable {
     mapping(address => uint256) public userIndex;
 
     modifier onlyUser() {
-        require(locks[msg.sender].amount > 0, NotAUser(msg.sender, locks[msg.sender].amount));
+        require(locks[msg.sender].amount > 0, NotAUser(msg.sender));
         _;
     }
 
@@ -73,9 +73,9 @@ contract NuvoLockUpgradeable is INuvoLock, OwnableUpgradeable {
     }
 
     function lock(uint256 _amount, uint256 _period) external {
-        require(_amount >= minLockAmount, InvalidAmount());
-        require(_period >= minLockPeriod, TimePeriodBelowMin());
-        require(locks[msg.sender].amount == 0, AlreadyLocked());
+        require(_amount >= minLockAmount, AmountBelowMin(_amount));
+        require(_period >= minLockPeriod, TimePeriodBelowMin(_period));
+        require(locks[msg.sender].amount == 0, AlreadyLocked(msg.sender));
 
         uint256 unlockTime = block.timestamp + _period;
         locks[msg.sender] = LockInfo({
@@ -101,7 +101,10 @@ contract NuvoLockUpgradeable is INuvoLock, OwnableUpgradeable {
 
     function unlock() external onlyUser {
         LockInfo storage lockInfo = locks[msg.sender];
-        require(block.timestamp >= lockInfo.unlockTime, UnlockedTimeNotReached());
+        require(
+            block.timestamp >= lockInfo.unlockTime,
+            UnlockedTimeNotReached(block.timestamp, lockInfo.unlockTime)
+        );
         // Accumulate rewards for all unaccounted periods before unlocking
         accumulateRewards();
 
@@ -117,7 +120,7 @@ contract NuvoLockUpgradeable is INuvoLock, OwnableUpgradeable {
     }
 
     function accumulateBonusPoints(address _userAddr) external onlyOwner {
-        require(locks[_userAddr].amount > 0, NotAUser(_userAddr, locks[_userAddr].amount));
+        require(locks[_userAddr].amount > 0, NotAUser(_userAddr));
 
         // Check if the reward period has ended and accumulate rewards if necessary
         if (getCurrentPeriod() > lastPeriodNumber) {
@@ -130,7 +133,7 @@ contract NuvoLockUpgradeable is INuvoLock, OwnableUpgradeable {
     }
 
     function accumulateDemeritPoints(address _userAddr) external onlyOwner {
-        require(locks[_userAddr].amount > 0, NotAUser(_userAddr, locks[_userAddr].amount));
+        require(locks[_userAddr].amount > 0, NotAUser(_userAddr));
 
         // Check if the reward period has ended and accumulate rewards if necessary
         if (getCurrentPeriod() > lastPeriodNumber) {

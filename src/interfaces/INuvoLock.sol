@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.26;
 
 interface INuvoToken {
     function transferFrom(
@@ -19,12 +19,12 @@ interface INuvoLock {
     event RewardPerPeriodUpdated(uint256 newRewardPerPeriod, uint256 period);
     event DemeritPointsIncreased(address indexed submitter, uint256 points);
 
-    error AlreadyLocked();
-    error InvalidAmount();
-    error UnlockedTimeNotReached();
-    error NotAUser(address user, uint256 amount);
+    error AlreadyLocked(address user);
+    error AmountBelowMin(uint256 inputAmount);
+    error NotAUser(address user);
     error NothingToClaim();
-    error TimePeriodBelowMin();
+    error TimePeriodBelowMin(uint inputPeriod);
+    error UnlockedTimeNotReached(uint256 currentTime, uint256 unlockTime);
 
     struct LockInfo {
         uint256 amount;

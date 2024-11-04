@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.26;
 
 contract MockNuvoLockUpgradeable {
     struct LockInfo {
@@ -34,16 +34,22 @@ contract MockNuvoLockUpgradeable {
         rewardPerPeriod[currentPeriod] = newRewardPerPeriod;
     }
 
-    function getLockInfo(address participant) external view returns (
-        uint256 amount, 
-        uint256 unlockTime, 
-        uint256 originalLockTime, 
-        uint256 startTime, 
-        uint256 bonusPoints, 
-        uint256 accumulatedRewards, 
-        uint256 lastClaimedPeriod, 
-        uint256 demeritPoints
-    ) {
+    function getLockInfo(
+        address participant
+    )
+        external
+        view
+        returns (
+            uint256 amount,
+            uint256 unlockTime,
+            uint256 originalLockTime,
+            uint256 startTime,
+            uint256 bonusPoints,
+            uint256 accumulatedRewards,
+            uint256 lastClaimedPeriod,
+            uint256 demeritPoints
+        )
+    {
         LockInfo storage lockInfo = locks[participant];
         return (
             lockInfo.amount,
@@ -58,7 +64,11 @@ contract MockNuvoLockUpgradeable {
     }
 
     // Optionally, you can have a function to initialize default lock info if needed
-    function initializeLockInfo(address participant, uint256 amount, uint256 initialDemeritPoints) external {
+    function initializeLockInfo(
+        address participant,
+        uint256 amount,
+        uint256 initialDemeritPoints
+    ) external {
         locks[participant] = LockInfo({
             amount: amount,
             unlockTime: block.timestamp + 7 days,

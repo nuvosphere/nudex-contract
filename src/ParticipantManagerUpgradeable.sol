@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.26;
 
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {IParticipantManager} from "./interfaces/IParticipantManager.sol";
@@ -29,8 +29,8 @@ contract ParticipantManagerUpgradeable is IParticipantManager, OwnableUpgradeabl
     }
 
     function addParticipant(address newParticipant) external onlyOwner {
-        require(!isParticipant[newParticipant], AlreadyParticipant());
-        require(nuvoLock.lockedBalanceOf(newParticipant) > 0, NotEligible());
+        require(!isParticipant[newParticipant], AlreadyParticipant(newParticipant));
+        require(nuvoLock.lockedBalanceOf(newParticipant) > 0, NotEligible(newParticipant));
 
         participants.push(newParticipant);
         isParticipant[newParticipant] = true;
@@ -40,7 +40,7 @@ contract ParticipantManagerUpgradeable is IParticipantManager, OwnableUpgradeabl
 
     function removeParticipant(address participant) external onlyOwner {
         require(participants.length > 3, NotEnoughParticipant());
-        require(isParticipant[participant], NotParticipant());
+        require(isParticipant[participant], NotParticipant(participant));
 
         isParticipant[participant] = false;
         for (uint256 i = 0; i < participants.length; i++) {

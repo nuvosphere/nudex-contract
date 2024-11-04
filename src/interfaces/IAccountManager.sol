@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.26;
 
 interface IAccountManager {
     enum Chain {
@@ -16,9 +16,9 @@ interface IAccountManager {
         address indexed newAddress
     );
 
-    error RegisteredAccount();
-    error InvalidAccountNumber();
     error InvalidAddress();
+    error InvalidAccountNumber(uint);
+    error RegisteredAccount(address, address);
 
     function addressRecord(bytes calldata _input) external view returns (address);
     function userMapping(address _addr, Chain _chain) external view returns (address);
