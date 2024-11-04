@@ -6,8 +6,6 @@ import {NuvoLockUpgradeable} from "../src/NuvoLockUpgradeable.sol";
 import {INuvoLock} from "../src/interfaces/INuvoLock.sol";
 import {VotingManagerUpgradeable} from "../src/VotingManagerUpgradeable.sol";
 
-import {MockParticipantManager} from "../src/mocks/MockParticipantManager.sol";
-
 contract NuvoLockTest is BaseTest {
     address public user;
 
@@ -263,6 +261,8 @@ contract NuvoLockTest is BaseTest {
             newLockPeriod
         );
         bytes memory signature = generateSignature(callData, tssKey);
+        vm.expectEmit(true, true, true, true);
+        emit INuvoLock.MinLockInfo(newLockAmount, newLockPeriod);
         votingManager.verifyAndCall(nuvoLockProxy, callData, signature);
         assertEq(nuvoLock.minLockAmount(), newLockAmount);
         assertEq(nuvoLock.minLockPeriod(), newLockPeriod);

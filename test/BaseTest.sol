@@ -28,7 +28,6 @@ contract BaseTest is Test {
     address public daoContract;
     address public thisAddr;
     address public msgSender;
-    address[] public participants;
     address public tssSigner;
     uint256 public tssKey;
 
@@ -37,9 +36,6 @@ contract BaseTest is Test {
         (tssSigner, tssKey) = makeAddrAndKey("tss");
         daoContract = makeAddr("dao");
         thisAddr = address(this);
-        participants.push(msgSender);
-        participants.push(msgSender);
-        participants.push(msgSender);
         // console.log("Addresses: ", address(this), msgSender);
 
         // deploy mock nuvoToken
@@ -68,6 +64,10 @@ contract BaseTest is Test {
             daoContract
         );
         participantManager = ParticipantManagerUpgradeable(participantManagerProxy);
+        address[] memory participants = new address[](3);
+        participants[0] = msgSender;
+        participants[1] = msgSender;
+        participants[2] = msgSender;
         participantManager.initialize(address(nuvoLock), vmProxy, participants);
         assertEq(participantManager.owner(), vmProxy);
 
@@ -83,15 +83,11 @@ contract BaseTest is Test {
     }
 
     function generateSignature(
-        bytes memory _encodedParams,
+        bytes memory _callData,
         uint256 _privateKey
     ) internal view returns (bytes memory) {
         bytes32 digest = keccak256(
-            abi.encodePacked(
-                votingManager.tssNonce(),
-                uint256ToString(_encodedParams.length),
-                _encodedParams
-            )
+            abi.encodePacked(votingManager.tssNonce(), uint256ToString(_callData.length), _callData)
         ).toEthSignedMessageHash();
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(_privateKey, digest);
         return abi.encodePacked(r, s, v);

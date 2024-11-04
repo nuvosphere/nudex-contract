@@ -9,9 +9,6 @@ import {NuDexOperationsUpgradeable} from "../src/NuDexOperationsUpgradeable.sol"
 import {INuDexOperations} from "../src/interfaces/INuDexOperations.sol";
 import {VotingManagerUpgradeable} from "../src/VotingManagerUpgradeable.sol";
 
-import {MockParticipantManager} from "../src/mocks/MockParticipantManager.sol";
-import {MockNuvoLockUpgradeable} from "../src/mocks/MockNuvoLockUpgradeable.sol";
-
 contract Deposit is BaseTest {
     address public user;
 
