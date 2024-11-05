@@ -56,7 +56,7 @@ contract Participant is BaseTest {
             address(0), // assetManager
             address(0), // depositManager
             participantManagerProxy, // participantManager
-            address(0), // nudeOperation
+            address(0), // taskManager
             address(nuvoLock) // nuvoLock
         );
         assert(

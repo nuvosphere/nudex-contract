@@ -5,8 +5,8 @@ import {BaseTest, console} from "./BaseTest.sol";
 import {DepositManagerUpgradeable} from "../src/DepositManagerUpgradeable.sol";
 import {IDepositManager} from "../src/interfaces/IDepositManager.sol";
 import {NIP20Upgradeable} from "../src/NIP20Upgradeable.sol";
-import {NuDexOperationsUpgradeable} from "../src/NuDexOperationsUpgradeable.sol";
-import {INuDexOperations} from "../src/interfaces/INuDexOperations.sol";
+import {TaskManagerUpgradeable} from "../src/TaskManagerUpgradeable.sol";
+import {ITaskManager} from "../src/interfaces/ITaskManager.sol";
 import {VotingManagerUpgradeable} from "../src/VotingManagerUpgradeable.sol";
 
 contract Deposit is BaseTest {
@@ -14,22 +14,12 @@ contract Deposit is BaseTest {
 
     DepositManagerUpgradeable public depositManager;
     NIP20Upgradeable public nip20;
-    NuDexOperationsUpgradeable public nuDexOperations;
 
     address public dmProxy;
 
     function setUp() public override {
         super.setUp();
         user = makeAddr("user");
-
-        // deploy nuDexOperations
-        address operationProxy = deployProxy(
-            address(new NuDexOperationsUpgradeable()),
-            daoContract
-        );
-        nuDexOperations = NuDexOperationsUpgradeable(operationProxy);
-        nuDexOperations.initialize(address(participantManager), vmProxy);
-        assertEq(nuDexOperations.owner(), vmProxy);
 
         // deploy depositManager and NIP20 contract
         dmProxy = deployProxy(address(new DepositManagerUpgradeable()), daoContract);
@@ -49,24 +39,13 @@ contract Deposit is BaseTest {
             address(0), // assetManager
             dmProxy, // depositManager
             address(participantManager), // participantManager
-            operationProxy, // nudeOperation
+            address(0), // taskManager
             address(nuvoLock) // nuvoLock
         );
     }
 
     function test_Deposit() public {
         vm.startPrank(msgSender);
-        // first deposit
-        // submit task
-        uint256 taskId = nuDexOperations.nextTaskId();
-        bytes memory taskContext = "--- encoded deposit task context ---";
-        vm.expectEmit(true, true, true, true);
-        emit INuDexOperations.TaskSubmitted(taskId, taskContext, msgSender);
-        nuDexOperations.submitTask(taskContext);
-        assertEq(taskId, nuDexOperations.nextTaskId() - 1);
-
-        // --- tss verify deposit ---
-
         // setup deposit info
         uint256 depositIndex = depositManager.getDeposits(user).length;
         assertEq(depositIndex, 0);
@@ -104,16 +83,6 @@ contract Deposit is BaseTest {
         );
 
         // second deposit
-        // submit task
-        taskId = nuDexOperations.nextTaskId();
-        taskContext = "--- encoded deposit task context 2 ---";
-        vm.expectEmit(true, true, true, true);
-        emit INuDexOperations.TaskSubmitted(taskId, taskContext, msgSender);
-        nuDexOperations.submitTask(taskContext);
-        assertEq(taskId, nuDexOperations.nextTaskId() - 1);
-
-        // --- tss verify deposit ---
-
         // setup deposit info
         depositIndex = depositManager.getDeposits(user).length;
         assertEq(depositIndex, 1); // should have increased by 1
@@ -215,17 +184,6 @@ contract Deposit is BaseTest {
     function test_Withdraw() public {
         vm.startPrank(msgSender);
         // first withdrawal
-        // --- user burn the inscription ---
-        // submit task
-        uint256 taskId = nuDexOperations.nextTaskId();
-        bytes memory taskContext = "--- encoded withdraw task context ---";
-        vm.expectEmit(true, true, true, true);
-        emit INuDexOperations.TaskSubmitted(taskId, taskContext, msgSender);
-        nuDexOperations.submitTask(taskContext);
-        assertEq(taskId, nuDexOperations.nextTaskId() - 1);
-
-        // --- tss verify withdrawal ---
-
         // setup withdrawal info
         uint256 withdrawIndex = depositManager.getWithdrawals(user).length;
         assertEq(withdrawIndex, 0);

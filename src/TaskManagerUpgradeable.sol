@@ -108,5 +108,7 @@ contract TaskManagerUpgradeable is ITaskManager, OwnableUpgradeable {
                 preconfirmedTaskResults[i]
             );
         }
+        delete preconfirmedTasks;
+        delete preconfirmedTaskResults;
     }
 }
