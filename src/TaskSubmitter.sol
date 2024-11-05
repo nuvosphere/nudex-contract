@@ -1,11 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {ITaskManager} from "./interfaces/ITaskManager.sol";
 
-contract TaskSubmitterUpgradeable is OwnableUpgradeable {
-    // _owner: votingManager
-    function initialize(address _owner) public initializer {
-        __Ownable_init(_owner);
+contract TaskSubmitter {
+    ITaskManager public taskManager;
+
+    constructor(address _taskManager) {
+        taskManager = ITaskManager(_taskManager);
+    }
+
+    function submitTask(bytes calldata _context) public {
+        taskManager.submitTask(msg.sender, _context);
     }
 }

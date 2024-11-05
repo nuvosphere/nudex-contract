@@ -7,7 +7,8 @@ import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transpa
 import {AccountManagerUpgradeable} from "../src/AccountManagerUpgradeable.sol";
 import {DepositManagerUpgradeable} from "../src/DepositManagerUpgradeable.sol";
 import {NIP20Upgradeable} from "../src/NIP20Upgradeable.sol";
-import {NuDexOperationsUpgradeable} from "../src/NuDexOperationsUpgradeable.sol";
+import {TaskManagerUpgradeable} from "../src/TaskManagerUpgradeable.sol";
+import {TaskSubmitter} from "../src/TaskSubmitter.sol";
 import {ParticipantManagerUpgradeable} from "../src/ParticipantManagerUpgradeable.sol";
 import {VotingManagerUpgradeable} from "../src/VotingManagerUpgradeable.sol";
 
@@ -16,7 +17,7 @@ contract Deploy is Script {
 
     address vmProxy;
     address pmProxy;
-    address operationProxy;
+    address tmProxy;
     address amProxy;
     address dmProxy;
     address nip20Proxy;
@@ -42,10 +43,10 @@ contract Deploy is Script {
         // FIXME: initialize participant
         // participantManager.initialize(address(0), vmProxy, deployer);
 
-        // deploy nuDexOperations
-        operationProxy = deployProxy(address(new NuDexOperationsUpgradeable()), daoContract);
-        NuDexOperationsUpgradeable nuDexOperations = NuDexOperationsUpgradeable(operationProxy);
-        nuDexOperations.initialize(address(participantManager), vmProxy);
+        // deploy taskManager
+        tmProxy = deployProxy(address(new TaskManagerUpgradeable()), daoContract);
+        TaskManagerUpgradeable taskManager = TaskManagerUpgradeable(tmProxy);
+        taskManager.initialize(address(new TaskSubmitter(tmProxy)), vmProxy);
 
         // deploy accountManager
         amProxy = deployProxy(address(new AccountManagerUpgradeable()), daoContract);
@@ -68,7 +69,7 @@ contract Deploy is Script {
             address(0), // assetManager
             dmProxy, // depositManager
             pmProxy, // participantManager
-            operationProxy, // nudeOperation
+            tmProxy, // nudeOperation
             address(0) // nuvoLock
         );
 

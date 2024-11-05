@@ -2,28 +2,24 @@
 pragma solidity ^0.8.26;
 
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import {INuDexOperations} from "./interfaces/INuDexOperations.sol";
-import {IParticipantManager} from "./interfaces/IParticipantManager.sol";
+import {ITaskManager} from "./interfaces/ITaskManager.sol";
 
-contract NuDexOperationsUpgradeable is INuDexOperations, OwnableUpgradeable {
+contract TaskManagerUpgradeable is ITaskManager, OwnableUpgradeable {
+    address public taskSubmitter;
     uint256 public nextTaskId;
     uint256[] public preconfirmedTasks;
     bytes[] public preconfirmedTaskResults;
     mapping(uint256 => Task) public tasks;
-    IParticipantManager public participantManager;
-
-    modifier onlyParticipant() {
-        require(
-            participantManager.isParticipant(msg.sender),
-            IParticipantManager.NotParticipant(msg.sender)
-        );
-        _;
-    }
 
     // _owner: votingManager
-    function initialize(address _participantManager, address _owner) public initializer {
+    function initialize(address _taskSubmitter, address _owner) public initializer {
         __Ownable_init(_owner);
-        participantManager = IParticipantManager(_participantManager);
+        taskSubmitter = _taskSubmitter;
+    }
+
+    function setTaskSubmitter(address _taskSubmitter) external onlyOwner {
+        require(_taskSubmitter != address(0));
+        taskSubmitter = _taskSubmitter;
     }
 
     function isTaskCompleted(uint256 _taskId) external view returns (bool) {
@@ -55,19 +51,20 @@ contract NuDexOperationsUpgradeable is INuDexOperations, OwnableUpgradeable {
         return uncompletedTasks;
     }
 
-    function submitTask(bytes calldata _context) external onlyParticipant {
+    function submitTask(address _submitter, bytes calldata _context) external {
+        require(msg.sender == taskSubmitter, OnlyTaskSubmitter());
         uint256 taskId = nextTaskId++;
         tasks[taskId] = Task({
             id: taskId,
             context: _context,
-            submitter: msg.sender,
+            submitter: _submitter,
             isCompleted: false,
             createdAt: block.timestamp,
             completedAt: 0,
             result: ""
         });
 
-        emit TaskSubmitted(taskId, _context, msg.sender);
+        emit TaskSubmitted(taskId, _context, _submitter);
     }
 
     function markTaskCompleted(uint256 _taskId, bytes calldata _result) external onlyOwner {
@@ -83,8 +80,7 @@ contract NuDexOperationsUpgradeable is INuDexOperations, OwnableUpgradeable {
         bytes[] calldata _results
     ) external onlyOwner {
         Task storage task;
-        uint256 i;
-        for (; i < _taskIds.length; ++i) {
+        for (uint256 i; i < _taskIds.length; ++i) {
             task = tasks[_taskIds[i]];
             task.isCompleted = true;
             task.completedAt = block.timestamp;
@@ -100,8 +96,7 @@ contract NuDexOperationsUpgradeable is INuDexOperations, OwnableUpgradeable {
 
     function confirmAllTasks() external onlyOwner {
         Task storage task;
-        uint256 i;
-        for (; i < preconfirmedTasks.length; ++i) {
+        for (uint256 i; i < preconfirmedTasks.length; ++i) {
             task = tasks[preconfirmedTasks[i]];
             task.isCompleted = true;
             task.completedAt = block.timestamp;

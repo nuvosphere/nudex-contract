@@ -7,7 +7,7 @@ import {IAccountManager} from "./interfaces/IAccountManager.sol";
 import {IAssetManager} from "./interfaces/IAssetManager.sol";
 import {IDepositManager} from "./interfaces/IDepositManager.sol";
 import {IParticipantManager} from "./interfaces/IParticipantManager.sol";
-import {INuDexOperations} from "./interfaces/INuDexOperations.sol";
+import {ITaskManager} from "./interfaces/ITaskManager.sol";
 import {INuvoLock} from "./interfaces/INuvoLock.sol";
 import {console} from "forge-std/console.sol";
 
@@ -16,7 +16,7 @@ contract VotingManagerUpgradeable is Initializable, ReentrancyGuardUpgradeable {
     IAssetManager public assetManager;
     IDepositManager public depositManager;
     IParticipantManager public participantManager;
-    INuDexOperations public nuDexOperations;
+    ITaskManager public nuDexOperations;
     INuvoLock public nuvoLock;
 
     uint256 public lastSubmissionTime;
@@ -55,7 +55,7 @@ contract VotingManagerUpgradeable is Initializable, ReentrancyGuardUpgradeable {
         assetManager = IAssetManager(_assetManager);
         depositManager = IDepositManager(_depositManager);
         participantManager = IParticipantManager(_participantManager);
-        nuDexOperations = INuDexOperations(_nuDexOperations);
+        nuDexOperations = ITaskManager(_nuDexOperations);
         nuvoLock = INuvoLock(_nuvoLock);
 
         tssSigner = _tssSigner;
@@ -83,7 +83,7 @@ contract VotingManagerUpgradeable is Initializable, ReentrancyGuardUpgradeable {
         );
         _verifySignature(bytes("chooseNewSubmitter"), _signature);
         // Check for uncompleted tasks and apply demerit points if needed
-        INuDexOperations.Task[] memory uncompletedTasks = nuDexOperations.getUncompletedTasks();
+        ITaskManager.Task[] memory uncompletedTasks = nuDexOperations.getUncompletedTasks();
         for (uint256 i = 0; i < uncompletedTasks.length; i++) {
             if (block.timestamp > uncompletedTasks[i].createdAt + taskCompletionThreshold) {
                 //uncompleted tasks

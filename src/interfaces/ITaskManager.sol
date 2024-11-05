@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-interface INuDexOperations {
+interface ITaskManager {
     struct Task {
         uint256 id;
         bytes context;
@@ -21,8 +21,9 @@ interface INuDexOperations {
     );
 
     error EmptyTask();
+    error OnlyTaskSubmitter();
 
-    function submitTask(bytes memory _context) external;
+    function submitTask(address _submitter, bytes calldata _context) external;
 
     function getLatestTask() external view returns (Task memory);
 

@@ -7,7 +7,8 @@ import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transpa
 import {AccountManagerUpgradeable} from "../src/AccountManagerUpgradeable.sol";
 import {DepositManagerUpgradeable} from "../src/DepositManagerUpgradeable.sol";
 import {NIP20Upgradeable} from "../src/NIP20Upgradeable.sol";
-import {NuDexOperationsUpgradeable} from "../src/NuDexOperationsUpgradeable.sol";
+import {TaskManagerUpgradeable} from "../src/TaskManagerUpgradeable.sol";
+import {TaskSubmitter} from "../src/TaskSubmitter.sol";
 import {ParticipantManagerUpgradeable} from "../src/ParticipantManagerUpgradeable.sol";
 import {VotingManagerUpgradeable} from "../src/VotingManagerUpgradeable.sol";
 
@@ -40,10 +41,13 @@ contract DeployTest is Script {
         participantManager.initialize(address(0), address(votingManager), initParticipant);
         console.log("participantManager: ", address(participantManager));
 
-        // deploy nuDexOperations
-        NuDexOperationsUpgradeable nuDexOperations = new NuDexOperationsUpgradeable();
-        nuDexOperations.initialize(address(participantManager), address(votingManager));
-        console.log("NuDexOperations: ", address(nuDexOperations));
+        // deploy taskManager
+        TaskManagerUpgradeable taskManager = new TaskManagerUpgradeable();
+        taskManager.initialize(
+            address(new TaskSubmitter(address(taskManager))),
+            address(votingManager)
+        );
+        console.log("taskManager: ", address(taskManager));
 
         // deploy accountManager
         AccountManagerUpgradeable accountManager = new AccountManagerUpgradeable();
@@ -64,7 +68,7 @@ contract DeployTest is Script {
             address(0), // assetManager
             address(depositManager), // depositManager
             address(participantManager), // participantManager
-            address(nuDexOperations), // nudeOperation
+            address(taskManager), // nudeOperation
             address(0) // nuvoLock
         );
 
