@@ -5,8 +5,8 @@ import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Own
 import {IAccountManager} from "./interfaces/IAccountManager.sol";
 
 contract AccountManagerUpgradeable is IAccountManager, OwnableUpgradeable {
-    mapping(bytes => address) public addressRecord;
-    mapping(address depositAddress => mapping(Chain => address user)) public userMapping;
+    mapping(bytes => string) public addressRecord;
+    mapping(string depositAddress => mapping(Chain => address user)) public userMapping;
 
     // _owner: Voting Manager contract
     function initialize(address _owner) public initializer {
@@ -18,7 +18,7 @@ contract AccountManagerUpgradeable is IAccountManager, OwnableUpgradeable {
         uint256 _account,
         Chain _chain,
         uint256 _index
-    ) external view returns (address) {
+    ) external view returns (string memory) {
         return addressRecord[abi.encodePacked(_user, _account, _chain, _index)];
     }
 
@@ -28,12 +28,12 @@ contract AccountManagerUpgradeable is IAccountManager, OwnableUpgradeable {
         uint256 _account,
         Chain _chain,
         uint256 _index,
-        address _address
+        string calldata _address
     ) external onlyOwner {
-        require(_address != address(0), InvalidAddress());
+        require(bytes(_address).length != 0, InvalidAddress());
         require(_account > 10000, InvalidAccountNumber(_account));
         require(
-            addressRecord[abi.encodePacked(_user, _account, _chain, _index)] == address(0),
+            bytes(addressRecord[abi.encodePacked(_user, _account, _chain, _index)]).length == 0,
             RegisteredAccount(
                 _user,
                 addressRecord[abi.encodePacked(_user, _account, _chain, _index)]

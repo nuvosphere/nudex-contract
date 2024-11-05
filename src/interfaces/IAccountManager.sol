@@ -13,27 +13,27 @@ interface IAccountManager {
         uint account,
         Chain indexed chainId,
         uint index,
-        address indexed newAddress
+        string indexed newAddress
     );
 
     error InvalidAddress();
     error InvalidAccountNumber(uint);
-    error RegisteredAccount(address, address);
+    error RegisteredAccount(address, string);
 
-    function addressRecord(bytes calldata _input) external view returns (address);
-    function userMapping(address _addr, Chain _chain) external view returns (address);
+    function addressRecord(bytes calldata _input) external view returns (string calldata);
+    function userMapping(string calldata _addr, Chain _chain) external view returns (address);
     function getAddressRecord(
         address _user,
         uint256 _account,
         Chain _chain,
         uint256 _index
-    ) external view returns (address);
+    ) external view returns (string memory);
 
     function registerNewAddress(
         address _user,
         uint _account,
         Chain _chain,
         uint _index,
-        address _address
+        string calldata _address
     ) external;
 }

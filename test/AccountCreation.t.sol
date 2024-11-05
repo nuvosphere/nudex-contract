@@ -9,14 +9,14 @@ import {INuDexOperations} from "../src/interfaces/INuDexOperations.sol";
 import {VotingManagerUpgradeable} from "../src/VotingManagerUpgradeable.sol";
 
 contract AccountCreation is BaseTest {
-    address public depositAddress;
+    string public depositAddress;
 
     AccountManagerUpgradeable public accountManager;
     NuDexOperationsUpgradeable public nuDexOperations;
 
     function setUp() public override {
         super.setUp();
-        depositAddress = makeAddr("new_address");
+        depositAddress = "new_address";
 
         // deploy nuDexOperations
         address operationProxy = deployProxy(
@@ -139,7 +139,7 @@ contract AccountCreation is BaseTest {
             uint(10001),
             IAccountManager.Chain.BTC,
             uint(0),
-            address(0)
+            ""
         );
         bytes memory signature = generateSignature(callData, tssKey);
         vm.prank(msgSender);

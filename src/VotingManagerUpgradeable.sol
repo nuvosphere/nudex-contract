@@ -94,24 +94,6 @@ contract VotingManagerUpgradeable is Initializable, ReentrancyGuardUpgradeable {
         _rotateSubmitter();
     }
 
-    function addParticipant(
-        address newParticipant,
-        bytes calldata signature
-    ) external onlyCurrentSubmitter nonReentrant {
-        _verifySignature(abi.encodePacked(newParticipant), signature);
-        participantManager.addParticipant(newParticipant);
-        _rotateSubmitter();
-    }
-
-    function removeParticipant(
-        address participant,
-        bytes calldata signature
-    ) external onlyCurrentSubmitter nonReentrant {
-        _verifySignature(abi.encodePacked(participant), signature);
-        participantManager.removeParticipant(participant);
-        _rotateSubmitter();
-    }
-
     function submitTaskReceipt(
         uint256 _taskId,
         bytes memory _result,
@@ -139,94 +121,6 @@ contract VotingManagerUpgradeable is Initializable, ReentrancyGuardUpgradeable {
     function confirmTasks(bytes calldata _signature) external onlyCurrentSubmitter nonReentrant {
         _verifySignature(bytes("confirmTasks"), _signature);
         nuDexOperations.confirmAllTasks();
-        _rotateSubmitter();
-    }
-
-    function registerAccount(
-        address _user,
-        uint _account,
-        IAccountManager.Chain _chain,
-        uint _index,
-        address _address,
-        bytes calldata _signature
-    ) external onlyCurrentSubmitter nonReentrant {
-        bytes memory encodedParams = abi.encodePacked(_user, _account, _chain, _index, _address);
-        _verifySignature(encodedParams, _signature);
-        accountManager.registerNewAddress(_user, _account, _chain, _index, _address);
-        _rotateSubmitter();
-    }
-
-    function submitDepositInfo(
-        address targetAddress,
-        uint256 amount,
-        uint256 chainId,
-        bytes memory txInfo,
-        bytes memory extraInfo,
-        bytes calldata signature
-    ) external onlyCurrentSubmitter nonReentrant {
-        bytes memory encodedParams = abi.encodePacked(
-            targetAddress,
-            amount,
-            chainId,
-            txInfo,
-            extraInfo
-        );
-        _verifySignature(encodedParams, signature);
-        depositManager.recordDeposit(targetAddress, amount, chainId, txInfo, extraInfo);
-        _rotateSubmitter();
-    }
-
-    function submitWithdrawalInfo(
-        address targetAddress,
-        uint256 amount,
-        uint256 chainId,
-        bytes memory txInfo,
-        bytes memory extraInfo,
-        bytes calldata signature
-    ) external onlyCurrentSubmitter nonReentrant {
-        bytes memory encodedParams = abi.encodePacked(
-            targetAddress,
-            amount,
-            chainId,
-            txInfo,
-            extraInfo
-        );
-        _verifySignature(encodedParams, signature);
-        depositManager.recordWithdrawal(targetAddress, amount, chainId, txInfo, extraInfo);
-        _rotateSubmitter();
-    }
-
-    function setRewardPerPeriod(
-        uint256 newRewardPerPeriod,
-        bytes calldata signature
-    ) external onlyCurrentSubmitter nonReentrant {
-        bytes memory encodedParams = abi.encodePacked(newRewardPerPeriod);
-        _verifySignature(encodedParams, signature);
-        nuvoLock.setRewardPerPeriod(newRewardPerPeriod);
-        _rotateSubmitter();
-    }
-
-    function addBonusPoints(
-        address[] calldata _voters,
-        bytes calldata _signature
-    ) external onlyCurrentSubmitter nonReentrant {
-        bytes memory encodedParams = abi.encodePacked(_voters);
-        _verifySignature(encodedParams, _signature);
-        require(_voters.length < type(uint16).max, "overflow");
-        for (uint16 i; i < _voters.length; ++i) {
-            nuvoLock.accumulateBonusPoints(_voters[i]);
-        }
-        _rotateSubmitter();
-    }
-
-    function setMinLockInfo(
-        uint256 _minLockAmount,
-        uint256 _minLockPeriod,
-        bytes calldata _signature
-    ) external onlyCurrentSubmitter nonReentrant {
-        bytes memory encodedParams = abi.encodePacked(_minLockAmount, _minLockPeriod);
-        _verifySignature(encodedParams, _signature);
-        nuvoLock.setMinLockInfo(_minLockAmount, _minLockPeriod);
         _rotateSubmitter();
     }
 
