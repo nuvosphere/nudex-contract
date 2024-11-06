@@ -51,7 +51,7 @@ contract TaskManagerUpgradeable is ITaskManager, OwnableUpgradeable {
         return uncompletedTasks;
     }
 
-    function submitTask(address _submitter, bytes calldata _context) external {
+    function submitTask(address _submitter, bytes calldata _context) external returns (uint256) {
         require(msg.sender == taskSubmitter, OnlyTaskSubmitter());
         uint256 taskId = nextTaskId++;
         tasks[taskId] = Task({
@@ -65,6 +65,7 @@ contract TaskManagerUpgradeable is ITaskManager, OwnableUpgradeable {
         });
 
         emit TaskSubmitted(taskId, _context, _submitter);
+        return taskId;
     }
 
     function markTaskCompleted(uint256 _taskId, bytes calldata _result) external onlyOwner {

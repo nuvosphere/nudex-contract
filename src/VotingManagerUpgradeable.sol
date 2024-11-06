@@ -16,7 +16,7 @@ contract VotingManagerUpgradeable is Initializable, ReentrancyGuardUpgradeable {
     IAssetManager public assetManager;
     IDepositManager public depositManager;
     IParticipantManager public participantManager;
-    ITaskManager public nuDexOperations;
+    ITaskManager public taskManager;
     INuvoLock public nuvoLock;
 
     uint256 public lastSubmissionTime;
@@ -46,7 +46,7 @@ contract VotingManagerUpgradeable is Initializable, ReentrancyGuardUpgradeable {
         address _assetManager,
         address _depositManager,
         address _participantManager,
-        address _nuDexOperations,
+        address _taskManager,
         address _nuvoLock
     ) public initializer {
         __ReentrancyGuard_init();
@@ -55,7 +55,7 @@ contract VotingManagerUpgradeable is Initializable, ReentrancyGuardUpgradeable {
         assetManager = IAssetManager(_assetManager);
         depositManager = IDepositManager(_depositManager);
         participantManager = IParticipantManager(_participantManager);
-        nuDexOperations = ITaskManager(_nuDexOperations);
+        taskManager = ITaskManager(_taskManager);
         nuvoLock = INuvoLock(_nuvoLock);
 
         tssSigner = _tssSigner;
@@ -67,7 +67,7 @@ contract VotingManagerUpgradeable is Initializable, ReentrancyGuardUpgradeable {
         address _newSigner,
         bytes calldata _signature
     ) external onlyCurrentSubmitter nonReentrant {
-        _verifySignature(abi.encodePacked(_newSigner), _signature);
+        _verifySignature(keccak256(abi.encodePacked(tssNonce++, _newSigner)), _signature);
         tssSigner = _newSigner;
         _rotateSubmitter();
     }
@@ -81,9 +81,12 @@ contract VotingManagerUpgradeable is Initializable, ReentrancyGuardUpgradeable {
             block.timestamp >= lastSubmissionTime + forcedRotationWindow,
             RotationWindowNotPassed(block.timestamp, lastSubmissionTime + forcedRotationWindow)
         );
-        _verifySignature(bytes("chooseNewSubmitter"), _signature);
+        _verifySignature(
+            keccak256(abi.encodePacked(tssNonce++, bytes("chooseNewSubmitter"))),
+            _signature
+        );
         // Check for uncompleted tasks and apply demerit points if needed
-        ITaskManager.Task[] memory uncompletedTasks = nuDexOperations.getUncompletedTasks();
+        ITaskManager.Task[] memory uncompletedTasks = taskManager.getUncompletedTasks();
         for (uint256 i = 0; i < uncompletedTasks.length; i++) {
             if (block.timestamp > uncompletedTasks[i].createdAt + taskCompletionThreshold) {
                 //uncompleted tasks
@@ -99,28 +102,9 @@ contract VotingManagerUpgradeable is Initializable, ReentrancyGuardUpgradeable {
         bytes memory _result,
         bytes calldata _signature
     ) external onlyCurrentSubmitter nonReentrant {
-        require(!nuDexOperations.isTaskCompleted(_taskId), TaskAlreadyCompleted(_taskId));
-        bytes memory encodedParams = abi.encodePacked(_taskId, _result);
-        _verifySignature(encodedParams, _signature);
-        nuDexOperations.markTaskCompleted(_taskId, _result);
-        _rotateSubmitter();
-    }
-
-    function preconfirmTask(
-        uint256 _taskId,
-        bytes calldata _result,
-        bytes calldata _signature
-    ) external onlyCurrentSubmitter nonReentrant {
-        require(!nuDexOperations.isTaskCompleted(_taskId), TaskAlreadyCompleted(_taskId));
-        bytes memory encodedParams = abi.encodePacked(_taskId, _result);
-        _verifySignature(encodedParams, _signature);
-        nuDexOperations.preconfirmTask(_taskId, _result);
-        _rotateSubmitter();
-    }
-
-    function confirmTasks(bytes calldata _signature) external onlyCurrentSubmitter nonReentrant {
-        _verifySignature(bytes("confirmTasks"), _signature);
-        nuDexOperations.confirmAllTasks();
+        require(!taskManager.isTaskCompleted(_taskId), TaskAlreadyCompleted(_taskId));
+        _verifySignature(keccak256(abi.encodePacked(tssNonce++, _taskId, _result)), _signature);
+        taskManager.markTaskCompleted(_taskId, _result);
         _rotateSubmitter();
     }
 
@@ -132,14 +116,12 @@ contract VotingManagerUpgradeable is Initializable, ReentrancyGuardUpgradeable {
         uint256 chainId,
         bytes calldata signature
     ) external onlyCurrentSubmitter nonReentrant {
-        bytes memory encodedParams = abi.encodePacked(
-            name,
-            nuDexName,
-            assetType,
-            contractAddress,
-            chainId
+        _verifySignature(
+            keccak256(
+                abi.encodePacked(tssNonce++, name, nuDexName, assetType, contractAddress, chainId)
+            ),
+            signature
         );
-        _verifySignature(encodedParams, signature);
         assetManager.listAsset(name, nuDexName, assetType, contractAddress, chainId);
 
         _rotateSubmitter();
@@ -151,8 +133,10 @@ contract VotingManagerUpgradeable is Initializable, ReentrancyGuardUpgradeable {
         uint256 chainId,
         bytes calldata signature
     ) external onlyCurrentSubmitter nonReentrant {
-        bytes memory encodedParams = abi.encodePacked(assetType, contractAddress, chainId);
-        _verifySignature(encodedParams, signature);
+        _verifySignature(
+            keccak256(abi.encodePacked(tssNonce++, assetType, contractAddress, chainId)),
+            signature
+        );
         assetManager.delistAsset(assetType, contractAddress, chainId);
 
         _rotateSubmitter();
@@ -161,9 +145,35 @@ contract VotingManagerUpgradeable is Initializable, ReentrancyGuardUpgradeable {
     function verifyAndCall(
         address _target,
         bytes calldata _data,
+        uint256 _taskId,
         bytes calldata _signature
     ) external onlyCurrentSubmitter nonReentrant {
-        _verifySignature(_data, _signature);
+        _verifySignature(
+            keccak256(abi.encodePacked(tssNonce++, _target, _data, _taskId)),
+            _signature
+        );
+        (bool success, bytes memory result) = _target.call(_data);
+        if (!success) {
+            assembly {
+                let revertStringLength := mload(result)
+                let revertStringPtr := add(result, 0x20)
+                revert(revertStringPtr, revertStringLength)
+            }
+        }
+        taskManager.markTaskCompleted(_taskId, result);
+        _rotateSubmitter();
+    }
+
+    function verifyAndCall_Batch(
+        address _target,
+        bytes calldata _data,
+        uint256[] calldata _taskIds,
+        bytes calldata _signature
+    ) external onlyCurrentSubmitter nonReentrant {
+        _verifySignature(
+            keccak256(abi.encodePacked(tssNonce++, _target, _data, _taskIds)),
+            _signature
+        );
         (bool success, bytes memory data) = _target.call(_data);
         if (!success) {
             assembly {
@@ -182,12 +192,11 @@ contract VotingManagerUpgradeable is Initializable, ReentrancyGuardUpgradeable {
         emit SubmitterChosen(nextSubmitter);
     }
 
-    function _verifySignature(bytes memory encodedParams, bytes calldata signature) internal {
-        bytes32 hash = keccak256(
-            abi.encodePacked(tssNonce++, _uint256ToString(encodedParams.length), encodedParams)
+    function _verifySignature(bytes32 _hash, bytes calldata _signature) internal view {
+        bytes32 messageHash = keccak256(
+            abi.encodePacked("\x19Ethereum Signed Message:\n32", _hash)
         );
-        bytes32 messageHash = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", hash));
-        (bytes32 r, bytes32 s, uint8 v) = _splitSignature(signature);
+        (bytes32 r, bytes32 s, uint8 v) = _splitSignature(_signature);
         address recoverAddr = ecrecover(messageHash, v, r, s);
         require(tssSigner == recoverAddr, InvalidSigner(msg.sender, recoverAddr));
     }
@@ -208,24 +217,5 @@ contract VotingManagerUpgradeable is Initializable, ReentrancyGuardUpgradeable {
         }
 
         require(v == 27 || v == 28, "Invalid signature version");
-    }
-
-    function _uint256ToString(uint256 value) internal pure returns (string memory) {
-        if (value == 0) {
-            return "0";
-        }
-        uint256 temp = value;
-        uint256 digits;
-        while (temp != 0) {
-            digits++;
-            temp /= 10;
-        }
-        bytes memory buffer = new bytes(digits);
-        while (value != 0) {
-            digits -= 1;
-            buffer[digits] = bytes1(uint8(48 + uint256(value % 10)));
-            value /= 10;
-        }
-        return string(buffer);
     }
 }

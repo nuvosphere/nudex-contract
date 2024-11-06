@@ -28,7 +28,7 @@ contract ParticipantManagerUpgradeable is IParticipantManager, OwnableUpgradeabl
         }
     }
 
-    function addParticipant(address newParticipant) external onlyOwner {
+    function addParticipant(address newParticipant) external onlyOwner returns (bytes memory) {
         require(!isParticipant[newParticipant], AlreadyParticipant(newParticipant));
         require(nuvoLock.lockedBalanceOf(newParticipant) > 0, NotEligible(newParticipant));
 
@@ -36,9 +36,10 @@ contract ParticipantManagerUpgradeable is IParticipantManager, OwnableUpgradeabl
         isParticipant[newParticipant] = true;
 
         emit ParticipantAdded(newParticipant);
+        return abi.encodePacked(true, uint8(1), newParticipant);
     }
 
-    function removeParticipant(address participant) external onlyOwner {
+    function removeParticipant(address participant) external onlyOwner returns (bytes memory) {
         require(participants.length > 3, NotEnoughParticipant());
         require(isParticipant[participant], NotParticipant(participant));
 
@@ -52,6 +53,7 @@ contract ParticipantManagerUpgradeable is IParticipantManager, OwnableUpgradeabl
         }
 
         emit ParticipantRemoved(participant);
+        return abi.encodePacked(true, uint8(1), newParticipant);
     }
 
     function getParticipants() external view returns (address[] memory) {

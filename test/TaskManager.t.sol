@@ -7,15 +7,14 @@ import {ITaskManager} from "../src/interfaces/ITaskManager.sol";
 import {TaskSubmitter} from "../src/TaskSubmitter.sol";
 import {VotingManagerUpgradeable} from "../src/VotingManagerUpgradeable.sol";
 
-contract AccountCreation is BaseTest {
-    TaskManagerUpgradeable public taskManager;
-    TaskSubmitter public taskSubmitter;
+contract TaskManagment is BaseTest {
+    address public tmProxy;
 
     function setUp() public override {
         super.setUp();
 
         // deploy taskManager
-        address tmProxy = deployProxy(address(new TaskManagerUpgradeable()), daoContract);
+        tmProxy = _deployProxy(address(new TaskManagerUpgradeable()), daoContract);
         taskSubmitter = new TaskSubmitter(tmProxy);
         taskManager = TaskManagerUpgradeable(tmProxy);
         taskManager.initialize(address(taskSubmitter), vmProxy);
@@ -52,10 +51,10 @@ contract AccountCreation is BaseTest {
             taskId,
             taskResult
         );
-        bytes memory signature = generateSignature(callData, tssKey);
+        bytes memory signature = _generateSignature(tmProxy, callData, taskId, tssKey);
         vm.expectEmit(true, true, true, true);
         emit ITaskManager.TaskCompleted(taskId, msgSender, block.timestamp, taskResult);
-        votingManager.verifyAndCall(address(taskManager), callData, signature);
+        votingManager.verifyAndCall(tmProxy, callData, taskId, signature);
         vm.stopPrank();
     }
 }

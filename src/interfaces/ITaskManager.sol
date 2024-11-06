@@ -23,7 +23,7 @@ interface ITaskManager {
     error EmptyTask();
     error OnlyTaskSubmitter();
 
-    function submitTask(address _submitter, bytes calldata _context) external;
+    function submitTask(address _submitter, bytes calldata _context) external returns (uint256);
 
     function getLatestTask() external view returns (Task memory);
 

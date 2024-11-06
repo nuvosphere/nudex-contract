@@ -17,13 +17,15 @@ contract Deposit is BaseTest {
 
     address public dmProxy;
 
+    bytes public constant TASK_CONTEXT = "--- encoded deposit task context ---";
+
     function setUp() public override {
         super.setUp();
         user = makeAddr("user");
 
         // deploy depositManager and NIP20 contract
-        dmProxy = deployProxy(address(new DepositManagerUpgradeable()), daoContract);
-        address nip20Proxy = deployProxy(address(new NIP20Upgradeable()), daoContract);
+        dmProxy = _deployProxy(address(new DepositManagerUpgradeable()), daoContract);
+        address nip20Proxy = _deployProxy(address(new NIP20Upgradeable()), daoContract);
         nip20 = NIP20Upgradeable(nip20Proxy);
         nip20.initialize(dmProxy);
         assertEq(nip20.owner(), dmProxy);
@@ -39,7 +41,7 @@ contract Deposit is BaseTest {
             address(0), // assetManager
             dmProxy, // depositManager
             address(participantManager), // participantManager
-            address(0), // taskManager
+            address(taskManager), // taskManager
             address(nuvoLock) // nuvoLock
         );
     }
@@ -47,6 +49,7 @@ contract Deposit is BaseTest {
     function test_Deposit() public {
         vm.startPrank(msgSender);
         // setup deposit info
+        uint256 taskId = taskSubmitter.submitTask(TASK_CONTEXT);
         uint256 depositIndex = depositManager.getDeposits(user).length;
         assertEq(depositIndex, 0);
         uint256 depositAmount = 1 ether;
@@ -61,11 +64,11 @@ contract Deposit is BaseTest {
             txInfo,
             extraInfo
         );
-        bytes memory signature = generateSignature(callData, tssKey);
+        bytes memory signature = _generateSignature(dmProxy, callData, taskId, tssKey);
         // check event and result
         vm.expectEmit(true, true, true, true);
         emit IDepositManager.DepositRecorded(user, depositAmount, chainId, txInfo, extraInfo);
-        votingManager.verifyAndCall(dmProxy, callData, signature);
+        votingManager.verifyAndCall(dmProxy, callData, taskId, signature);
 
         IDepositManager.DepositInfo memory depositInfo = depositManager.getDeposit(
             user,
@@ -84,6 +87,7 @@ contract Deposit is BaseTest {
 
         // second deposit
         // setup deposit info
+        taskId = taskSubmitter.submitTask(TASK_CONTEXT);
         depositIndex = depositManager.getDeposits(user).length;
         assertEq(depositIndex, 1); // should have increased by 1
         depositAmount = 5 ether;
@@ -98,12 +102,12 @@ contract Deposit is BaseTest {
             txInfo,
             extraInfo
         );
-        signature = generateSignature(callData, tssKey);
+        signature = _generateSignature(dmProxy, callData, taskId, tssKey);
 
         // check event and result
         vm.expectEmit(true, true, true, true);
         emit IDepositManager.DepositRecorded(user, depositAmount, chainId, txInfo, extraInfo);
-        votingManager.verifyAndCall(dmProxy, callData, signature);
+        votingManager.verifyAndCall(dmProxy, callData, taskId, signature);
         depositInfo = depositManager.getDeposit(user, depositIndex);
         assertEq(
             abi.encodePacked(user, depositAmount, chainId, txInfo, extraInfo),
@@ -121,6 +125,7 @@ contract Deposit is BaseTest {
     function test_DepositRevert() public {
         vm.startPrank(msgSender);
         // --- submit task ---
+        uint256 taskId = taskSubmitter.submitTask(TASK_CONTEXT);
 
         // --- tss verify deposit ---
 
@@ -137,16 +142,17 @@ contract Deposit is BaseTest {
             txInfo,
             extraInfo
         );
-        bytes memory signature = generateSignature(callData, tssKey);
+        bytes memory signature = _generateSignature(dmProxy, callData, taskId, tssKey);
         // fail case: invalid amount
         vm.expectRevert(IDepositManager.InvalidAmount.selector);
-        votingManager.verifyAndCall(dmProxy, callData, signature);
+        votingManager.verifyAndCall(dmProxy, callData, taskId, signature);
         vm.stopPrank();
     }
 
     function testFuzz_DepositFuzz(address _user, uint256 _amount, bytes memory _txInfo) public {
         vm.assume(_amount > 0);
         // setup deposit info
+        uint256 taskId = taskSubmitter.submitTask(TASK_CONTEXT);
         uint256 depositIndex = depositManager.getDeposits(user).length;
         uint256 chainId = 0;
         bytes memory extraInfo = "--- extra info ---";
@@ -158,13 +164,13 @@ contract Deposit is BaseTest {
             _txInfo,
             extraInfo
         );
-        bytes memory signature = generateSignature(callData, tssKey);
+        bytes memory signature = _generateSignature(dmProxy, callData, taskId, tssKey);
 
         // check event and result
         vm.prank(msgSender);
         vm.expectEmit(true, true, true, true);
         emit IDepositManager.DepositRecorded(_user, _amount, chainId, _txInfo, extraInfo);
-        votingManager.verifyAndCall(dmProxy, callData, signature);
+        votingManager.verifyAndCall(dmProxy, callData, taskId, signature);
         IDepositManager.DepositInfo memory depositInfo = depositManager.getDeposit(
             _user,
             depositIndex
@@ -185,6 +191,7 @@ contract Deposit is BaseTest {
         vm.startPrank(msgSender);
         // first withdrawal
         // setup withdrawal info
+        uint256 taskId = taskSubmitter.submitTask(TASK_CONTEXT);
         uint256 withdrawIndex = depositManager.getWithdrawals(user).length;
         assertEq(withdrawIndex, 0);
         uint256 withdrawAmount = 1 ether;
@@ -199,11 +206,11 @@ contract Deposit is BaseTest {
             txInfo,
             extraInfo
         );
-        bytes memory signature = generateSignature(callData, tssKey);
+        bytes memory signature = _generateSignature(dmProxy, callData, taskId, tssKey);
         // check event and result
         vm.expectEmit(true, true, true, true);
         emit IDepositManager.WithdrawalRecorded(user, withdrawAmount, chainId, txInfo, extraInfo);
-        votingManager.verifyAndCall(dmProxy, callData, signature);
+        votingManager.verifyAndCall(dmProxy, callData, taskId, signature);
         IDepositManager.WithdrawalInfo memory withdrawInfo = depositManager.getWithdrawal(
             user,
             withdrawIndex
@@ -224,6 +231,7 @@ contract Deposit is BaseTest {
     function test_withdrawRevert() public {
         vm.startPrank(msgSender);
         // --- submit task ---
+        uint256 taskId = taskSubmitter.submitTask(TASK_CONTEXT);
 
         // --- tss verify withdraw ---
 
@@ -240,10 +248,10 @@ contract Deposit is BaseTest {
             txInfo,
             extraInfo
         );
-        bytes memory signature = generateSignature(callData, tssKey);
+        bytes memory signature = _generateSignature(dmProxy, callData, taskId, tssKey);
         // fail case: invalid amount
         vm.expectRevert(IDepositManager.InvalidAmount.selector);
-        votingManager.verifyAndCall(dmProxy, callData, signature);
+        votingManager.verifyAndCall(dmProxy, callData, taskId, signature);
         vm.stopPrank();
     }
 }

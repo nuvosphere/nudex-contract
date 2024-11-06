@@ -29,7 +29,7 @@ contract AccountManagerUpgradeable is IAccountManager, OwnableUpgradeable {
         Chain _chain,
         uint256 _index,
         string calldata _address
-    ) external onlyOwner {
+    ) external onlyOwner returns (bytes memory) {
         require(bytes(_address).length != 0, InvalidAddress());
         require(_account > 10000, InvalidAccountNumber(_account));
         require(
@@ -42,5 +42,6 @@ contract AccountManagerUpgradeable is IAccountManager, OwnableUpgradeable {
         addressRecord[abi.encodePacked(_user, _account, _chain, _index)] = _address;
         userMapping[_address][_chain] = _user;
         emit AddressRegistered(_user, _account, _chain, _index, _address);
+        return abi.encodePacked(true, uint8(1), _user, _account, _chain, _index);
     }
 }

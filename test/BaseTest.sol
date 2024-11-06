@@ -5,8 +5,10 @@ import {console} from "forge-std/console.sol";
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 
-import {ParticipantManagerUpgradeable} from "../src/ParticipantManagerUpgradeable.sol";
 import {NuvoLockUpgradeable} from "../src/NuvoLockUpgradeable.sol";
+import {ParticipantManagerUpgradeable} from "../src/ParticipantManagerUpgradeable.sol";
+import {TaskManagerUpgradeable} from "../src/TaskManagerUpgradeable.sol";
+import {TaskSubmitter} from "../src/TaskSubmitter.sol";
 import {VotingManagerUpgradeable} from "../src/VotingManagerUpgradeable.sol";
 
 import {MockNuvoToken} from "../src/mocks/MockNuvoToken.sol";
@@ -19,8 +21,10 @@ contract BaseTest is Test {
 
     MockNuvoToken public nuvoToken;
 
-    ParticipantManagerUpgradeable public participantManager;
     NuvoLockUpgradeable public nuvoLock;
+    ParticipantManagerUpgradeable public participantManager;
+    TaskManagerUpgradeable public taskManager;
+    TaskSubmitter public taskSubmitter;
     VotingManagerUpgradeable public votingManager;
 
     address public vmProxy;
@@ -44,10 +48,10 @@ contract BaseTest is Test {
         nuvoToken.mint(msgSender, 100 ether);
 
         // deploy votingManager proxy
-        vmProxy = deployProxy(address(new VotingManagerUpgradeable()), daoContract);
+        vmProxy = _deployProxy(address(new VotingManagerUpgradeable()), daoContract);
 
         // deploy NuvoLockUpgradeable
-        address nuvoLockProxy = deployProxy(address(new NuvoLockUpgradeable()), daoContract);
+        address nuvoLockProxy = _deployProxy(address(new NuvoLockUpgradeable()), daoContract);
         nuvoLock = NuvoLockUpgradeable(nuvoLockProxy);
         nuvoLock.initialize(
             address(nuvoToken),
@@ -58,8 +62,15 @@ contract BaseTest is Test {
         );
         assertEq(nuvoLock.owner(), vmProxy);
 
+        // deploy taskManager
+        address tmProxy = _deployProxy(address(new TaskManagerUpgradeable()), daoContract);
+        taskSubmitter = new TaskSubmitter(tmProxy);
+        taskManager = TaskManagerUpgradeable(tmProxy);
+        taskManager.initialize(address(taskSubmitter), vmProxy);
+        assertEq(taskManager.owner(), vmProxy);
+
         // deploy ParticipantManagerUpgradeable
-        address participantManagerProxy = deployProxy(
+        address participantManagerProxy = _deployProxy(
             address(new ParticipantManagerUpgradeable()),
             daoContract
         );
@@ -78,17 +89,43 @@ contract BaseTest is Test {
         vm.stopPrank();
     }
 
-    function deployProxy(address _logic, address _admin) internal returns (address) {
+    function _deployProxy(address _logic, address _admin) internal returns (address) {
         return address(new TransparentUpgradeableProxy(_logic, _admin, ""));
     }
 
-    function generateSignature(
+    function _vmSignAndCall(address _target, bytes memory _data, uint256 _taskId) public {
+        bytes memory encodedData = abi.encodePacked(
+            votingManager.tssNonce(),
+            _target,
+            _data,
+            _taskId
+        );
+        bytes memory signature = _generateSignature(encodedData, tssKey);
+        votingManager.verifyAndCall(_target, _data, _taskId, signature);
+    }
+
+    function _generateSignature(
+        address _target,
         bytes memory _callData,
+        uint256 _taskId,
         uint256 _privateKey
     ) internal view returns (bytes memory) {
-        bytes32 digest = keccak256(
-            abi.encodePacked(votingManager.tssNonce(), uint256ToString(_callData.length), _callData)
-        ).toEthSignedMessageHash();
+        bytes memory encodedData = abi.encodePacked(
+            votingManager.tssNonce(),
+            _target,
+            _callData,
+            _taskId
+        );
+        bytes32 digest = keccak256(encodedData).toEthSignedMessageHash();
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(_privateKey, digest);
+        return abi.encodePacked(r, s, v);
+    }
+
+    function _generateSignature(
+        bytes memory _encodedData,
+        uint256 _privateKey
+    ) internal pure returns (bytes memory) {
+        bytes32 digest = keccak256(_encodedData).toEthSignedMessageHash();
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(_privateKey, digest);
         return abi.encodePacked(r, s, v);
     }

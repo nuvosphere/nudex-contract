@@ -45,7 +45,7 @@ contract DepositManagerUpgradeable is IDepositManager, OwnableUpgradeable {
         uint256 chainId,
         bytes calldata txInfo,
         bytes calldata extraInfo
-    ) external onlyOwner {
+    ) external onlyOwner returns (bytes memory) {
         require(amount > 0, InvalidAmount());
         DepositInfo memory newDeposit = DepositInfo({
             targetAddress: targetAddress,
@@ -59,6 +59,7 @@ contract DepositManagerUpgradeable is IDepositManager, OwnableUpgradeable {
         // mint inscription
         nip20Contract.mint(targetAddress, amount);
         emit DepositRecorded(targetAddress, amount, chainId, txInfo, extraInfo);
+        return abi.encodePacked(true, uint8(1), targetAddress, amount, chainId, txInfo, extraInfo);
     }
 
     function recordWithdrawal(
@@ -67,7 +68,7 @@ contract DepositManagerUpgradeable is IDepositManager, OwnableUpgradeable {
         uint256 chainId,
         bytes calldata txInfo,
         bytes calldata extraInfo
-    ) external onlyOwner {
+    ) external onlyOwner returns (bytes memory) {
         require(amount > 0, InvalidAmount());
         WithdrawalInfo memory newWithdrawal = WithdrawalInfo({
             targetAddress: targetAddress,
@@ -80,5 +81,6 @@ contract DepositManagerUpgradeable is IDepositManager, OwnableUpgradeable {
 
         // TODO: burn inscription?
         emit WithdrawalRecorded(targetAddress, amount, chainId, txInfo, extraInfo);
+        return abi.encodePacked(true, uint8(1), targetAddress, amount, chainId, txInfo, extraInfo);
     }
 }

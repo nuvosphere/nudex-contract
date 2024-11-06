@@ -12,9 +12,9 @@ interface IParticipantManager {
 
     function isParticipant(address) external view returns (bool);
 
-    function addParticipant(address newParticipant) external;
+    function addParticipant(address newParticipant) external returns (bytes memory);
 
-    function removeParticipant(address participant) external;
+    function removeParticipant(address participant) external returns (bytes memory);
 
     function getParticipants() external view returns (address[] memory);
 

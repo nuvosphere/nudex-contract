@@ -41,7 +41,7 @@ interface IDepositManager {
         uint256 chainId,
         bytes memory txInfo,
         bytes memory extraInfo
-    ) external;
+    ) external returns (bytes memory);
 
     function recordWithdrawal(
         address targetAddress,
@@ -49,7 +49,7 @@ interface IDepositManager {
         uint256 chainId,
         bytes memory txInfo,
         bytes memory extraInfo
-    ) external;
+    ) external returns (bytes memory);
 
     function getDeposits(address targetAddress) external view returns (DepositInfo[] memory);
     function getWithdrawals(address targetAddress) external view returns (WithdrawalInfo[] memory);

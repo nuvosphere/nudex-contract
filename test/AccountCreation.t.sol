@@ -4,19 +4,23 @@ import {BaseTest, console} from "./BaseTest.sol";
 
 import {AccountManagerUpgradeable} from "../src/AccountManagerUpgradeable.sol";
 import {IAccountManager} from "../src/interfaces/IAccountManager.sol";
+import {ITaskManager} from "../src/interfaces/ITaskManager.sol";
 import {VotingManagerUpgradeable} from "../src/VotingManagerUpgradeable.sol";
 
 contract AccountCreation is BaseTest {
     string public depositAddress;
 
     AccountManagerUpgradeable public accountManager;
+    address public amProxy;
+
+    bytes public constant TASK_CONTEXT = "--- encoded account creation task context ---";
 
     function setUp() public override {
         super.setUp();
         depositAddress = "new_address";
 
         // deploy accountManager
-        address amProxy = deployProxy(address(new AccountManagerUpgradeable()), daoContract);
+        amProxy = _deployProxy(address(new AccountManagerUpgradeable()), daoContract);
         accountManager = AccountManagerUpgradeable(amProxy);
         accountManager.initialize(vmProxy);
         assertEq(accountManager.owner(), vmProxy);
@@ -29,13 +33,15 @@ contract AccountCreation is BaseTest {
             address(0), // assetManager
             address(0), // depositManager
             address(participantManager), // participantManager
-            address(0), // taskManager
+            address(taskManager), // taskManager
             address(nuvoLock) // nuvoLock
         );
     }
 
     function test_Create() public {
         vm.startPrank(msgSender);
+        // submit task
+        uint256 taskId = taskSubmitter.submitTask(TASK_CONTEXT);
 
         // process after tss picked up the task
         bytes memory callData = abi.encodeWithSelector(
@@ -46,8 +52,8 @@ contract AccountCreation is BaseTest {
             0,
             depositAddress
         );
-        bytes memory signature = generateSignature(callData, tssKey);
-        votingManager.verifyAndCall(address(accountManager), callData, signature);
+        bytes memory signature = _generateSignature(amProxy, callData, taskId, tssKey);
+        votingManager.verifyAndCall(amProxy, callData, taskId, signature);
 
         // check mappings|reverseMapping
         assertEq(
@@ -67,11 +73,9 @@ contract AccountCreation is BaseTest {
         );
         assertEq(accountManager.userMapping(depositAddress, IAccountManager.Chain.BTC), msgSender);
 
-        // revert if using the same signature
-        vm.expectPartialRevert(VotingManagerUpgradeable.InvalidSigner.selector);
-        votingManager.verifyAndCall(address(accountManager), callData, signature);
-
-        signature = generateSignature(callData, tssKey);
+        // fail: already registered
+        taskId = taskSubmitter.submitTask(TASK_CONTEXT);
+        signature = _generateSignature(amProxy, callData, taskId, tssKey);
         vm.expectRevert(
             abi.encodeWithSelector(
                 IAccountManager.RegisteredAccount.selector,
@@ -81,7 +85,7 @@ contract AccountCreation is BaseTest {
                 )
             )
         );
-        votingManager.verifyAndCall(address(accountManager), callData, signature);
+        votingManager.verifyAndCall(amProxy, callData, taskId, signature);
         vm.stopPrank();
     }
 
@@ -102,6 +106,7 @@ contract AccountCreation is BaseTest {
         );
 
         // fail case: deposit address as address zero
+        uint256 taskId = taskSubmitter.submitTask(TASK_CONTEXT);
         bytes memory callData = abi.encodeWithSelector(
             IAccountManager.registerNewAddress.selector,
             msgSender,
@@ -110,10 +115,10 @@ contract AccountCreation is BaseTest {
             uint(0),
             ""
         );
-        bytes memory signature = generateSignature(callData, tssKey);
+        bytes memory signature = _generateSignature(amProxy, callData, taskId, tssKey);
         vm.prank(msgSender);
         vm.expectRevert(IAccountManager.InvalidAddress.selector);
-        votingManager.verifyAndCall(address(accountManager), callData, signature);
+        votingManager.verifyAndCall(amProxy, callData, taskId, signature);
 
         // fail case: account number less than 10000
         callData = abi.encodeWithSelector(
@@ -124,11 +129,11 @@ contract AccountCreation is BaseTest {
             uint(0),
             depositAddress
         );
-        signature = generateSignature(callData, tssKey);
+        signature = _generateSignature(amProxy, callData, taskId, tssKey);
         vm.prank(msgSender);
         vm.expectRevert(
             abi.encodeWithSelector(IAccountManager.InvalidAccountNumber.selector, 9999)
         );
-        votingManager.verifyAndCall(address(accountManager), callData, signature);
+        votingManager.verifyAndCall(amProxy, callData, taskId, signature);
     }
 }

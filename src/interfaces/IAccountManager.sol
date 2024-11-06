@@ -35,5 +35,5 @@ interface IAccountManager {
         Chain _chain,
         uint _index,
         string calldata _address
-    ) external;
+    ) external returns (bytes memory);
 }
