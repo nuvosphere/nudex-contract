@@ -93,17 +93,6 @@ contract BaseTest is Test {
         return address(new TransparentUpgradeableProxy(_logic, _admin, ""));
     }
 
-    function _vmSignAndCall(address _target, bytes memory _data, uint256 _taskId) public {
-        bytes memory encodedData = abi.encodePacked(
-            votingManager.tssNonce(),
-            _target,
-            _data,
-            _taskId
-        );
-        bytes memory signature = _generateSignature(encodedData, tssKey);
-        votingManager.verifyAndCall(_target, _data, _taskId, signature);
-    }
-
     function _generateSignature(
         address _target,
         bytes memory _callData,

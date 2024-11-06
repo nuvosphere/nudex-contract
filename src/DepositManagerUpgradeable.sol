@@ -42,19 +42,20 @@ contract DepositManagerUpgradeable is IDepositManager, OwnableUpgradeable {
     function recordDeposit(
         address targetAddress,
         uint256 amount,
-        uint256 chainId,
+        uint48 chainId,
         bytes calldata txInfo,
         bytes calldata extraInfo
     ) external onlyOwner returns (bytes memory) {
         require(amount > 0, InvalidAmount());
-        DepositInfo memory newDeposit = DepositInfo({
-            targetAddress: targetAddress,
-            amount: amount,
-            chainId: chainId,
-            txInfo: txInfo,
-            extraInfo: extraInfo
-        });
-        deposits[targetAddress].push(newDeposit);
+        deposits[targetAddress].push(
+            DepositInfo({
+                targetAddress: targetAddress,
+                amount: amount,
+                chainId: chainId,
+                txInfo: txInfo,
+                extraInfo: extraInfo
+            })
+        );
 
         // mint inscription
         nip20Contract.mint(targetAddress, amount);
@@ -62,10 +63,59 @@ contract DepositManagerUpgradeable is IDepositManager, OwnableUpgradeable {
         return abi.encodePacked(true, uint8(1), targetAddress, amount, chainId, txInfo, extraInfo);
     }
 
+    function record_Batch(
+        address[] calldata targetAddresses,
+        uint256[] calldata amounts,
+        uint48[] calldata chainIds,
+        bytes[] calldata txInfos,
+        bytes[] calldata extraInfos
+    ) external onlyOwner returns (bytes[] memory) {
+        require(
+            targetAddresses.length == amounts.length &&
+                chainIds.length == amounts.length &&
+                chainIds.length == txInfos.length &&
+                extraInfos.length == txInfos.length,
+            "invalid inputs"
+        );
+        DepositInfo memory newDeposit;
+        bytes[] memory results = new bytes[](amounts.length);
+        for (uint16 i; i < amounts.length; ++i) {
+            require(amounts[i] > 0, InvalidAmount());
+            newDeposit = DepositInfo({
+                targetAddress: targetAddresses[i],
+                amount: amounts[i],
+                chainId: chainIds[i],
+                txInfo: txInfos[i],
+                extraInfo: extraInfos[i]
+            });
+            deposits[targetAddresses[i]].push(newDeposit);
+
+            // mint inscription
+            nip20Contract.mint(targetAddresses[i], amounts[i]);
+            emit DepositRecorded(
+                targetAddresses[i],
+                amounts[i],
+                chainIds[i],
+                txInfos[i],
+                extraInfos[i]
+            );
+            results[i] = abi.encodePacked(
+                true,
+                uint8(1),
+                targetAddresses[i],
+                amounts[i],
+                chainIds[i],
+                txInfos[i],
+                extraInfos[i]
+            );
+        }
+        return results;
+    }
+
     function recordWithdrawal(
         address targetAddress,
         uint256 amount,
-        uint256 chainId,
+        uint48 chainId,
         bytes calldata txInfo,
         bytes calldata extraInfo
     ) external onlyOwner returns (bytes memory) {

@@ -53,7 +53,7 @@ contract ParticipantManagerUpgradeable is IParticipantManager, OwnableUpgradeabl
         }
 
         emit ParticipantRemoved(participant);
-        return abi.encodePacked(true, uint8(1), newParticipant);
+        return abi.encodePacked(true, uint8(1), participant);
     }
 
     function getParticipants() external view returns (address[] memory) {

@@ -174,11 +174,24 @@ contract VotingManagerUpgradeable is Initializable, ReentrancyGuardUpgradeable {
             keccak256(abi.encodePacked(tssNonce++, _target, _data, _taskIds)),
             _signature
         );
-        (bool success, bytes memory data) = _target.call(_data);
+        (bool success, bytes memory result) = _target.call(_data);
         if (!success) {
             assembly {
-                let revertStringLength := mload(data)
-                let revertStringPtr := add(data, 0x20)
+                let revertStringLength := mload(result)
+                let revertStringPtr := add(result, 0x20)
+                revert(revertStringPtr, revertStringLength)
+            }
+        }
+        // 0xdf2f7649: function selector of markTaskCompleted_Batch()
+        bytes[] memory results = abi.decode(result, (bytes[]));
+        // console.logBytes(abi.encodePacked(bytes4(0xdf2f7649), abi.encode(_taskIds, result)));
+        (success, result) = address(taskManager).call(
+            abi.encodeWithSelector(bytes4(0xdf2f7649), _taskIds, results)
+        );
+        if (!success) {
+            assembly {
+                let revertStringLength := mload(result)
+                let revertStringPtr := add(result, 0x20)
                 revert(revertStringPtr, revertStringLength)
             }
         }

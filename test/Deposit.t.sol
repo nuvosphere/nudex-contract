@@ -53,7 +53,7 @@ contract Deposit is BaseTest {
         uint256 depositIndex = depositManager.getDeposits(user).length;
         assertEq(depositIndex, 0);
         uint256 depositAmount = 1 ether;
-        uint256 chainId = 0;
+        uint48 chainId = 0;
         bytes memory txInfo = "--- encoded tx info ---";
         bytes memory extraInfo = "--- extra info ---";
         bytes memory callData = abi.encodeWithSelector(
@@ -131,7 +131,7 @@ contract Deposit is BaseTest {
 
         // setup deposit info
         uint256 depositAmount = 0; // invalid amount
-        uint256 chainId = 0;
+        uint48 chainId = 0;
         bytes memory txInfo = "--- encoded tx info ---";
         bytes memory extraInfo = "--- extra info ---";
         bytes memory callData = abi.encodeWithSelector(
@@ -149,12 +149,66 @@ contract Deposit is BaseTest {
         vm.stopPrank();
     }
 
+    function test_DepositBatch() public {
+        vm.startPrank(msgSender);
+        uint16 batchSize = 20;
+
+        // setup deposit info
+        uint256[] memory taskIds = new uint256[](batchSize);
+        address[] memory users = new address[](batchSize);
+        uint256[] memory amounts = new uint256[](batchSize);
+        uint48[] memory chainIds = new uint48[](batchSize);
+        bytes[] memory txInfos = new bytes[](batchSize);
+        bytes[] memory extraInfos = new bytes[](batchSize);
+        for (uint16 i; i < batchSize; ++i) {
+            taskIds[i] = taskSubmitter.submitTask(TASK_CONTEXT);
+            users[i] = makeAddr(string(abi.encodePacked("user", i)));
+            amounts[i] = 1 ether;
+            chainIds[i] = 0;
+            txInfos[i] = "--- encoded tx info ---";
+            extraInfos[i] = "--- extra info ---";
+        }
+        bytes memory callData = abi.encodeWithSelector(
+            IDepositManager.record_Batch.selector,
+            users,
+            amounts,
+            chainIds,
+            txInfos,
+            extraInfos
+        );
+        bytes memory encodedData = abi.encodePacked(
+            votingManager.tssNonce(),
+            dmProxy,
+            callData,
+            taskIds
+        );
+        console.log("taskManager: ", address(taskManager));
+        bytes memory signature = _generateSignature(encodedData, tssKey);
+        assertFalse(taskManager.isTaskCompleted(taskIds[0]));
+        votingManager.verifyAndCall_Batch(dmProxy, callData, taskIds, signature);
+        assertTrue(taskManager.isTaskCompleted(taskIds[0]));
+
+        IDepositManager.DepositInfo memory depositInfo = depositManager.getDeposit(users[0], 0);
+        assertEq(
+            abi.encodePacked(users[0], amounts[0], chainIds[0], txInfos[0], extraInfos[0]),
+            abi.encodePacked(
+                depositInfo.targetAddress,
+                depositInfo.amount,
+                depositInfo.chainId,
+                depositInfo.txInfo,
+                depositInfo.extraInfo
+            )
+        );
+
+        vm.stopPrank();
+    }
+
     function testFuzz_DepositFuzz(address _user, uint256 _amount, bytes memory _txInfo) public {
         vm.assume(_amount > 0);
         // setup deposit info
         uint256 taskId = taskSubmitter.submitTask(TASK_CONTEXT);
         uint256 depositIndex = depositManager.getDeposits(user).length;
-        uint256 chainId = 0;
+        uint48 chainId = 0;
         bytes memory extraInfo = "--- extra info ---";
         bytes memory callData = abi.encodeWithSelector(
             IDepositManager.recordDeposit.selector,
@@ -195,7 +249,7 @@ contract Deposit is BaseTest {
         uint256 withdrawIndex = depositManager.getWithdrawals(user).length;
         assertEq(withdrawIndex, 0);
         uint256 withdrawAmount = 1 ether;
-        uint256 chainId = 0;
+        uint48 chainId = 0;
         bytes memory txInfo = "--- encoded tx info ---";
         bytes memory extraInfo = "--- extra info ---";
         bytes memory callData = abi.encodeWithSelector(
@@ -237,7 +291,7 @@ contract Deposit is BaseTest {
 
         // setup withdraw info
         uint256 withdrawAmount = 0; // invalid amount
-        uint256 chainId = 0;
+        uint48 chainId = 0;
         bytes memory txInfo = "--- encoded tx info ---";
         bytes memory extraInfo = "--- extra info ---";
         bytes memory callData = abi.encodeWithSelector(
