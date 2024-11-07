@@ -53,7 +53,7 @@ contract Deposit is BaseTest {
         uint256 depositIndex = depositManager.getDeposits(user).length;
         assertEq(depositIndex, 0);
         uint256 depositAmount = 1 ether;
-        uint48 chainId = 0;
+        uint64 chainId = 0;
         bytes memory txInfo = "--- encoded tx info ---";
         bytes memory extraInfo = "--- extra info ---";
         bytes memory callData = abi.encodeWithSelector(
@@ -131,7 +131,7 @@ contract Deposit is BaseTest {
 
         // setup deposit info
         uint256 depositAmount = 0; // invalid amount
-        uint48 chainId = 0;
+        uint64 chainId = 0;
         bytes memory txInfo = "--- encoded tx info ---";
         bytes memory extraInfo = "--- extra info ---";
         bytes memory callData = abi.encodeWithSelector(
@@ -157,7 +157,7 @@ contract Deposit is BaseTest {
         uint256[] memory taskIds = new uint256[](batchSize);
         address[] memory users = new address[](batchSize);
         uint256[] memory amounts = new uint256[](batchSize);
-        uint48[] memory chainIds = new uint48[](batchSize);
+        uint64[] memory chainIds = new uint64[](batchSize);
         bytes[] memory txInfos = new bytes[](batchSize);
         bytes[] memory extraInfos = new bytes[](batchSize);
         for (uint16 i; i < batchSize; ++i) {
@@ -169,7 +169,7 @@ contract Deposit is BaseTest {
             extraInfos[i] = "--- extra info ---";
         }
         bytes memory callData = abi.encodeWithSelector(
-            IDepositManager.record_Batch.selector,
+            IDepositManager.recordDeposit_Batch.selector,
             users,
             amounts,
             chainIds,
@@ -182,23 +182,42 @@ contract Deposit is BaseTest {
             callData,
             taskIds
         );
-        console.log("taskManager: ", address(taskManager));
         bytes memory signature = _generateSignature(encodedData, tssKey);
-        assertFalse(taskManager.isTaskCompleted(taskIds[0]));
+        for (uint16 i; i < batchSize; ++i) {
+            assertFalse(taskManager.isTaskCompleted(taskIds[i]));
+        }
         votingManager.verifyAndCall_Batch(dmProxy, callData, taskIds, signature);
-        assertTrue(taskManager.isTaskCompleted(taskIds[0]));
+        IDepositManager.DepositInfo memory depositInfo;
+        for (uint16 i; i < batchSize; ++i) {
+            assertTrue(taskManager.isTaskCompleted(taskIds[i]));
+            depositInfo = depositManager.getDeposit(users[i], 0);
+            assertEq(
+                abi.encodePacked(users[i], amounts[i], chainIds[i], txInfos[i], extraInfos[i]),
+                abi.encodePacked(
+                    depositInfo.targetAddress,
+                    depositInfo.amount,
+                    depositInfo.chainId,
+                    depositInfo.txInfo,
+                    depositInfo.extraInfo
+                )
+            );
+        }
 
-        IDepositManager.DepositInfo memory depositInfo = depositManager.getDeposit(users[0], 0);
-        assertEq(
-            abi.encodePacked(users[0], amounts[0], chainIds[0], txInfos[0], extraInfos[0]),
-            abi.encodePacked(
-                depositInfo.targetAddress,
-                depositInfo.amount,
-                depositInfo.chainId,
-                depositInfo.txInfo,
-                depositInfo.extraInfo
-            )
+        // fail: different input parameters length
+        users = new address[](batchSize + 1);
+        users[users.length - 1] = msgSender;
+        callData = abi.encodeWithSelector(
+            IDepositManager.recordDeposit_Batch.selector,
+            users,
+            amounts,
+            chainIds,
+            txInfos,
+            extraInfos
         );
+        encodedData = abi.encodePacked(votingManager.tssNonce(), dmProxy, callData, taskIds);
+        signature = _generateSignature(encodedData, tssKey);
+        vm.expectRevert(IDepositManager.InvalidInput.selector);
+        votingManager.verifyAndCall_Batch(dmProxy, callData, taskIds, signature);
 
         vm.stopPrank();
     }
@@ -208,7 +227,7 @@ contract Deposit is BaseTest {
         // setup deposit info
         uint256 taskId = taskSubmitter.submitTask(TASK_CONTEXT);
         uint256 depositIndex = depositManager.getDeposits(user).length;
-        uint48 chainId = 0;
+        uint64 chainId = 0;
         bytes memory extraInfo = "--- extra info ---";
         bytes memory callData = abi.encodeWithSelector(
             IDepositManager.recordDeposit.selector,
@@ -249,7 +268,7 @@ contract Deposit is BaseTest {
         uint256 withdrawIndex = depositManager.getWithdrawals(user).length;
         assertEq(withdrawIndex, 0);
         uint256 withdrawAmount = 1 ether;
-        uint48 chainId = 0;
+        uint64 chainId = 0;
         bytes memory txInfo = "--- encoded tx info ---";
         bytes memory extraInfo = "--- extra info ---";
         bytes memory callData = abi.encodeWithSelector(
@@ -282,7 +301,7 @@ contract Deposit is BaseTest {
         vm.stopPrank();
     }
 
-    function test_withdrawRevert() public {
+    function test_WithdrawRevert() public {
         vm.startPrank(msgSender);
         // --- submit task ---
         uint256 taskId = taskSubmitter.submitTask(TASK_CONTEXT);
@@ -291,7 +310,7 @@ contract Deposit is BaseTest {
 
         // setup withdraw info
         uint256 withdrawAmount = 0; // invalid amount
-        uint48 chainId = 0;
+        uint64 chainId = 0;
         bytes memory txInfo = "--- encoded tx info ---";
         bytes memory extraInfo = "--- extra info ---";
         bytes memory callData = abi.encodeWithSelector(
@@ -306,6 +325,78 @@ contract Deposit is BaseTest {
         // fail case: invalid amount
         vm.expectRevert(IDepositManager.InvalidAmount.selector);
         votingManager.verifyAndCall(dmProxy, callData, taskId, signature);
+        vm.stopPrank();
+    }
+
+    function test_WithdrawBatch() public {
+        vm.startPrank(msgSender);
+        uint16 batchSize = 20;
+
+        // setup deposit info
+        uint256[] memory taskIds = new uint256[](batchSize);
+        address[] memory users = new address[](batchSize);
+        uint256[] memory amounts = new uint256[](batchSize);
+        uint64[] memory chainIds = new uint64[](batchSize);
+        bytes[] memory txInfos = new bytes[](batchSize);
+        bytes[] memory extraInfos = new bytes[](batchSize);
+        for (uint16 i; i < batchSize; ++i) {
+            taskIds[i] = taskSubmitter.submitTask(TASK_CONTEXT);
+            users[i] = makeAddr(string(abi.encodePacked("user", i)));
+            amounts[i] = 1 ether;
+            chainIds[i] = 0;
+            txInfos[i] = "--- encoded tx info ---";
+            extraInfos[i] = "--- extra info ---";
+        }
+        bytes memory callData = abi.encodeWithSelector(
+            IDepositManager.recordWithdrawal_Batch.selector,
+            users,
+            amounts,
+            chainIds,
+            txInfos,
+            extraInfos
+        );
+        bytes memory encodedData = abi.encodePacked(
+            votingManager.tssNonce(),
+            dmProxy,
+            callData,
+            taskIds
+        );
+        bytes memory signature = _generateSignature(encodedData, tssKey);
+        for (uint16 i; i < batchSize; ++i) {
+            assertFalse(taskManager.isTaskCompleted(taskIds[i]));
+        }
+        votingManager.verifyAndCall_Batch(dmProxy, callData, taskIds, signature);
+        IDepositManager.WithdrawalInfo memory withdrawalInfo;
+        for (uint16 i; i < batchSize; ++i) {
+            assertTrue(taskManager.isTaskCompleted(taskIds[i]));
+            withdrawalInfo = depositManager.getWithdrawal(users[i], 0);
+            assertEq(
+                abi.encodePacked(users[i], amounts[i], chainIds[i], txInfos[i], extraInfos[i]),
+                abi.encodePacked(
+                    withdrawalInfo.targetAddress,
+                    withdrawalInfo.amount,
+                    withdrawalInfo.chainId,
+                    withdrawalInfo.txInfo,
+                    withdrawalInfo.extraInfo
+                )
+            );
+        }
+        // fail: different input parameters length
+        users = new address[](batchSize + 1);
+        users[users.length - 1] = msgSender;
+        callData = abi.encodeWithSelector(
+            IDepositManager.recordWithdrawal_Batch.selector,
+            users,
+            amounts,
+            chainIds,
+            txInfos,
+            extraInfos
+        );
+        encodedData = abi.encodePacked(votingManager.tssNonce(), dmProxy, callData, taskIds);
+        signature = _generateSignature(encodedData, tssKey);
+        vm.expectRevert(IDepositManager.InvalidInput.selector);
+        votingManager.verifyAndCall_Batch(dmProxy, callData, taskIds, signature);
+
         vm.stopPrank();
     }
 }

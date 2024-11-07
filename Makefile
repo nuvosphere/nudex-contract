@@ -16,6 +16,9 @@ deploy:
 deployTest:
 	forge script --chain sepolia script/DeployTest.s.sol:DeployTest --rpc-url ${SEPOLIA_RPC_URL} --broadcast --verify -vvvv
 
+deployDev:
+	forge script --chain 1337 script/DeployTest.s.sol:DeployTest --rpc-url localhost --broadcast -vvvv
+
 .PHONY: abi
 abi:
 	mkdir -p abi

@@ -4,7 +4,7 @@ pragma solidity ^0.8.26;
 interface IDepositManager {
     struct DepositInfo {
         address targetAddress;
-        uint48 chainId;
+        uint64 chainId;
         uint256 amount;
         bytes txInfo;
         bytes extraInfo;
@@ -13,7 +13,7 @@ interface IDepositManager {
     struct WithdrawalInfo {
         address targetAddress;
         uint256 amount;
-        uint48 chainId;
+        uint64 chainId;
         bytes txInfo;
         bytes extraInfo;
     }
@@ -34,19 +34,20 @@ interface IDepositManager {
     );
 
     error InvalidAmount();
+    error InvalidInput();
 
     function recordDeposit(
         address targetAddress,
         uint256 amount,
-        uint48 chainId,
+        uint64 chainId,
         bytes memory txInfo,
         bytes memory extraInfo
     ) external returns (bytes memory);
 
-    function record_Batch(
+    function recordDeposit_Batch(
         address[] calldata targetAddresses,
         uint256[] calldata amounts,
-        uint48[] calldata chainIds,
+        uint64[] calldata chainIds,
         bytes[] calldata txInfos,
         bytes[] calldata extraInfos
     ) external returns (bytes[] memory);
@@ -54,10 +55,18 @@ interface IDepositManager {
     function recordWithdrawal(
         address targetAddress,
         uint256 amount,
-        uint48 chainId,
+        uint64 chainId,
         bytes memory txInfo,
         bytes memory extraInfo
     ) external returns (bytes memory);
+
+    function recordWithdrawal_Batch(
+        address[] calldata targetAddresses,
+        uint256[] calldata amounts,
+        uint64[] calldata chainIds,
+        bytes[] calldata txInfos,
+        bytes[] calldata extraInfos
+    ) external returns (bytes[] memory);
 
     function getDeposits(address targetAddress) external view returns (DepositInfo[] memory);
     function getWithdrawals(address targetAddress) external view returns (WithdrawalInfo[] memory);

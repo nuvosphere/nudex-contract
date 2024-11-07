@@ -89,27 +89,4 @@ contract TaskManagerUpgradeable is ITaskManager, OwnableUpgradeable {
             emit TaskCompleted(_taskIds[i], task.submitter, block.timestamp, _results[i]);
         }
     }
-
-    function preconfirmTask(uint256 _taskId, bytes calldata _result) external onlyOwner {
-        preconfirmedTasks.push(_taskId);
-        preconfirmedTaskResults.push(_result);
-    }
-
-    function confirmAllTasks() external onlyOwner {
-        Task storage task;
-        for (uint256 i; i < preconfirmedTasks.length; ++i) {
-            task = tasks[preconfirmedTasks[i]];
-            task.isCompleted = true;
-            task.completedAt = block.timestamp;
-            task.result = preconfirmedTaskResults[i];
-            emit TaskCompleted(
-                preconfirmedTasks[i],
-                task.submitter,
-                block.timestamp,
-                preconfirmedTaskResults[i]
-            );
-        }
-        delete preconfirmedTasks;
-        delete preconfirmedTaskResults;
-    }
 }

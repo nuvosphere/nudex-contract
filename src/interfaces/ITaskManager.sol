@@ -34,10 +34,6 @@ interface ITaskManager {
         bytes[] calldata _results
     ) external;
 
-    function preconfirmTask(uint256 _taskId, bytes calldata _result) external;
-
-    function confirmAllTasks() external;
-
     function getUncompletedTasks() external view returns (Task[] memory);
 
     function isTaskCompleted(uint256 taskId) external view returns (bool);

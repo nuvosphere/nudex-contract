@@ -182,9 +182,8 @@ contract VotingManagerUpgradeable is Initializable, ReentrancyGuardUpgradeable {
                 revert(revertStringPtr, revertStringLength)
             }
         }
-        // 0xdf2f7649: function selector of markTaskCompleted_Batch()
         bytes[] memory results = abi.decode(result, (bytes[]));
-        // console.logBytes(abi.encodePacked(bytes4(0xdf2f7649), abi.encode(_taskIds, result)));
+        // 0xdf2f7649: function selector of markTaskCompleted_Batch()
         (success, result) = address(taskManager).call(
             abi.encodeWithSelector(bytes4(0xdf2f7649), _taskIds, results)
         );

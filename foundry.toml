@@ -7,7 +7,7 @@ ffi = true
 ast = true
 build_info = true
 extra_output = ["storageLayout"]
-gas_reports = ["DepositManagerUpgradeable"]
+gas_reports = ["DepositManagerUpgradeable", "VotingManagerUpgradeable", "TaskManagerUpgradeable"]
 
 solc_version='0.8.27'
 optimizer = true
@@ -16,6 +16,7 @@ via_ir = true
 
 [rpc_endpoints]
 sepolia = "${SEPOLIA_RPC_URL}"
+localhost = "${LOCALHOST_RPC_URL}"
 
 [etherscan]
 sepolia = { key = "${SEPOLIA_ETHERSCAN_API_KEY}" }
