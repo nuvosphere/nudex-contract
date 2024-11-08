@@ -14,7 +14,7 @@ deploy:
 	forge script --chain sepolia script/Deploy.s.sol:Deploy --rpc-url ${SEPOLIA_RPC_URL} --broadcast --verify -vvvv
 
 deployTest:
-	forge script --chain sepolia script/DeployTest.s.sol:DeployTest --rpc-url ${SEPOLIA_RPC_URL} --broadcast --verify -vvvv
+	forge script --chain 48815 script/DeployTest.s.sol:DeployTest --rpc-url ${GOAT_TESTNET_RPC_URL} --broadcast --verify -vvvv
 
 deployDev:
 	forge script --chain 1337 script/DeployTest.s.sol:DeployTest --rpc-url localhost --broadcast -vvvv

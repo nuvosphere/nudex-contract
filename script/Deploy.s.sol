@@ -7,15 +7,19 @@ import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transpa
 import {AccountManagerUpgradeable} from "../src/AccountManagerUpgradeable.sol";
 import {DepositManagerUpgradeable} from "../src/DepositManagerUpgradeable.sol";
 import {NIP20Upgradeable} from "../src/NIP20Upgradeable.sol";
+import {NuvoLockUpgradeable} from "../src/NuvoLockUpgradeable.sol";
 import {TaskManagerUpgradeable} from "../src/TaskManagerUpgradeable.sol";
 import {TaskSubmitter} from "../src/TaskSubmitter.sol";
 import {ParticipantManagerUpgradeable} from "../src/ParticipantManagerUpgradeable.sol";
 import {VotingManagerUpgradeable} from "../src/VotingManagerUpgradeable.sol";
 
 contract Deploy is Script {
+    address constant NUVO_TOKEN = address(0x9A359f736674913e405Eb64C2048c6293DC97CbF);
     address daoContract;
+    address[] initialParticipants;
 
     address vmProxy;
+    address lockProxy;
     address pmProxy;
     address tmProxy;
     address amProxy;
@@ -29,6 +33,7 @@ contract Deploy is Script {
     }
 
     function run() public {
+        require(initialParticipants.length > 2, "Require at least 3 participant");
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         address deployer = vm.createWallet(deployerPrivateKey).addr;
         console.log("Deployer address: ", deployer);
@@ -37,11 +42,15 @@ contract Deploy is Script {
         // deploy votingManager proxy
         vmProxy = deployProxy(address(new VotingManagerUpgradeable()), daoContract);
 
+        // deploy nuvoLock
+        lockProxy = deployProxy(address(new NuvoLockUpgradeable()), daoContract);
+        NuvoLockUpgradeable nuvoLock = NuvoLockUpgradeable(lockProxy);
+        nuvoLock.initialize(NUVO_TOKEN, deployer, vmProxy, 1 weeks, 1 ether);
+
         // deploy participantManager
         pmProxy = deployProxy(address(new ParticipantManagerUpgradeable()), daoContract);
         ParticipantManagerUpgradeable participantManager = ParticipantManagerUpgradeable(pmProxy);
-        // FIXME: initialize participant
-        // participantManager.initialize(address(0), vmProxy, deployer);
+        participantManager.initialize(address(0), vmProxy, initialParticipants);
 
         // deploy taskManager
         tmProxy = deployProxy(address(new TaskManagerUpgradeable()), daoContract);
@@ -69,8 +78,8 @@ contract Deploy is Script {
             address(0), // assetManager
             dmProxy, // depositManager
             pmProxy, // participantManager
-            tmProxy, // nudeOperation
-            address(0) // nuvoLock
+            tmProxy, // taskManager
+            lockProxy // nuvoLock
         );
 
         vm.stopBroadcast();

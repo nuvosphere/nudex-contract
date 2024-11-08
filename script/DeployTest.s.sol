@@ -7,6 +7,7 @@ import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transpa
 import {AccountManagerUpgradeable} from "../src/AccountManagerUpgradeable.sol";
 import {DepositManagerUpgradeable} from "../src/DepositManagerUpgradeable.sol";
 import {NIP20Upgradeable} from "../src/NIP20Upgradeable.sol";
+import {NuvoLockUpgradeable} from "../src/NuvoLockUpgradeable.sol";
 import {TaskManagerUpgradeable} from "../src/TaskManagerUpgradeable.sol";
 import {TaskSubmitter} from "../src/TaskSubmitter.sol";
 import {ParticipantManagerUpgradeable} from "../src/ParticipantManagerUpgradeable.sol";
@@ -14,11 +15,15 @@ import {VotingManagerUpgradeable} from "../src/VotingManagerUpgradeable.sol";
 
 // this contract is only used for contract testing
 contract DeployTest is Script {
+    address constant NUVO_TOKEN = address(0x9A359f736674913e405Eb64C2048c6293DC97CbF);
     address daoContract;
+    address tssSigner;
+    address[] initialParticipants;
 
     function setUp() public {
         // TODO: temporary dao contract
         daoContract = vm.envAddress("DAO_CONTRACT_ADDR");
+        tssSigner = vm.envAddress("TSS_SIGNER_ADDR");
         console.log("DAO contract addr: ", daoContract);
     }
 
@@ -32,22 +37,26 @@ contract DeployTest is Script {
         VotingManagerUpgradeable votingManager = new VotingManagerUpgradeable();
         console.log("VotingManager: ", address(votingManager));
 
+        // deploy nuvoLock
+        NuvoLockUpgradeable nuvoLock = new NuvoLockUpgradeable();
+        nuvoLock.initialize(NUVO_TOKEN, deployer, address(votingManager), 300, 10);
+        console.log("NuvoLock: ", address(nuvoLock));
+
         // deploy participantManager
         ParticipantManagerUpgradeable participantManager = new ParticipantManagerUpgradeable();
         address[] memory initParticipant = new address[](3);
-        initParticipant[0] = deployer;
-        initParticipant[1] = deployer;
-        initParticipant[2] = deployer;
-        participantManager.initialize(address(0), address(votingManager), initParticipant);
+        initParticipant[0] = vm.envAddress("PARTICIPANT_1");
+        initParticipant[1] = vm.envAddress("PARTICIPANT_2");
+        initParticipant[2] = vm.envAddress("PARTICIPANT_3");
+        participantManager.initialize(address(nuvoLock), address(votingManager), initParticipant);
         console.log("participantManager: ", address(participantManager));
 
         // deploy taskManager
         TaskManagerUpgradeable taskManager = new TaskManagerUpgradeable();
-        taskManager.initialize(
-            address(new TaskSubmitter(address(taskManager))),
-            address(votingManager)
-        );
-        console.log("taskManager: ", address(taskManager));
+        TaskSubmitter taskSubmitter = new TaskSubmitter(address(taskManager));
+        console.log("TaskSubmitter: ", address(taskSubmitter));
+        taskManager.initialize(address(taskSubmitter), address(votingManager));
+        console.log("TaskManager: ", address(taskManager));
 
         // deploy accountManager
         AccountManagerUpgradeable accountManager = new AccountManagerUpgradeable();
@@ -56,20 +65,20 @@ contract DeployTest is Script {
 
         // deploy depositManager and NIP20 contract
         DepositManagerUpgradeable depositManager = new DepositManagerUpgradeable();
-        NIP20Upgradeable nip20 = new NIP20Upgradeable();
-        nip20.initialize(address(depositManager));
-        depositManager.initialize(address(votingManager), address(nip20));
+        // NIP20Upgradeable nip20 = new NIP20Upgradeable();
+        // nip20.initialize(address(depositManager));
+        depositManager.initialize(address(votingManager), address(0));
         console.log("DepositManager: ", address(depositManager));
 
         // initialize votingManager link to all contracts
         votingManager.initialize(
-            deployer,
+            tssSigner,
             address(accountManager), // accountManager
             address(0), // assetManager
             address(depositManager), // depositManager
             address(participantManager), // participantManager
-            address(taskManager), // nudeOperation
-            address(0) // nuvoLock
+            address(taskManager), // taskManager
+            address(nuvoLock) // nuvoLock
         );
 
         vm.stopBroadcast();

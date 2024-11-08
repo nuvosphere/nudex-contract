@@ -131,8 +131,7 @@ contract DepositManagerUpgradeable is IDepositManager, OwnableUpgradeable {
             })
         );
 
-        // mint inscription
-        nip20Contract.mint(_targetAddress, _amount);
+        // TODO: mint inscription
         emit DepositRecorded(_targetAddress, _amount, _chainId, _txInfo, _extraInfo);
         return
             abi.encodePacked(
