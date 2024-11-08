@@ -18,6 +18,7 @@ interface IAccountManager {
 
     error InvalidAddress();
     error InvalidAccountNumber(uint);
+    error InvalidInput();
     error RegisteredAccount(address, string);
 
     function addressRecord(bytes calldata _input) external view returns (string calldata);
@@ -36,4 +37,12 @@ interface IAccountManager {
         uint _index,
         string calldata _address
     ) external returns (bytes memory);
+
+    function registerNewAddress_Batch(
+        address[] calldata _users,
+        uint256[] calldata _accounts,
+        Chain[] calldata _chains,
+        uint256[] calldata _indexs,
+        string[] calldata _addresses
+    ) external returns (bytes[] memory);
 }

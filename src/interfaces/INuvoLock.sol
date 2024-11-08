@@ -11,7 +11,7 @@ interface INuvoToken {
 }
 
 interface INuvoLock {
-    event Locked(address indexed user, uint256 amount, uint256 unlockTime);
+    event Locked(address indexed user, uint256 amount, uint32 unlockTime);
     event Unlocked(address indexed user, uint256 amount);
     event MinLockInfo(uint256 indexed amount, uint256 indexed period);
     event RewardsAccumulated(address indexed user, uint256 rewards);
@@ -24,22 +24,22 @@ interface INuvoLock {
     error NotAUser(address user);
     error NothingToClaim();
     error TimePeriodBelowMin(uint inputPeriod);
-    error UnlockedTimeNotReached(uint256 currentTime, uint256 unlockTime);
+    error UnlockedTimeNotReached(uint256 currentTime, uint32 unlockTime);
 
     struct LockInfo {
+        uint32 unlockTime;
+        uint32 originalLockTime;
+        uint32 startTime;
+        uint32 lastClaimedPeriod;
         uint256 amount;
-        uint256 unlockTime;
-        uint256 originalLockTime;
-        uint256 startTime;
         uint256 bonusPoints;
         uint256 accumulatedRewards;
-        uint256 lastClaimedPeriod;
         uint256 demeritPoints;
     }
 
     function totalLocked() external view returns (uint256);
 
-    function lock(uint256 amount, uint256 period) external;
+    function lock(uint256 amount, uint32 period) external;
 
     function unlock() external;
 
@@ -47,13 +47,13 @@ interface INuvoLock {
 
     function accumulateDemeritPoints(address participant) external;
 
-    function setMinLockInfo(uint256 _minLockAmount, uint256 _minLockPeriod) external;
+    function setMinLockInfo(uint256 _minLockAmount, uint32 _minLockPeriod) external;
 
     function setRewardPerPeriod(uint256 newRewardPerPeriod) external;
 
     function claimRewards() external;
 
-    function getCurrentPeriod() external view returns (uint256);
+    function getCurrentPeriod() external view returns (uint32);
 
     function lockedBalanceOf(address participant) external view returns (uint256);
 

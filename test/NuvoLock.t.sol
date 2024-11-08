@@ -11,7 +11,7 @@ contract NuvoLockTest is BaseTest {
 
     address public nuvoLockProxy;
 
-    uint256 public constant ONE_WEEK = 1 weeks;
+    uint32 public constant ONE_WEEK = 1 weeks;
     bytes public constant TASK_CONTEXT = "--- encoded lock task context ---";
 
     function setUp() public override {
@@ -51,12 +51,12 @@ contract NuvoLockTest is BaseTest {
         // first participant
         uint256 totalAmount = nuvoLock.totalLocked();
         uint256 lockAmount = 1 ether;
-        uint256 lastPeriodNumber = nuvoLock.lastPeriodNumber();
+        uint32 lastPeriodNumber = nuvoLock.lastPeriodNumber();
         assertEq(nuvoLock.lockedBalanceOf(msgSender), 0);
 
         nuvoToken.approve(address(nuvoLock), lockAmount);
         vm.expectEmit(true, true, true, true);
-        emit INuvoLock.Locked(msgSender, lockAmount, block.timestamp + ONE_WEEK);
+        emit INuvoLock.Locked(msgSender, lockAmount, uint32(block.timestamp + ONE_WEEK));
         nuvoLock.lock(lockAmount, ONE_WEEK);
         totalAmount += lockAmount;
 
@@ -65,9 +65,9 @@ contract NuvoLockTest is BaseTest {
         assertEq(nuvoLock.users(0), msgSender);
         INuvoLock.LockInfo memory expectedLockInfo = INuvoLock.LockInfo({
             amount: lockAmount,
-            unlockTime: block.timestamp + ONE_WEEK,
+            unlockTime: uint32(block.timestamp + ONE_WEEK),
             originalLockTime: ONE_WEEK,
-            startTime: block.timestamp,
+            startTime: uint32(block.timestamp),
             bonusPoints: 0,
             accumulatedRewards: 0,
             lastClaimedPeriod: lastPeriodNumber,
@@ -76,9 +76,9 @@ contract NuvoLockTest is BaseTest {
         {
             (
                 uint256 amount,
-                uint256 unlockTime,
-                uint256 originalLockTime,
-                uint256 startTime,
+                uint32 unlockTime,
+                uint32 originalLockTime,
+                uint32 startTime,
                 uint256 bonusPoints,
                 uint256 accumulatedRewards,
                 uint256 lastClaimedPeriod,
@@ -106,7 +106,7 @@ contract NuvoLockTest is BaseTest {
         vm.startPrank(user2);
         nuvoToken.approve(address(nuvoLock), lockAmount);
         vm.expectEmit(true, true, true, true);
-        emit INuvoLock.Locked(user2, lockAmount, block.timestamp + ONE_WEEK);
+        emit INuvoLock.Locked(user2, lockAmount, uint32(block.timestamp + ONE_WEEK));
         nuvoLock.lock(lockAmount, ONE_WEEK);
         totalAmount += lockAmount;
 
@@ -115,9 +115,9 @@ contract NuvoLockTest is BaseTest {
         assertEq(nuvoLock.users(1), user2);
         expectedLockInfo = INuvoLock.LockInfo({
             amount: lockAmount,
-            unlockTime: block.timestamp + ONE_WEEK,
+            unlockTime: uint32(block.timestamp + ONE_WEEK),
             originalLockTime: ONE_WEEK,
-            startTime: block.timestamp,
+            startTime: uint32(block.timestamp),
             bonusPoints: 0,
             accumulatedRewards: 0,
             lastClaimedPeriod: lastPeriodNumber,
@@ -125,25 +125,25 @@ contract NuvoLockTest is BaseTest {
         });
         {
             (
+                uint32 unlockTime,
+                uint32 originalLockTime,
+                uint32 startTime,
+                uint32 lastClaimedPeriod,
                 uint256 amount,
-                uint256 unlockTime,
-                uint256 originalLockTime,
-                uint256 startTime,
                 uint256 bonusPoints,
                 uint256 accumulatedRewards,
-                uint256 lastClaimedPeriod,
                 uint256 demeritPoints
             ) = nuvoLock.locks(user2);
             assertEq(
                 abi.encode(expectedLockInfo),
                 abi.encode(
-                    amount,
                     unlockTime,
                     originalLockTime,
                     startTime,
+                    lastClaimedPeriod,
+                    amount,
                     bonusPoints,
                     accumulatedRewards,
-                    lastClaimedPeriod,
                     demeritPoints
                 )
             );
@@ -228,7 +228,7 @@ contract NuvoLockTest is BaseTest {
         nuvoLock.lock(lockAmount, ONE_WEEK);
 
         // fail case: have not pass the unlock time
-        (, uint256 unlockTime, , , , , , ) = nuvoLock.locks(msgSender);
+        (uint32 unlockTime, , , , , , , ) = nuvoLock.locks(msgSender);
         vm.expectRevert(
             abi.encodeWithSelector(
                 INuvoLock.UnlockedTimeNotReached.selector,
@@ -282,7 +282,7 @@ contract NuvoLockTest is BaseTest {
         skip(1 weeks);
         vm.startPrank(vmProxy);
         nuvoLock.accumulateBonusPoints(msgSender);
-        (, , , , uint256 bonusPoints, , , ) = nuvoLock.locks(msgSender);
+        (, , , , , uint256 bonusPoints, , ) = nuvoLock.locks(msgSender);
         assertEq(bonusPoints, 2);
         skip(1 weeks);
         nuvoLock.accumulateDemeritPoints(msgSender);
@@ -296,7 +296,7 @@ contract NuvoLockTest is BaseTest {
         nuvoToken.approve(address(nuvoLock), MIN_LOCK_AMOUNT);
         nuvoLock.lock(MIN_LOCK_AMOUNT, MIN_LOCK_PERIOD);
 
-        uint256 lastPeriodNumber = nuvoLock.lastPeriodNumber();
+        uint32 lastPeriodNumber = nuvoLock.lastPeriodNumber();
         assertEq(lastPeriodNumber, nuvoLock.getCurrentPeriod());
         assertEq(nuvoLock.rewardPerPeriod(lastPeriodNumber), 0);
         uint256 newRewardPerPeriod = 3 ether;
@@ -309,7 +309,7 @@ contract NuvoLockTest is BaseTest {
         votingManager.verifyAndCall(nuvoLockProxy, callData, taskId, signature);
         assertEq(nuvoLock.rewardPerPeriod(lastPeriodNumber), newRewardPerPeriod);
         {
-            (, , , , uint256 bonusPoints, , , ) = nuvoLock.locks(msgSender);
+            (, , , , , uint256 bonusPoints, , ) = nuvoLock.locks(msgSender);
             assertEq(bonusPoints, 1);
             assertEq(nuvoLock.totalBonusPoints(), bonusPoints);
         }
@@ -329,7 +329,7 @@ contract NuvoLockTest is BaseTest {
         assert(lastPeriodNumber < nuvoLock.getCurrentPeriod());
         assertEq(nuvoLock.lastPeriodNumber(), nuvoLock.getCurrentPeriod());
         {
-            (, , , , uint256 bonusPoints, uint256 accumulatedRewards, , ) = nuvoLock.locks(
+            (, , , , , uint256 bonusPoints, uint256 accumulatedRewards, ) = nuvoLock.locks(
                 msgSender
             );
             assertEq(bonusPoints, 0);
@@ -347,7 +347,7 @@ contract NuvoLockTest is BaseTest {
         vm.prank(vmProxy);
         nuvoLock.accumulateDemeritPoints(msgSender);
         {
-            (, , , , uint256 bonusPoints, , , uint256 demeritPoints) = nuvoLock.locks(msgSender);
+            (, , , , , uint256 bonusPoints, , uint256 demeritPoints) = nuvoLock.locks(msgSender);
             assertEq(bonusPoints, 1);
             assertEq(demeritPoints, 1);
         }
@@ -360,9 +360,9 @@ contract NuvoLockTest is BaseTest {
                 ,
                 ,
                 ,
+                ,
                 uint256 bonusPoints,
                 uint256 accumulatedRewards,
-                ,
                 uint256 demeritPoints
             ) = nuvoLock.locks(msgSender);
             assertEq(bonusPoints, 0);

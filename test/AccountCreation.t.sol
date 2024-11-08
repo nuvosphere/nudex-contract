@@ -136,4 +136,99 @@ contract AccountCreation is BaseTest {
         );
         votingManager.verifyAndCall(amProxy, callData, taskId, signature);
     }
+
+    function test_DepositBatch() public {
+        vm.startPrank(msgSender);
+        uint16 batchSize = 20;
+
+        // setup deposit info
+        uint256[] memory taskIds = new uint256[](batchSize);
+        address[] memory users = new address[](batchSize);
+        uint256[] memory accounts = new uint256[](batchSize);
+        IAccountManager.Chain[] memory chains = new IAccountManager.Chain[](batchSize);
+        uint256[] memory indexs = new uint256[](batchSize);
+        string[] memory addresses = new string[](batchSize);
+        for (uint16 i; i < batchSize; ++i) {
+            taskIds[i] = taskSubmitter.submitTask(TASK_CONTEXT);
+            users[i] = makeAddr(string(abi.encodePacked("user", i)));
+            accounts[i] = 10001;
+            chains[i] = IAccountManager.Chain.BTC;
+            indexs[i] = 0;
+            addresses[i] = "depositAddress";
+        }
+        bytes memory callData = abi.encodeWithSelector(
+            IAccountManager.registerNewAddress_Batch.selector,
+            users,
+            accounts,
+            chains,
+            indexs,
+            addresses
+        );
+        bytes memory encodedData = abi.encodePacked(
+            votingManager.tssNonce(),
+            amProxy,
+            callData,
+            taskIds
+        );
+        bytes memory signature = _generateSignature(encodedData, tssKey);
+        for (uint16 i; i < batchSize; ++i) {
+            assertFalse(taskManager.isTaskCompleted(taskIds[i]));
+        }
+        votingManager.verifyAndCall_Batch(amProxy, callData, taskIds, signature);
+        for (uint16 i; i < batchSize; ++i) {
+            assertEq(
+                accountManager.addressRecord(
+                    abi.encodePacked(users[i], accounts[i], chains[i], indexs[i])
+                ),
+                addresses[i]
+            );
+        }
+
+        // fail: different input parameters length
+        users = new address[](batchSize + 1);
+        users[users.length - 1] = msgSender;
+        callData = abi.encodeWithSelector(
+            IAccountManager.registerNewAddress_Batch.selector,
+            users,
+            accounts,
+            chains,
+            indexs,
+            addresses
+        );
+        encodedData = abi.encodePacked(votingManager.tssNonce(), amProxy, callData, taskIds);
+        signature = _generateSignature(encodedData, tssKey);
+        vm.expectRevert(IAccountManager.InvalidInput.selector);
+        votingManager.verifyAndCall_Batch(amProxy, callData, taskIds, signature);
+
+        vm.stopPrank();
+    }
+
+    function testFuzz_CreateFuzz(
+        address _user,
+        uint256 _account,
+        uint8 _chain,
+        uint256 _index,
+        string calldata _address
+    ) public {
+        vm.assume(_account < 10000000);
+        vm.assume(_chain < 3);
+        vm.assume(bytes(_address).length > 0);
+        IAccountManager.Chain chain = IAccountManager.Chain(_chain);
+        vm.startPrank(address(votingManager));
+        if (_account > 10000) {
+            accountManager.registerNewAddress(_user, _account, chain, _index, _address);
+            // check mappings|reverseMapping
+            assertEq(
+                accountManager.addressRecord(abi.encodePacked(_user, _account, chain, _index)),
+                _address
+            );
+            assertEq(accountManager.userMapping(_address, chain), _user);
+        } else {
+            vm.expectRevert(
+                abi.encodeWithSelector(IAccountManager.InvalidAccountNumber.selector, _account)
+            );
+            accountManager.registerNewAddress(_user, _account, chain, _index, _address);
+            vm.stopPrank();
+        }
+    }
 }

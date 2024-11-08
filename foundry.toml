@@ -7,7 +7,7 @@ ffi = true
 ast = true
 build_info = true
 extra_output = ["storageLayout"]
-gas_reports = ["DepositManagerUpgradeable", "VotingManagerUpgradeable", "TaskManagerUpgradeable"]
+gas_reports = ["*"]
 
 solc_version='0.8.27'
 optimizer = true

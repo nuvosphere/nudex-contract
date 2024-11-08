@@ -8,14 +8,15 @@ import {INuvoLock} from "./interfaces/INuvoLock.sol";
 contract NuvoLockUpgradeable is INuvoLock, OwnableUpgradeable {
     using SafeERC20 for IERC20;
 
+    uint256 private initTimestamp;
+
     IERC20 public nuvoToken;
     address public rewardSource;
+    uint32 public lastPeriodNumber; // Tracks the last reward period
     uint256 public minLockAmount;
     uint256 public minLockPeriod;
-    uint256 public currentPeriodStart;
     uint256 public totalBonusPoints;
     uint256 public totalLocked;
-    uint256 public lastPeriodNumber; // Tracks the last reward period
 
     mapping(address => LockInfo) public locks;
     mapping(uint256 => uint256) public rewardPerPeriod; // Maps period number to its reward amount
@@ -38,51 +39,51 @@ contract NuvoLockUpgradeable is INuvoLock, OwnableUpgradeable {
 
         nuvoToken = IERC20(_nuvoToken);
         rewardSource = _rewardSource;
-        currentPeriodStart = block.timestamp;
+        initTimestamp = block.timestamp;
         minLockPeriod = _minLockPeriod;
         minLockAmount = _minLockAmount;
         lastPeriodNumber = getCurrentPeriod();
     }
 
-    function getCurrentPeriod() public view returns (uint256) {
-        return (block.timestamp - currentPeriodStart) / 1 weeks;
+    function getCurrentPeriod() public view returns (uint32) {
+        return uint32((block.timestamp - initTimestamp) / 1 weeks);
     }
 
-    function lockedBalanceOf(address userAddr) external view returns (uint256) {
-        return locks[userAddr].amount;
+    function lockedBalanceOf(address _userAddr) external view returns (uint256) {
+        return locks[_userAddr].amount;
     }
 
-    function lockedTime(address userAddr) external view returns (uint256) {
-        return block.timestamp - locks[userAddr].startTime;
+    function lockedTime(address _userAddr) external view returns (uint256) {
+        return block.timestamp - locks[_userAddr].startTime;
     }
 
-    function setMinLockInfo(uint256 _minLockAmount, uint256 _minLockPeriod) external onlyOwner {
+    function setMinLockInfo(uint256 _minLockAmount, uint32 _minLockPeriod) external onlyOwner {
         minLockAmount = _minLockAmount;
         minLockPeriod = _minLockPeriod;
         emit MinLockInfo(minLockAmount, minLockPeriod);
     }
 
-    function setRewardPerPeriod(uint256 newRewardPerPeriod) external onlyOwner {
+    function setRewardPerPeriod(uint256 _newRewardPerPeriod) external onlyOwner {
         // Accumulate rewards for all previous periods before updating the reward per period
         accumulateRewards();
 
         // Update rewardPerPeriod for the current period
-        rewardPerPeriod[lastPeriodNumber] = newRewardPerPeriod;
+        rewardPerPeriod[lastPeriodNumber] = _newRewardPerPeriod;
 
-        emit RewardPerPeriodUpdated(newRewardPerPeriod, lastPeriodNumber);
+        emit RewardPerPeriodUpdated(_newRewardPerPeriod, lastPeriodNumber);
     }
 
-    function lock(uint256 _amount, uint256 _period) external {
+    function lock(uint256 _amount, uint32 _period) external {
         require(_amount >= minLockAmount, AmountBelowMin(_amount));
         require(_period >= minLockPeriod, TimePeriodBelowMin(_period));
         require(locks[msg.sender].amount == 0, AlreadyLocked(msg.sender));
 
-        uint256 unlockTime = block.timestamp + _period;
+        uint32 unlockTime = uint32(block.timestamp + _period);
         locks[msg.sender] = LockInfo({
             amount: _amount,
             unlockTime: unlockTime,
             originalLockTime: _period,
-            startTime: block.timestamp,
+            startTime: uint32(block.timestamp),
             bonusPoints: 0,
             accumulatedRewards: 0,
             lastClaimedPeriod: lastPeriodNumber,
@@ -146,7 +147,7 @@ contract NuvoLockUpgradeable is INuvoLock, OwnableUpgradeable {
 
     // calculate reward of every user for the last period
     function accumulateRewards() public {
-        uint256 currentPeriodNumber = getCurrentPeriod();
+        uint32 currentPeriodNumber = getCurrentPeriod();
 
         if (currentPeriodNumber > lastPeriodNumber) {
             if (totalBonusPoints > 0 && rewardPerPeriod[lastPeriodNumber] > 0) {

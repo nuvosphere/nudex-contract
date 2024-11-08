@@ -17,7 +17,7 @@ contract BaseTest is Test {
     using MessageHashUtils for bytes32;
 
     uint256 public constant MIN_LOCK_AMOUNT = 1 ether;
-    uint256 public constant MIN_LOCK_PERIOD = 1 weeks;
+    uint32 public constant MIN_LOCK_PERIOD = 1 weeks;
 
     MockNuvoToken public nuvoToken;
 

@@ -45,7 +45,7 @@ contract NuvoDAOUpgradeable is OwnableUpgradeable {
         address proposer;
         string description;
         uint256 voteCount;
-        uint256 startTime;
+        uint32 startTime;
         uint256 endTime;
         uint256 executionTime;
         bool executed;
@@ -193,7 +193,7 @@ contract NuvoDAOUpgradeable is OwnableUpgradeable {
             proposer: msg.sender,
             description: _description,
             voteCount: 0,
-            startTime: block.timestamp,
+            startTime: uint32(block.timestamp),
             endTime: block.timestamp + _votingPeriod,
             executionTime: block.timestamp + _votingPeriod + executionDelay,
             executed: false,
