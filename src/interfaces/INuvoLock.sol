@@ -37,7 +37,35 @@ interface INuvoLock {
         uint256 demeritPoints;
     }
 
+    function minLockAmount() external view returns (uint256);
+    function minLockPeriod() external view returns (uint256);
     function totalLocked() external view returns (uint256);
+    function getCurrentPeriod() external view returns (uint32);
+    function lockedBalanceOf(address participant) external view returns (uint256);
+    function lockedTime(address participant) external view returns (uint256);
+    function locks(
+        address participant
+    )
+        external
+        view
+        returns (
+            uint32 unlockTime,
+            uint32 originalLockTime,
+            uint32 startTime,
+            uint32 lastClaimedPeriod,
+            uint256 amount,
+            uint256 bonusPoints,
+            uint256 accumulatedRewards,
+            uint256 demeritPoints
+        );
+
+    function initialize(
+        address _nuvoToken,
+        address _rewardSource,
+        address _owner,
+        uint256 _minLockAmount,
+        uint256 _minLockPeriod
+    ) external;
 
     function lock(uint256 amount, uint32 period) external;
 
@@ -52,10 +80,4 @@ interface INuvoLock {
     function setRewardPerPeriod(uint256 newRewardPerPeriod) external;
 
     function claimRewards() external;
-
-    function getCurrentPeriod() external view returns (uint32);
-
-    function lockedBalanceOf(address participant) external view returns (uint256);
-
-    function lockedTime(address participant) external view returns (uint256);
 }

@@ -4,6 +4,8 @@ pragma solidity ^0.8.0;
 import {Script, console} from "forge-std/Script.sol";
 import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 
+import {MockNuvoToken} from "../src/mocks/MockNuvoToken.sol";
+
 import {AccountManagerUpgradeable} from "../src/AccountManagerUpgradeable.sol";
 import {DepositManagerUpgradeable} from "../src/DepositManagerUpgradeable.sol";
 import {NIP20Upgradeable} from "../src/NIP20Upgradeable.sol";
@@ -15,7 +17,6 @@ import {VotingManagerUpgradeable} from "../src/VotingManagerUpgradeable.sol";
 
 // this contract is only used for contract testing
 contract DeployTest is Script {
-    address constant NUVO_TOKEN = address(0x9A359f736674913e405Eb64C2048c6293DC97CbF);
     address daoContract;
     address tssSigner;
     address[] initialParticipants;
@@ -23,8 +24,9 @@ contract DeployTest is Script {
     function setUp() public {
         // TODO: temporary dao contract
         daoContract = vm.envAddress("DAO_CONTRACT_ADDR");
-        tssSigner = vm.envAddress("TSS_SIGNER_ADDR");
         console.log("DAO contract addr: ", daoContract);
+
+        tssSigner = vm.envAddress("TSS_SIGNER_ADDR");
     }
 
     function run() public {
@@ -33,13 +35,16 @@ contract DeployTest is Script {
         console.log("Deployer address: ", deployer);
         vm.startBroadcast(deployerPrivateKey);
 
+        MockNuvoToken nuvoToken = new MockNuvoToken();
+        console.log("nuvoToken: ", address(nuvoToken));
+
         // deploy votingManager proxy
         VotingManagerUpgradeable votingManager = new VotingManagerUpgradeable();
         console.log("VotingManager: ", address(votingManager));
 
         // deploy nuvoLock
         NuvoLockUpgradeable nuvoLock = new NuvoLockUpgradeable();
-        nuvoLock.initialize(NUVO_TOKEN, deployer, address(votingManager), 300, 10);
+        nuvoLock.initialize(address(nuvoToken), deployer, address(votingManager), 300, 10);
         console.log("NuvoLock: ", address(nuvoLock));
 
         // deploy participantManager

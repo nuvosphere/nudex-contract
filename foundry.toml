@@ -10,6 +10,7 @@ extra_output = ["storageLayout"]
 gas_reports = ["*"]
 
 solc_version='0.8.27'
+evm_version='Cancun'
 optimizer = true
 optimizer-runs = 200
 via_ir = true

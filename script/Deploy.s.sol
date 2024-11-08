@@ -14,7 +14,7 @@ import {ParticipantManagerUpgradeable} from "../src/ParticipantManagerUpgradeabl
 import {VotingManagerUpgradeable} from "../src/VotingManagerUpgradeable.sol";
 
 contract Deploy is Script {
-    address constant NUVO_TOKEN = address(0x9A359f736674913e405Eb64C2048c6293DC97CbF);
+    address nuvoToken;
     address daoContract;
     address[] initialParticipants;
 
@@ -30,6 +30,7 @@ contract Deploy is Script {
         // TODO: temporary dao contract
         daoContract = vm.envAddress("DAO_CONTRACT_ADDR");
         console.log("DAO contract addr: ", daoContract);
+        nuvoToken = vm.envAddress("NUVO_TOKEN_ADDR");
     }
 
     function run() public {
@@ -45,7 +46,7 @@ contract Deploy is Script {
         // deploy nuvoLock
         lockProxy = deployProxy(address(new NuvoLockUpgradeable()), daoContract);
         NuvoLockUpgradeable nuvoLock = NuvoLockUpgradeable(lockProxy);
-        nuvoLock.initialize(NUVO_TOKEN, deployer, vmProxy, 1 weeks, 1 ether);
+        nuvoLock.initialize(nuvoToken, deployer, vmProxy, 1 weeks, 1 ether);
 
         // deploy participantManager
         pmProxy = deployProxy(address(new ParticipantManagerUpgradeable()), daoContract);
