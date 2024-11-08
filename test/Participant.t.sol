@@ -53,10 +53,7 @@ contract Participant is BaseTest {
 
         votingManager = VotingManagerUpgradeable(vmProxy);
         votingManager.initialize(
-            tssSigner,
-            address(0), // accountManager
-            address(0), // assetManager
-            address(0), // depositManager
+            tssSigner, // tssSigner
             participantManagerProxy, // participantManager
             address(taskManager), // taskManager
             address(nuvoLock) // nuvoLock

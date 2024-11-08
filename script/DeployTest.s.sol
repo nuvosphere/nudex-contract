@@ -77,10 +77,7 @@ contract DeployTest is Script {
 
         // initialize votingManager link to all contracts
         votingManager.initialize(
-            tssSigner,
-            address(accountManager), // accountManager
-            address(0), // assetManager
-            address(depositManager), // depositManager
+            tssSigner, // tssSigner
             address(participantManager), // participantManager
             address(taskManager), // taskManager
             address(nuvoLock) // nuvoLock

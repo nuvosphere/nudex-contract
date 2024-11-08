@@ -16,6 +16,7 @@ import {VotingManagerUpgradeable} from "../src/VotingManagerUpgradeable.sol";
 contract Deploy is Script {
     address nuvoToken;
     address daoContract;
+    address tssSigner;
     address[] initialParticipants;
 
     address vmProxy;
@@ -31,6 +32,7 @@ contract Deploy is Script {
         daoContract = vm.envAddress("DAO_CONTRACT_ADDR");
         console.log("DAO contract addr: ", daoContract);
         nuvoToken = vm.envAddress("NUVO_TOKEN_ADDR");
+        tssSigner = vm.envAddress("TSS_SIGNER_ADDR");
     }
 
     function run() public {
@@ -74,10 +76,7 @@ contract Deploy is Script {
         // initialize votingManager link to all contracts
         VotingManagerUpgradeable votingManager = VotingManagerUpgradeable(vmProxy);
         votingManager.initialize(
-            deployer,
-            amProxy, // accountManager
-            address(0), // assetManager
-            dmProxy, // depositManager
+            tssSigner, // tssSigner
             pmProxy, // participantManager
             tmProxy, // taskManager
             lockProxy // nuvoLock

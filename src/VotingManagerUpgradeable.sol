@@ -3,18 +3,13 @@ pragma solidity ^0.8.26;
 
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
-import {IAccountManager} from "./interfaces/IAccountManager.sol";
-import {IAssetManager} from "./interfaces/IAssetManager.sol";
-import {IDepositManager} from "./interfaces/IDepositManager.sol";
+
 import {IParticipantManager} from "./interfaces/IParticipantManager.sol";
 import {ITaskManager} from "./interfaces/ITaskManager.sol";
 import {INuvoLock} from "./interfaces/INuvoLock.sol";
 import {console} from "forge-std/console.sol";
 
 contract VotingManagerUpgradeable is Initializable, ReentrancyGuardUpgradeable {
-    IAccountManager public accountManager;
-    IAssetManager public assetManager;
-    IDepositManager public depositManager;
     IParticipantManager public participantManager;
     ITaskManager public taskManager;
     INuvoLock public nuvoLock;
@@ -42,18 +37,12 @@ contract VotingManagerUpgradeable is Initializable, ReentrancyGuardUpgradeable {
 
     function initialize(
         address _tssSigner,
-        address _accountManager,
-        address _assetManager,
-        address _depositManager,
         address _participantManager,
         address _taskManager,
         address _nuvoLock
     ) public initializer {
         __ReentrancyGuard_init();
 
-        accountManager = IAccountManager(_accountManager);
-        assetManager = IAssetManager(_assetManager);
-        depositManager = IDepositManager(_depositManager);
         participantManager = IParticipantManager(_participantManager);
         taskManager = ITaskManager(_taskManager);
         nuvoLock = INuvoLock(_nuvoLock);
@@ -99,46 +88,12 @@ contract VotingManagerUpgradeable is Initializable, ReentrancyGuardUpgradeable {
 
     function submitTaskReceipt(
         uint256 _taskId,
-        bytes memory _result,
+        bytes calldata _result,
         bytes calldata _signature
     ) external onlyCurrentSubmitter nonReentrant {
         require(!taskManager.isTaskCompleted(_taskId), TaskAlreadyCompleted(_taskId));
         _verifySignature(keccak256(abi.encodePacked(tssNonce++, _taskId, _result)), _signature);
         taskManager.markTaskCompleted(_taskId, _result);
-        _rotateSubmitter();
-    }
-
-    function listAsset(
-        string memory name,
-        string memory nuDexName,
-        IAssetManager.AssetType assetType,
-        address contractAddress,
-        uint256 chainId,
-        bytes calldata signature
-    ) external onlyCurrentSubmitter nonReentrant {
-        _verifySignature(
-            keccak256(
-                abi.encodePacked(tssNonce++, name, nuDexName, assetType, contractAddress, chainId)
-            ),
-            signature
-        );
-        assetManager.listAsset(name, nuDexName, assetType, contractAddress, chainId);
-
-        _rotateSubmitter();
-    }
-
-    function delistAsset(
-        IAssetManager.AssetType assetType,
-        address contractAddress,
-        uint256 chainId,
-        bytes calldata signature
-    ) external onlyCurrentSubmitter nonReentrant {
-        _verifySignature(
-            keccak256(abi.encodePacked(tssNonce++, assetType, contractAddress, chainId)),
-            signature
-        );
-        assetManager.delistAsset(assetType, contractAddress, chainId);
-
         _rotateSubmitter();
     }
 
@@ -183,17 +138,7 @@ contract VotingManagerUpgradeable is Initializable, ReentrancyGuardUpgradeable {
             }
         }
         bytes[] memory results = abi.decode(result, (bytes[]));
-        // 0xdf2f7649: function selector of markTaskCompleted_Batch()
-        (success, result) = address(taskManager).call(
-            abi.encodeWithSelector(bytes4(0xdf2f7649), _taskIds, results)
-        );
-        if (!success) {
-            assembly {
-                let revertStringLength := mload(result)
-                let revertStringPtr := add(result, 0x20)
-                revert(revertStringPtr, revertStringLength)
-            }
-        }
+        taskManager.markTaskCompleted_Batch(_taskIds, results);
         _rotateSubmitter();
     }
 

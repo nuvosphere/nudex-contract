@@ -36,10 +36,7 @@ contract Deposit is BaseTest {
         // initialize votingManager link to all contracts
         votingManager = VotingManagerUpgradeable(vmProxy);
         votingManager.initialize(
-            tssSigner,
-            address(0), // accountManager
-            address(0), // assetManager
-            dmProxy, // depositManager
+            tssSigner, // tssSigner
             address(participantManager), // participantManager
             address(taskManager), // taskManager
             address(nuvoLock) // nuvoLock
