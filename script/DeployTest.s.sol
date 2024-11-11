@@ -27,6 +27,9 @@ contract DeployTest is Script {
         console.log("DAO contract addr: ", daoContract);
 
         tssSigner = vm.envAddress("TSS_SIGNER_ADDR");
+        initialParticipants.push(vm.envAddress("PARTICIPANT_1"));
+        initialParticipants.push(vm.envAddress("PARTICIPANT_2"));
+        initialParticipants.push(vm.envAddress("PARTICIPANT_3"));
     }
 
     function run() public {
