@@ -52,11 +52,11 @@ contract DeployTest is Script {
 
         // deploy participantManager
         ParticipantManagerUpgradeable participantManager = new ParticipantManagerUpgradeable();
-        address[] memory initParticipant = new address[](3);
-        initParticipant[0] = vm.envAddress("PARTICIPANT_1");
-        initParticipant[1] = vm.envAddress("PARTICIPANT_2");
-        initParticipant[2] = vm.envAddress("PARTICIPANT_3");
-        participantManager.initialize(address(nuvoLock), address(votingManager), initParticipant);
+        participantManager.initialize(
+            address(nuvoLock),
+            address(votingManager),
+            initialParticipants
+        );
         console.log("participantManager: ", address(participantManager));
 
         // deploy taskManager

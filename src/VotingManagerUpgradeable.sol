@@ -120,25 +120,25 @@ contract VotingManagerUpgradeable is Initializable, ReentrancyGuardUpgradeable {
     }
 
     function verifyAndCall_Batch(
-        address _target,
-        bytes calldata _data,
+        address[] calldata _targets,
+        bytes[] calldata _datas,
         uint256[] calldata _taskIds,
         bytes calldata _signature
     ) external onlyCurrentSubmitter nonReentrant {
-        _verifySignature(
-            keccak256(abi.encodePacked(tssNonce++, _target, _data, _taskIds)),
-            _signature
-        );
-        (bool success, bytes memory result) = _target.call(_data);
-        if (!success) {
-            assembly {
-                let revertStringLength := mload(result)
-                let revertStringPtr := add(result, 0x20)
-                revert(revertStringPtr, revertStringLength)
+        _verifySignature(keccak256(abi.encode(tssNonce++, _targets, _datas, _taskIds)), _signature);
+        bool success;
+        bytes memory result;
+        for (uint8 i; i < _targets.length; ++i) {
+            (success, result) = _targets[i].call(_datas[i]);
+            if (!success) {
+                assembly {
+                    let revertStringLength := mload(result)
+                    let revertStringPtr := add(result, 0x20)
+                    revert(revertStringPtr, revertStringLength)
+                }
             }
+            taskManager.markTaskCompleted(_taskIds[i], result);
         }
-        bytes[] memory results = abi.decode(result, (bytes[]));
-        taskManager.markTaskCompleted_Batch(_taskIds, results);
         _rotateSubmitter();
     }
 
