@@ -46,80 +46,6 @@ contract DepositManagerUpgradeable is IDepositManager, OwnableUpgradeable {
         bytes calldata _txInfo,
         bytes calldata _extraInfo
     ) external onlyOwner returns (bytes memory) {
-        return _recordDeposit(_targetAddress, _amount, _chainId, _txInfo, _extraInfo);
-    }
-
-    function recordDeposit_Batch(
-        address[] calldata _targetAddresses,
-        uint256[] calldata _amounts,
-        uint64[] calldata _chainIds,
-        bytes[] calldata _txInfos,
-        bytes[] calldata _extraInfos
-    ) external onlyOwner returns (bytes[] memory) {
-        require(
-            _targetAddresses.length == _amounts.length &&
-                _chainIds.length == _amounts.length &&
-                _chainIds.length == _txInfos.length &&
-                _extraInfos.length == _txInfos.length,
-            InvalidInput()
-        );
-        bytes[] memory results = new bytes[](_amounts.length);
-        for (uint16 i; i < _amounts.length; ++i) {
-            results[i] = _recordDeposit(
-                _targetAddresses[i],
-                _amounts[i],
-                _chainIds[i],
-                _txInfos[i],
-                _extraInfos[i]
-            );
-        }
-        return results;
-    }
-
-    function recordWithdrawal(
-        address _targetAddress,
-        uint256 _amount,
-        uint64 _chainId,
-        bytes calldata _txInfo,
-        bytes calldata _extraInfo
-    ) external onlyOwner returns (bytes memory) {
-        return _recordWithdrawal(_targetAddress, _amount, _chainId, _txInfo, _extraInfo);
-    }
-
-    function recordWithdrawal_Batch(
-        address[] calldata _targetAddresses,
-        uint256[] calldata _amounts,
-        uint64[] calldata _chainIds,
-        bytes[] calldata _txInfos,
-        bytes[] calldata _extraInfos
-    ) external onlyOwner returns (bytes[] memory) {
-        require(
-            _targetAddresses.length == _amounts.length &&
-                _chainIds.length == _amounts.length &&
-                _chainIds.length == _txInfos.length &&
-                _extraInfos.length == _txInfos.length,
-            InvalidInput()
-        );
-        bytes[] memory results = new bytes[](_amounts.length);
-        for (uint16 i; i < _amounts.length; ++i) {
-            results[i] = _recordWithdrawal(
-                _targetAddresses[i],
-                _amounts[i],
-                _chainIds[i],
-                _txInfos[i],
-                _extraInfos[i]
-            );
-        }
-        return results;
-    }
-
-    function _recordDeposit(
-        address _targetAddress,
-        uint256 _amount,
-        uint64 _chainId,
-        bytes calldata _txInfo,
-        bytes calldata _extraInfo
-    ) internal returns (bytes memory) {
         require(_amount > 0, InvalidAmount());
         deposits[_targetAddress].push(
             DepositInfo({
@@ -145,13 +71,13 @@ contract DepositManagerUpgradeable is IDepositManager, OwnableUpgradeable {
             );
     }
 
-    function _recordWithdrawal(
+    function recordWithdrawal(
         address _targetAddress,
         uint256 _amount,
         uint64 _chainId,
         bytes calldata _txInfo,
         bytes calldata _extraInfo
-    ) internal returns (bytes memory) {
+    ) external onlyOwner returns (bytes memory) {
         require(_amount > 0, InvalidAmount());
         withdrawals[_targetAddress].push(
             WithdrawalInfo({

@@ -7,6 +7,7 @@ import {ITaskManager} from "./interfaces/ITaskManager.sol";
 contract TaskManagerUpgradeable is ITaskManager, OwnableUpgradeable {
     address public taskSubmitter;
     uint256 public nextTaskId;
+    uint256 public nextPendingId;
     uint256[] public preconfirmedTasks;
     bytes[] public preconfirmedTaskResults;
     mapping(uint256 => Task) public tasks;
@@ -22,8 +23,8 @@ contract TaskManagerUpgradeable is ITaskManager, OwnableUpgradeable {
         taskSubmitter = _taskSubmitter;
     }
 
-    function isTaskCompleted(uint256 _taskId) external view returns (bool) {
-        return tasks[_taskId].isCompleted;
+    function getTaskState(uint256 _taskId) external view returns (State) {
+        return tasks[_taskId].state;
     }
 
     function getLatestTask() external view returns (Task memory) {
@@ -36,7 +37,7 @@ contract TaskManagerUpgradeable is ITaskManager, OwnableUpgradeable {
         uint256 count = 0;
 
         for (uint256 i = 0; i < nextTaskId; i++) {
-            if (!tasks[i].isCompleted) {
+            if (tasks[i].state != State.Completed) {
                 tempTasks[count] = tasks[i];
                 count++;
             }
@@ -58,9 +59,9 @@ contract TaskManagerUpgradeable is ITaskManager, OwnableUpgradeable {
             id: taskId,
             context: _context,
             submitter: _submitter,
-            isCompleted: false,
+            state: State.Created,
             createdAt: block.timestamp,
-            completedAt: 0,
+            updatedAt: 0,
             result: ""
         });
 
@@ -68,25 +69,14 @@ contract TaskManagerUpgradeable is ITaskManager, OwnableUpgradeable {
         return taskId;
     }
 
-    function markTaskCompleted(uint256 _taskId, bytes calldata _result) external onlyOwner {
+    function updateTask(uint256 _taskId, State _state, bytes calldata _result) external onlyOwner {
         Task storage task = tasks[_taskId];
-        task.isCompleted = true;
-        task.completedAt = block.timestamp;
-        task.result = _result;
-        emit TaskCompleted(_taskId, task.submitter, block.timestamp, _result);
-    }
-
-    function markTaskCompleted_Batch(
-        uint256[] calldata _taskIds,
-        bytes[] calldata _results
-    ) external onlyOwner {
-        Task storage task;
-        for (uint256 i; i < _taskIds.length; ++i) {
-            task = tasks[_taskIds[i]];
-            task.isCompleted = true;
-            task.completedAt = block.timestamp;
-            task.result = _results[i];
-            emit TaskCompleted(_taskIds[i], task.submitter, block.timestamp, _results[i]);
+        require(_taskId == nextPendingId++ || task.state == State.Pending, "Wrong id");
+        task.state = _state;
+        task.updatedAt = block.timestamp;
+        if (_result.length > 0) {
+            task.result = _result;
         }
+        emit TaskUpdated(_taskId, task.submitter, block.timestamp, _result);
     }
 }

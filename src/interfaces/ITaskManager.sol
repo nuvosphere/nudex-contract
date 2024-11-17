@@ -2,21 +2,28 @@
 pragma solidity ^0.8.26;
 
 interface ITaskManager {
+    enum State {
+        Created,
+        Pending,
+        Completed,
+        Failed
+    }
+
     struct Task {
         uint256 id;
-        bytes context;
+        State state;
         address submitter;
-        bool isCompleted;
         uint256 createdAt;
-        uint256 completedAt;
+        uint256 updatedAt;
+        bytes context;
         bytes result;
     }
 
     event TaskSubmitted(uint256 indexed taskId, bytes context, address indexed submitter);
-    event TaskCompleted(
+    event TaskUpdated(
         uint256 indexed taskId,
         address indexed submitter,
-        uint256 indexed completedAt,
+        uint256 indexed updateTime,
         bytes result
     );
 
@@ -27,14 +34,9 @@ interface ITaskManager {
 
     function getLatestTask() external view returns (Task memory);
 
-    function markTaskCompleted(uint256 taskId, bytes calldata result) external;
-
-    function markTaskCompleted_Batch(
-        uint256[] calldata _taskIds,
-        bytes[] calldata _results
-    ) external;
+    function updateTask(uint256 _taskId, State _state, bytes calldata _result) external;
 
     function getUncompletedTasks() external view returns (Task[] memory);
 
-    function isTaskCompleted(uint256 taskId) external view returns (bool);
+    function getTaskState(uint256 taskId) external view returns (State);
 }

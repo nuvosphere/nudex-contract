@@ -44,14 +44,6 @@ interface IDepositManager {
         bytes memory extraInfo
     ) external returns (bytes memory);
 
-    function recordDeposit_Batch(
-        address[] calldata targetAddresses,
-        uint256[] calldata amounts,
-        uint64[] calldata chainIds,
-        bytes[] calldata txInfos,
-        bytes[] calldata extraInfos
-    ) external returns (bytes[] memory);
-
     function recordWithdrawal(
         address targetAddress,
         uint256 amount,
@@ -59,14 +51,6 @@ interface IDepositManager {
         bytes memory txInfo,
         bytes memory extraInfo
     ) external returns (bytes memory);
-
-    function recordWithdrawal_Batch(
-        address[] calldata targetAddresses,
-        uint256[] calldata amounts,
-        uint64[] calldata chainIds,
-        bytes[] calldata txInfos,
-        bytes[] calldata extraInfos
-    ) external returns (bytes[] memory);
 
     function getDeposits(address targetAddress) external view returns (DepositInfo[] memory);
     function getWithdrawals(address targetAddress) external view returns (WithdrawalInfo[] memory);

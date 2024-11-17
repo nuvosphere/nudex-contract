@@ -18,9 +18,9 @@ contract NuvoLockUpgradeable is INuvoLock, OwnableUpgradeable {
     uint256 public totalBonusPoints;
     uint256 public totalLocked;
 
+    address[] public users;
     mapping(address => LockInfo) public locks;
     mapping(uint256 => uint256) public rewardPerPeriod; // Maps period number to its reward amount
-    address[] public users;
     mapping(address => uint256) public userIndex;
 
     modifier onlyUser() {

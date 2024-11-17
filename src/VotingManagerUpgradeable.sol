@@ -7,9 +7,10 @@ import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/ut
 import {IParticipantManager} from "./interfaces/IParticipantManager.sol";
 import {ITaskManager} from "./interfaces/ITaskManager.sol";
 import {INuvoLock} from "./interfaces/INuvoLock.sol";
+import {IVotingManager} from "./interfaces/IVotingManager.sol";
 import {console} from "forge-std/console.sol";
 
-contract VotingManagerUpgradeable is Initializable, ReentrancyGuardUpgradeable {
+contract VotingManagerUpgradeable is IVotingManager, Initializable, ReentrancyGuardUpgradeable {
     IParticipantManager public participantManager;
     ITaskManager public taskManager;
     INuvoLock public nuvoLock;
@@ -21,14 +22,6 @@ contract VotingManagerUpgradeable is Initializable, ReentrancyGuardUpgradeable {
     uint256 public tssNonce;
     address public tssSigner;
     address public nextSubmitter;
-
-    event SubmitterChosen(address indexed newSubmitter);
-    event SubmitterRotationRequested(address indexed requester, address indexed currentSubmitter);
-
-    error InvalidSigner(address sender, address recoverAddr);
-    error IncorrectSubmitter(address sender, address submitter);
-    error RotationWindowNotPassed(uint256 current, uint256 window);
-    error TaskAlreadyCompleted(uint256 taskId);
 
     modifier onlyCurrentSubmitter() {
         require(msg.sender == nextSubmitter, IncorrectSubmitter(msg.sender, nextSubmitter));
@@ -86,58 +79,29 @@ contract VotingManagerUpgradeable is Initializable, ReentrancyGuardUpgradeable {
         _rotateSubmitter();
     }
 
-    function submitTaskReceipt(
-        uint256 _taskId,
-        bytes calldata _result,
-        bytes calldata _signature
-    ) external onlyCurrentSubmitter nonReentrant {
-        require(!taskManager.isTaskCompleted(_taskId), TaskAlreadyCompleted(_taskId));
-        _verifySignature(keccak256(abi.encodePacked(tssNonce++, _taskId, _result)), _signature);
-        taskManager.markTaskCompleted(_taskId, _result);
-        _rotateSubmitter();
-    }
-
     function verifyAndCall(
-        address _target,
-        bytes calldata _data,
-        uint256 _taskId,
+        Operation[] calldata _opt,
         bytes calldata _signature
     ) external onlyCurrentSubmitter nonReentrant {
-        _verifySignature(
-            keccak256(abi.encodePacked(tssNonce++, _target, _data, _taskId)),
-            _signature
-        );
-        (bool success, bytes memory result) = _target.call(_data);
-        if (!success) {
-            assembly {
-                let revertStringLength := mload(result)
-                let revertStringPtr := add(result, 0x20)
-                revert(revertStringPtr, revertStringLength)
-            }
-        }
-        taskManager.markTaskCompleted(_taskId, result);
-        _rotateSubmitter();
-    }
-
-    function verifyAndCall_Batch(
-        address[] calldata _targets,
-        bytes[] calldata _datas,
-        uint256[] calldata _taskIds,
-        bytes calldata _signature
-    ) external onlyCurrentSubmitter nonReentrant {
-        _verifySignature(keccak256(abi.encode(tssNonce++, _targets, _datas, _taskIds)), _signature);
+        _verifySignature(keccak256(abi.encode(tssNonce++, _opt)), _signature);
         bool success;
         bytes memory result;
-        for (uint8 i; i < _targets.length; ++i) {
-            (success, result) = _targets[i].call(_datas[i]);
-            if (!success) {
-                assembly {
-                    let revertStringLength := mload(result)
-                    let revertStringPtr := add(result, 0x20)
-                    revert(revertStringPtr, revertStringLength)
+        Operation memory opt;
+        for (uint8 i; i < _opt.length; ++i) {
+            opt = _opt[i];
+            if (opt.managerAddr == address(0)) {
+                // override existing task result
+                taskManager.updateTask(opt.taskId, opt.state, opt.optData);
+            } else {
+                (success, result) = opt.managerAddr.call(opt.optData);
+                if (!success) {
+                    // fail
+                    taskManager.updateTask(opt.taskId, ITaskManager.State.Failed, result);
+                } else {
+                    // success
+                    taskManager.updateTask(opt.taskId, opt.state, result);
                 }
             }
-            taskManager.markTaskCompleted(_taskIds[i], result);
         }
         _rotateSubmitter();
     }

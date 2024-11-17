@@ -37,12 +37,4 @@ interface IAccountManager {
         uint _index,
         string calldata _address
     ) external returns (bytes memory);
-
-    function registerNewAddress_Batch(
-        address[] calldata _users,
-        uint256[] calldata _accounts,
-        Chain[] calldata _chains,
-        uint256[] calldata _indexs,
-        string[] calldata _addresses
-    ) external returns (bytes[] memory);
 }
