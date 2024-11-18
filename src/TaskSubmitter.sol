@@ -10,7 +10,7 @@ contract TaskSubmitter {
         taskManager = ITaskManager(_taskManager);
     }
 
-    function submitTask(bytes calldata _context) external returns (uint256) {
+    function submitTask(bytes calldata _context) external returns (uint64) {
         return taskManager.submitTask(msg.sender, _context);
     }
 }

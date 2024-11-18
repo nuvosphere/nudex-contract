@@ -5,9 +5,9 @@ import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Ini
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 
 import {IParticipantManager} from "./interfaces/IParticipantManager.sol";
-import {ITaskManager} from "./interfaces/ITaskManager.sol";
+import {ITaskManager, State} from "./interfaces/ITaskManager.sol";
 import {INuvoLock} from "./interfaces/INuvoLock.sol";
-import {IVotingManager} from "./interfaces/IVotingManager.sol";
+import {IVotingManager, Operation} from "./interfaces/IVotingManager.sol";
 import {console} from "forge-std/console.sol";
 
 contract VotingManagerUpgradeable is IVotingManager, Initializable, ReentrancyGuardUpgradeable {
@@ -80,15 +80,15 @@ contract VotingManagerUpgradeable is IVotingManager, Initializable, ReentrancyGu
     }
 
     function verifyAndCall(
-        Operation[] calldata _opt,
+        Operation[] calldata _opts,
         bytes calldata _signature
     ) external onlyCurrentSubmitter nonReentrant {
-        _verifySignature(keccak256(abi.encode(tssNonce++, _opt)), _signature);
+        _verifySignature(keccak256(abi.encode(tssNonce++, _opts)), _signature);
         bool success;
         bytes memory result;
         Operation memory opt;
-        for (uint8 i; i < _opt.length; ++i) {
-            opt = _opt[i];
+        for (uint8 i; i < _opts.length; ++i) {
+            opt = _opts[i];
             if (opt.managerAddr == address(0)) {
                 // override existing task result
                 taskManager.updateTask(opt.taskId, opt.state, opt.optData);
@@ -96,7 +96,8 @@ contract VotingManagerUpgradeable is IVotingManager, Initializable, ReentrancyGu
                 (success, result) = opt.managerAddr.call(opt.optData);
                 if (!success) {
                     // fail
-                    taskManager.updateTask(opt.taskId, ITaskManager.State.Failed, result);
+                    taskManager.updateTask(opt.taskId, State.Failed, "");
+                    emit OperationFailed(result);
                 } else {
                     // success
                     taskManager.updateTask(opt.taskId, opt.state, result);

@@ -2,12 +2,12 @@
 pragma solidity ^0.8.26;
 
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import {ITaskManager} from "./interfaces/ITaskManager.sol";
+import {ITaskManager, State} from "./interfaces/ITaskManager.sol";
 
 contract TaskManagerUpgradeable is ITaskManager, OwnableUpgradeable {
     address public taskSubmitter;
-    uint256 public nextTaskId;
-    uint256 public nextPendingId;
+    uint64 public nextTaskId;
+    uint64 public nextPendingId;
     uint256[] public preconfirmedTasks;
     bytes[] public preconfirmedTaskResults;
     mapping(uint256 => Task) public tasks;
@@ -23,7 +23,7 @@ contract TaskManagerUpgradeable is ITaskManager, OwnableUpgradeable {
         taskSubmitter = _taskSubmitter;
     }
 
-    function getTaskState(uint256 _taskId) external view returns (State) {
+    function getTaskState(uint64 _taskId) external view returns (State) {
         return tasks[_taskId].state;
     }
 
@@ -52,16 +52,16 @@ contract TaskManagerUpgradeable is ITaskManager, OwnableUpgradeable {
         return uncompletedTasks;
     }
 
-    function submitTask(address _submitter, bytes calldata _context) external returns (uint256) {
+    function submitTask(address _submitter, bytes calldata _context) external returns (uint64) {
         require(msg.sender == taskSubmitter, OnlyTaskSubmitter());
-        uint256 taskId = nextTaskId++;
+        uint64 taskId = nextTaskId++;
         tasks[taskId] = Task({
             id: taskId,
-            context: _context,
-            submitter: _submitter,
             state: State.Created,
+            submitter: _submitter,
             createdAt: block.timestamp,
             updatedAt: 0,
+            context: _context,
             result: ""
         });
 
@@ -69,9 +69,9 @@ contract TaskManagerUpgradeable is ITaskManager, OwnableUpgradeable {
         return taskId;
     }
 
-    function updateTask(uint256 _taskId, State _state, bytes calldata _result) external onlyOwner {
+    function updateTask(uint64 _taskId, State _state, bytes calldata _result) external onlyOwner {
         Task storage task = tasks[_taskId];
-        require(_taskId == nextPendingId++ || task.state == State.Pending, "Wrong id");
+        require(_taskId == nextPendingId++ || task.state == State.Pending, InvalidTask(_taskId));
         task.state = _state;
         task.updatedAt = block.timestamp;
         if (_result.length > 0) {

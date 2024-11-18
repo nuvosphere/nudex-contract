@@ -6,7 +6,7 @@ import {IAccountManager} from "./interfaces/IAccountManager.sol";
 
 contract AccountManagerUpgradeable is IAccountManager, OwnableUpgradeable {
     mapping(bytes => string) public addressRecord;
-    mapping(string depositAddress => mapping(Chain => address user)) public userMapping;
+    mapping(string depositAddress => mapping(Chain => uint256 account)) public userMapping;
 
     // _owner: Voting Manager contract
     function initialize(address _owner) public initializer {
@@ -14,17 +14,15 @@ contract AccountManagerUpgradeable is IAccountManager, OwnableUpgradeable {
     }
 
     function getAddressRecord(
-        address _user,
         uint256 _account,
         Chain _chain,
         uint256 _index
     ) external view returns (string memory) {
-        return addressRecord[abi.encodePacked(_user, _account, _chain, _index)];
+        return addressRecord[abi.encodePacked(_account, _chain, _index)];
     }
 
-    // register new deposit address for user
+    // register new deposit address for user account
     function registerNewAddress(
-        address _user,
         uint256 _account,
         Chain _chain,
         uint256 _index,
@@ -33,15 +31,12 @@ contract AccountManagerUpgradeable is IAccountManager, OwnableUpgradeable {
         require(bytes(_address).length != 0, InvalidAddress());
         require(_account > 10000, InvalidAccountNumber(_account));
         require(
-            bytes(addressRecord[abi.encodePacked(_user, _account, _chain, _index)]).length == 0,
-            RegisteredAccount(
-                _user,
-                addressRecord[abi.encodePacked(_user, _account, _chain, _index)]
-            )
+            bytes(addressRecord[abi.encodePacked(_account, _chain, _index)]).length == 0,
+            RegisteredAccount(_account, addressRecord[abi.encodePacked(_account, _chain, _index)])
         );
-        addressRecord[abi.encodePacked(_user, _account, _chain, _index)] = _address;
-        userMapping[_address][_chain] = _user;
-        emit AddressRegistered(_user, _account, _chain, _index, _address);
-        return abi.encodePacked(true, uint8(1), _user, _account, _chain, _index);
+        addressRecord[abi.encodePacked(_account, _chain, _index)] = _address;
+        userMapping[_address][_chain] = _account;
+        emit AddressRegistered(_account, _chain, _index, _address);
+        return abi.encodePacked(true, uint8(1), _account, _chain, _index);
     }
 }

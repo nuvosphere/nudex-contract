@@ -9,7 +9,6 @@ interface IAccountManager {
     }
 
     event AddressRegistered(
-        address indexed user,
         uint account,
         Chain indexed chainId,
         uint index,
@@ -19,19 +18,17 @@ interface IAccountManager {
     error InvalidAddress();
     error InvalidAccountNumber(uint);
     error InvalidInput();
-    error RegisteredAccount(address, string);
+    error RegisteredAccount(uint256, string);
 
     function addressRecord(bytes calldata _input) external view returns (string calldata);
-    function userMapping(string calldata _addr, Chain _chain) external view returns (address);
+    function userMapping(string calldata _addr, Chain _chain) external view returns (uint256);
     function getAddressRecord(
-        address _user,
         uint256 _account,
         Chain _chain,
         uint256 _index
     ) external view returns (string memory);
 
     function registerNewAddress(
-        address _user,
         uint _account,
         Chain _chain,
         uint _index,
