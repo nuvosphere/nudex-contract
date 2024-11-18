@@ -83,6 +83,7 @@ contract VotingManagerUpgradeable is IVotingManager, Initializable, ReentrancyGu
         Operation[] calldata _opts,
         bytes calldata _signature
     ) external onlyCurrentSubmitter nonReentrant {
+        require(_opts.length > 0, EmptyOperationsArray());
         _verifySignature(keccak256(abi.encode(tssNonce++, _opts)), _signature);
         bool success;
         bytes memory result;

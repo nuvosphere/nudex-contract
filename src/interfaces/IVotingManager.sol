@@ -15,6 +15,7 @@ contract IVotingManager {
     event SubmitterRotationRequested(address indexed requester, address indexed currentSubmitter);
     event OperationFailed(bytes indexed error);
 
+    error EmptyOperationsArray();
     error InvalidSigner(address sender, address recoverAddr);
     error IncorrectSubmitter(address sender, address submitter);
     error RotationWindowNotPassed(uint256 current, uint256 window);

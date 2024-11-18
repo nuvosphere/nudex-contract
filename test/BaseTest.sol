@@ -11,6 +11,10 @@ import {TaskManagerUpgradeable} from "../src/TaskManagerUpgradeable.sol";
 import {TaskSubmitter} from "../src/TaskSubmitter.sol";
 import {VotingManagerUpgradeable} from "../src/VotingManagerUpgradeable.sol";
 
+import {IVotingManager} from "../src/interfaces/IVotingManager.sol";
+import {Operation} from "../src/interfaces/IVotingManager.sol";
+import {State} from "../src/interfaces/ITaskManager.sol";
+
 import {MockNuvoToken} from "../src/mocks/MockNuvoToken.sol";
 
 contract BaseTest is Test {
@@ -94,30 +98,23 @@ contract BaseTest is Test {
     }
 
     function _generateSignature(
-        address _target,
-        bytes memory _callData,
-        uint256 _taskId,
+        Operation[] memory _opt,
         uint256 _privateKey
     ) internal view returns (bytes memory) {
-        bytes memory encodedData = abi.encodePacked(
-            votingManager.tssNonce(),
-            _target,
-            _callData,
-            _taskId
-        );
+        bytes memory encodedData = abi.encode(votingManager.tssNonce(), _opt);
         bytes32 digest = keccak256(encodedData).toEthSignedMessageHash();
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(_privateKey, digest);
         return abi.encodePacked(r, s, v);
     }
 
-    function _generateSignature(
-        bytes memory _encodedData,
-        uint256 _privateKey
-    ) internal pure returns (bytes memory) {
-        bytes32 digest = keccak256(_encodedData).toEthSignedMessageHash();
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(_privateKey, digest);
-        return abi.encodePacked(r, s, v);
-    }
+    // function _generateSignature(
+    //     bytes memory _encodedData,
+    //     uint256 _privateKey
+    // ) internal pure returns (bytes memory) {
+    //     bytes32 digest = keccak256(_encodedData).toEthSignedMessageHash();
+    //     (uint8 v, bytes32 r, bytes32 s) = vm.sign(_privateKey, digest);
+    //     return abi.encodePacked(r, s, v);
+    // }
 
     function uint256ToString(uint256 value) internal pure returns (string memory) {
         if (value == 0) {
