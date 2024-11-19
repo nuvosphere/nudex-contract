@@ -1,11 +1,8 @@
 pragma solidity ^0.8.0;
 
-import {BaseTest, console} from "./BaseTest.sol";
+import "./BaseTest.sol";
 
-import {TaskManagerUpgradeable} from "../src/TaskManagerUpgradeable.sol";
 import {ITaskManager} from "../src/interfaces/ITaskManager.sol";
-import {TaskSubmitter} from "../src/TaskSubmitter.sol";
-import {VotingManagerUpgradeable} from "../src/VotingManagerUpgradeable.sol";
 
 contract TaskManagment is BaseTest {
     address public tmProxy;
@@ -33,25 +30,22 @@ contract TaskManagment is BaseTest {
     function test_TaskProcess() public {
         vm.startPrank(msgSender);
         // submit task
-        uint256 taskId = taskManager.nextTaskId();
+        uint64 taskId = taskManager.nextTaskId();
         bytes memory taskContext = "--- encoded account creation task context ---";
         vm.expectEmit(true, true, true, true);
         emit ITaskManager.TaskSubmitted(taskId, taskContext, msgSender);
         taskSubmitter.submitTask(taskContext);
         assertEq(taskId, taskManager.nextTaskId() - 1);
-        assertFalse(taskManager.isTaskCompleted(taskId));
+        assertEq(uint8(taskManager.getTaskState(taskId)), uint8(State.Created));
 
         // finialize task
         bytes memory taskResult = "--- encoded task result ---";
-        bytes memory callData = abi.encodeWithSelector(
-            ITaskManager.markTaskCompleted.selector,
-            taskId,
-            taskResult
-        );
-        bytes memory signature = _generateSignature(tmProxy, callData, taskId, tssKey);
+        Operation[] memory opts = new Operation[](1);
+        opts[0] = Operation(address(0), State.Completed, taskId, taskResult);
+        bytes memory signature = _generateSignature(opts, tssKey);
         vm.expectEmit(true, true, true, true);
-        emit ITaskManager.TaskCompleted(taskId, msgSender, block.timestamp, taskResult);
-        votingManager.verifyAndCall(tmProxy, callData, taskId, signature);
+        emit ITaskManager.TaskUpdated(taskId, msgSender, block.timestamp, taskResult);
+        votingManager.verifyAndCall(opts, signature);
         vm.stopPrank();
     }
 }

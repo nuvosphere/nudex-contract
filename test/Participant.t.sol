@@ -1,10 +1,8 @@
 pragma solidity ^0.8.0;
 
-import {BaseTest, console} from "./BaseTest.sol";
+import "./BaseTest.sol";
 
-import {ParticipantManagerUpgradeable} from "../src/ParticipantManagerUpgradeable.sol";
 import {IParticipantManager} from "../src/interfaces/IParticipantManager.sol";
-import {VotingManagerUpgradeable} from "../src/VotingManagerUpgradeable.sol";
 
 contract Participant is BaseTest {
     address public user;
@@ -66,7 +64,7 @@ contract Participant is BaseTest {
     }
 
     function test_AddParticipant() public {
-        uint256 taskId = taskSubmitter.submitTask(TASK_CONTEXT);
+        uint64 taskId = taskSubmitter.submitTask(TASK_CONTEXT);
         // create an eligible user
         address newParticipant = makeAddr("newParticipant");
         // fail: did not stake
@@ -74,18 +72,16 @@ contract Participant is BaseTest {
             IParticipantManager.addParticipant.selector,
             newParticipant
         );
-        bytes memory signature = _generateSignature(
-            participantManagerProxy,
-            callData,
-            taskId,
-            tssKey
-        );
+        Operation[] memory opts = new Operation[](1);
+        opts[0] = Operation(participantManagerProxy, State.Completed, taskId, callData);
+        bytes memory signature = _generateSignature(opts, tssKey);
         nextSubmitter = votingManager.nextSubmitter();
-        vm.expectRevert(
+        vm.expectEmit(true, true, true, true);
+        emit IVotingManager.OperationFailed(
             abi.encodeWithSelector(IParticipantManager.NotEligible.selector, newParticipant)
         );
         vm.prank(nextSubmitter);
-        votingManager.verifyAndCall(participantManagerProxy, callData, taskId, signature);
+        votingManager.verifyAndCall(opts, signature);
 
         vm.startPrank(newParticipant);
         nuvoToken.mint(newParticipant, 100 ether);
@@ -103,113 +99,116 @@ contract Participant is BaseTest {
         participantManager.addParticipant(newParticipant);
 
         // successfully add new user
+        taskId = taskSubmitter.submitTask(TASK_CONTEXT);
         callData = abi.encodeWithSelector(
             IParticipantManager.addParticipant.selector,
             newParticipant
         );
-        signature = _generateSignature(participantManagerProxy, callData, taskId, tssKey);
+        opts[0] = Operation(participantManagerProxy, State.Completed, taskId, callData);
+        signature = _generateSignature(opts, tssKey);
         vm.prank(votingManager.nextSubmitter());
         vm.expectEmit(true, true, true, true);
         emit IParticipantManager.ParticipantAdded(newParticipant);
-        votingManager.verifyAndCall(participantManagerProxy, callData, taskId, signature);
+        votingManager.verifyAndCall(opts, signature);
 
         // fail: adding the same user again
-        signature = _generateSignature(participantManagerProxy, callData, taskId, tssKey);
+        taskId = taskSubmitter.submitTask(TASK_CONTEXT);
+        opts[0] = Operation(participantManagerProxy, State.Completed, taskId, callData);
+        signature = _generateSignature(opts, tssKey);
         nextSubmitter = votingManager.nextSubmitter();
         vm.prank(nextSubmitter);
-        vm.expectRevert(
+        vm.expectEmit(true, true, true, true);
+        emit IVotingManager.OperationFailed(
             abi.encodeWithSelector(IParticipantManager.AlreadyParticipant.selector, nextSubmitter)
         );
-        votingManager.verifyAndCall(participantManagerProxy, callData, taskId, signature);
+        votingManager.verifyAndCall(opts, signature);
     }
 
     function test_RemoveParticipant() public {
-        uint256 taskId = taskSubmitter.submitTask(TASK_CONTEXT);
         // add one valid partcipant
         address newParticipant = makeAddr("newParticipant");
         _addParticipant(newParticipant);
 
         // remove the added user
+        uint64 taskId = taskSubmitter.submitTask(TASK_CONTEXT);
         bytes memory callData = abi.encodeWithSelector(
             IParticipantManager.removeParticipant.selector,
             newParticipant
         );
-        bytes memory signature = _generateSignature(
-            participantManagerProxy,
-            callData,
-            taskId,
-            tssKey
-        );
+        Operation[] memory opts = new Operation[](1);
+        opts[0] = Operation(participantManagerProxy, State.Completed, taskId, callData);
+        bytes memory signature = _generateSignature(opts, tssKey);
         vm.prank(votingManager.nextSubmitter());
         vm.expectEmit(true, true, true, true);
         emit IParticipantManager.ParticipantRemoved(newParticipant);
-        votingManager.verifyAndCall(participantManagerProxy, callData, taskId, signature);
+        votingManager.verifyAndCall(opts, signature);
     }
 
     function test_RemoveParticipantRevert() public {
-        uint256 taskId = taskSubmitter.submitTask(TASK_CONTEXT);
+        uint64 taskId = taskSubmitter.submitTask(TASK_CONTEXT);
         // fail: cannot remove user when there is only 3 participant left
         bytes memory callData = abi.encodeWithSelector(
             IParticipantManager.removeParticipant.selector,
             msgSender
         );
-        bytes memory signature = _generateSignature(
-            participantManagerProxy,
-            callData,
-            taskId,
-            tssKey
-        );
+        Operation[] memory opts = new Operation[](1);
+        opts[0] = Operation(participantManagerProxy, State.Completed, taskId, callData);
+        bytes memory signature = _generateSignature(opts, tssKey);
         vm.prank(votingManager.nextSubmitter());
-        vm.expectRevert(IParticipantManager.NotEnoughParticipant.selector);
-        votingManager.verifyAndCall(participantManagerProxy, callData, taskId, signature);
+        vm.expectEmit(true, true, true, true);
+        emit IVotingManager.OperationFailed(
+            abi.encodeWithSelector(IParticipantManager.NotEnoughParticipant.selector)
+        );
+        votingManager.verifyAndCall(opts, signature);
 
         // add one valid partcipant
         address newParticipant = makeAddr("newParticipant");
         _addParticipant(newParticipant);
 
         // fail: remove a non-participant user
+        taskId = taskSubmitter.submitTask(TASK_CONTEXT);
         callData = abi.encodeWithSelector(IParticipantManager.removeParticipant.selector, thisAddr);
-        signature = _generateSignature(participantManagerProxy, callData, taskId, tssKey);
+        opts[0] = Operation(participantManagerProxy, State.Completed, taskId, callData);
+        signature = _generateSignature(opts, tssKey);
         nextSubmitter = votingManager.nextSubmitter();
-        vm.expectRevert(
+        vm.expectEmit(true, true, true, true);
+        emit IVotingManager.OperationFailed(
             abi.encodeWithSelector(IParticipantManager.NotParticipant.selector, thisAddr)
         );
         vm.prank(nextSubmitter);
-        votingManager.verifyAndCall(participantManagerProxy, callData, taskId, signature);
+        votingManager.verifyAndCall(opts, signature);
     }
 
     function test_massAddAndRemove() public {
-        uint256 taskId = taskSubmitter.submitTask(TASK_CONTEXT);
         uint8 initNumOfParticipant = 3;
+        address[] memory newParticipants = new address[](20);
         for (uint8 i; i < 20; ++i) {
-            _addParticipant(makeAddr(uint256ToString(i)));
+            newParticipants[i] = _addParticipant(makeAddr(uint256ToString(i)));
             assertEq(participantManager.getParticipants().length, initNumOfParticipant + i + 1);
         }
         assertEq(participantManager.getParticipants().length, 23);
         initNumOfParticipant = 23;
-        nextSubmitter = votingManager.nextSubmitter();
+        uint64 taskId;
+        bytes memory callData;
+        Operation[] memory opts = new Operation[](20);
         for (uint8 i; i < 20; ++i) {
-            // removing a random participant
-            bytes memory callData = abi.encodeWithSelector(
+            // removing a participant
+            taskId = taskSubmitter.submitTask(TASK_CONTEXT);
+            callData = abi.encodeWithSelector(
                 IParticipantManager.removeParticipant.selector,
-                participantManager.getRandomParticipant(nextSubmitter)
+                newParticipants[i]
             );
-            bytes memory signature = _generateSignature(
-                participantManagerProxy,
-                callData,
-                taskId,
-                tssKey
-            );
-            vm.prank(nextSubmitter);
-            votingManager.verifyAndCall(participantManagerProxy, callData, taskId, signature);
-            nextSubmitter = votingManager.nextSubmitter();
-            assertEq(participantManager.getParticipants().length, initNumOfParticipant - i - 1);
+            opts[i] = Operation(participantManagerProxy, State.Completed, taskId, callData);
         }
+        bytes memory signature = _generateSignature(opts, tssKey);
+        nextSubmitter = votingManager.nextSubmitter();
+        vm.prank(nextSubmitter);
+        votingManager.verifyAndCall(opts, signature);
         assertEq(participantManager.getParticipants().length, 3);
     }
 
-    function _addParticipant(address _newParticipant) internal {
-        uint256 taskId = taskSubmitter.submitTask(TASK_CONTEXT);
+    function _addParticipant(address _newParticipant) internal returns (address) {
+        uint64 taskId = taskSubmitter.submitTask(TASK_CONTEXT);
         // create an eligible user
         nuvoToken.mint(_newParticipant, 100 ether);
         vm.startPrank(_newParticipant);
@@ -222,13 +221,11 @@ contract Participant is BaseTest {
             IParticipantManager.addParticipant.selector,
             _newParticipant
         );
-        bytes memory signature = _generateSignature(
-            participantManagerProxy,
-            callData,
-            taskId,
-            tssKey
-        );
+        Operation[] memory opts = new Operation[](1);
+        opts[0] = Operation(participantManagerProxy, State.Completed, taskId, callData);
+        bytes memory signature = _generateSignature(opts, tssKey);
         vm.prank(votingManager.nextSubmitter());
-        votingManager.verifyAndCall(participantManagerProxy, callData, taskId, signature);
+        votingManager.verifyAndCall(opts, signature);
+        return _newParticipant;
     }
 }
