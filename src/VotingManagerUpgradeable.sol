@@ -8,7 +8,6 @@ import {IParticipantManager} from "./interfaces/IParticipantManager.sol";
 import {ITaskManager, State} from "./interfaces/ITaskManager.sol";
 import {INuvoLock} from "./interfaces/INuvoLock.sol";
 import {IVotingManager, Operation} from "./interfaces/IVotingManager.sol";
-import {console} from "forge-std/console.sol";
 
 contract VotingManagerUpgradeable is IVotingManager, Initializable, ReentrancyGuardUpgradeable {
     IParticipantManager public participantManager;
