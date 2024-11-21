@@ -39,16 +39,16 @@ contract DeployTest is Script {
         vm.startBroadcast(deployerPrivateKey);
 
         MockNuvoToken nuvoToken = new MockNuvoToken();
-        console.log("nuvoToken: ", address(nuvoToken));
+        console.log("|NuvoToken|", address(nuvoToken));
 
         // deploy votingManager proxy
         VotingManagerUpgradeable votingManager = new VotingManagerUpgradeable();
-        console.log("VotingManager: ", address(votingManager));
+        console.log("|VotingManager| ", address(votingManager));
 
         // deploy nuvoLock
         NuvoLockUpgradeable nuvoLock = new NuvoLockUpgradeable();
         nuvoLock.initialize(address(nuvoToken), deployer, address(votingManager), 300, 10);
-        console.log("NuvoLock: ", address(nuvoLock));
+        console.log("|NuvoLock|", address(nuvoLock));
 
         // deploy participantManager
         ParticipantManagerUpgradeable participantManager = new ParticipantManagerUpgradeable();
@@ -57,26 +57,26 @@ contract DeployTest is Script {
             address(votingManager),
             initialParticipants
         );
-        console.log("participantManager: ", address(participantManager));
+        console.log("|ParticipantManager|", address(participantManager));
 
         // deploy taskManager
         TaskManagerUpgradeable taskManager = new TaskManagerUpgradeable();
         TaskSubmitter taskSubmitter = new TaskSubmitter(address(taskManager));
-        console.log("TaskSubmitter: ", address(taskSubmitter));
+        console.log("|TaskSubmitter|", address(taskSubmitter));
         taskManager.initialize(address(taskSubmitter), address(votingManager));
-        console.log("TaskManager: ", address(taskManager));
+        console.log("|TaskManager|", address(taskManager));
 
         // deploy accountManager
         AccountManagerUpgradeable accountManager = new AccountManagerUpgradeable();
         accountManager.initialize(address(votingManager));
-        console.log("AccountManager: ", address(accountManager));
+        console.log("|AccountManager|", address(accountManager));
 
         // deploy depositManager and NIP20 contract
         DepositManagerUpgradeable depositManager = new DepositManagerUpgradeable();
         // NIP20Upgradeable nip20 = new NIP20Upgradeable();
         // nip20.initialize(address(depositManager));
         depositManager.initialize(address(votingManager), address(0));
-        console.log("DepositManager: ", address(depositManager));
+        console.log("|DepositManager|", address(depositManager));
 
         // initialize votingManager link to all contracts
         votingManager.initialize(

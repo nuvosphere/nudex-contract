@@ -16,6 +16,8 @@ contract ParticipantSetup is Script {
     function setUp() public {
         nuvoToken = MockNuvoToken(vm.envAddress("NUVO_TOKEN_ADDR"));
         nuvoLock = NuvoLockUpgradeable(vm.envAddress("NUVO_LOCK_ADDR"));
+        console.log("nuvoToken: ", address(nuvoToken));
+        console.log("nuvoLock: ", address(nuvoLock));
     }
 
     function run() public {

@@ -14,13 +14,13 @@ deploy:
 	forge script --chain sepolia script/Deploy.s.sol:Deploy --rpc-url sepolia --broadcast --verify -vvvv
 
 deployTest:
-	forge script --chain 48815 script/DeployTest.s.sol:DeployTest --rpc-url goatTestnet --broadcast -vvvv
+	forge script --chain 48816 script/DeployTest.s.sol:DeployTest --rpc-url goatTestnet --broadcast -vvvv  --verify --verifier blockscout --verifier-url https://explorer.testnet3.goat.network/api/
 
 deployDev:
 	forge script --rpc-url localhost script/DeployTest.s.sol:DeployTest --broadcast -vvvv
 
 participantSetup:
-	forge script --rpc-url localhost script/ParticipantSetup.s.sol:ParticipantSetup --broadcast -vvvv
+	forge script --rpc-url goatTestnet script/ParticipantSetup.s.sol:ParticipantSetup --broadcast -vvvv
 
 generateSig:
 	forge script --rpc-url localhost script/SignatureGenerator.sol --sig "run((address,uint8, uint64, bytes)[],uint256)" $(ARG)
