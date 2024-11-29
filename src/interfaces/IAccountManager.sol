@@ -5,12 +5,14 @@ interface IAccountManager {
     enum Chain {
         BTC,
         EVM,
+        SOL, // Solana
+        SUI,
         EVM_TSS
     }
 
     event AddressRegistered(
         uint account,
-        Chain indexed chainId,
+        Chain indexed chain,
         uint index,
         string indexed newAddress
     );
