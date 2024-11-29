@@ -120,7 +120,7 @@ contract VotingManagerUpgradeable is IVotingManager, Initializable, ReentrancyGu
         );
         (bytes32 r, bytes32 s, uint8 v) = _splitSignature(_signature);
         address recoverAddr = ecrecover(messageHash, v, r, s);
-        require(tssSigner == recoverAddr, InvalidSigner(msg.sender, recoverAddr));
+        require(tssSigner == recoverAddr, InvalidSigner(msg.sender));
     }
 
     function _splitSignature(

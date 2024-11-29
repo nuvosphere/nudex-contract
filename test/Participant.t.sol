@@ -119,7 +119,7 @@ contract Participant is BaseTest {
         vm.prank(nextSubmitter);
         vm.expectEmit(true, true, true, true);
         emit IVotingManager.OperationFailed(
-            abi.encodeWithSelector(IParticipantManager.AlreadyParticipant.selector, nextSubmitter)
+            abi.encodeWithSelector(IParticipantManager.AlreadyParticipant.selector, newParticipant)
         );
         votingManager.verifyAndCall(opts, signature);
     }

@@ -66,7 +66,7 @@ contract ParticipantManagerUpgradeable is IParticipantManager, OwnableUpgradeabl
                 abi.encodePacked(
                     block.prevrandao, // instead of difficulty in PoS
                     block.timestamp,
-                    blockhash(block.number - 1),
+                    blockhash(block.number),
                     _salt
                 )
             )

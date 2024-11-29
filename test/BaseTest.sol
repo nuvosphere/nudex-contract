@@ -107,6 +107,15 @@ contract BaseTest is Test {
         return abi.encodePacked(r, s, v);
     }
 
+    function _generateSignature(
+        bytes memory _encodedData,
+        uint256 _privateKey
+    ) internal pure returns (bytes memory) {
+        bytes32 digest = keccak256(_encodedData).toEthSignedMessageHash();
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(_privateKey, digest);
+        return abi.encodePacked(r, s, v);
+    }
+
     function uint256ToString(uint256 value) internal pure returns (string memory) {
         if (value == 0) {
             return "0";
