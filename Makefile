@@ -22,10 +22,6 @@ deployDev:
 participantSetup:
 	forge script --rpc-url goatTestnet script/ParticipantSetup.s.sol:ParticipantSetup --broadcast -vvvv
 
-generateSig:
-	forge script --rpc-url localhost script/SignatureGenerator.sol --sig "run((address,uint8, uint64, bytes)[],uint256)" $(ARG)
-# example: forge script --rpc-url localhost script/SignatureGenerator.sol --sig "run((address,uint8, uint64, bytes)[],uint256)" '[(0xADDRESS, 0, 0, 0x)]' 0xPRIVATE_KEY
-
 .PHONY: abi
 abi:
 	mkdir -p abi
