@@ -29,7 +29,7 @@ abi:
 	forge inspect  AssetManagerUpgradeable abi > ./abi/AssetManager.json
 	forge inspect  DepositManagerUpgradeable abi > ./abi/DepositManager.json
 	forge inspect  NIP20Upgradeable abi > ./abi/NIP20.json
-	forge inspect  NuDexOperationsUpgradeable abi > ./abi/NuDexOperations.json
+	forge inspect  TaskManagerUpgradeable abi > ./abi/TaskManager.json
 	forge inspect  NuvoDAOUpgradeable abi > ./abi/NuvoDao.json
 	forge inspect  NuvoLockUpgradeable abi > ./abi/NuvoLock.json
 	forge inspect  ParticipantManagerUpgradeable abi > ./abi/ParticipantManager.json
