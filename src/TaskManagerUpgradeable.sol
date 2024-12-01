@@ -7,10 +7,12 @@ import {ITaskManager, State} from "./interfaces/ITaskManager.sol";
 contract TaskManagerUpgradeable is ITaskManager, OwnableUpgradeable {
     address public taskSubmitter;
     uint64 public nextTaskId;
-    uint64 public nextPendingId;
-    uint256[] public preconfirmedTasks;
+    uint64 public pendingTaskIndex;
+    uint64[] public pendingTask;
+    uint64[] public preconfirmedTasks;
     bytes[] public preconfirmedTaskResults;
-    mapping(uint256 => Task) public tasks;
+    mapping(uint64 => Task) public tasks;
+    mapping(bytes32 => uint64) public taskRecords;
 
     // _owner: votingManager
     function initialize(address _taskSubmitter, address _owner) public initializer {
@@ -36,7 +38,7 @@ contract TaskManagerUpgradeable is ITaskManager, OwnableUpgradeable {
         Task[] memory tempTasks = new Task[](nextTaskId);
         uint256 count = 0;
 
-        for (uint256 i = 0; i < nextTaskId; i++) {
+        for (uint64 i = 0; i < nextTaskId; i++) {
             if (tasks[i].state != State.Completed) {
                 tempTasks[count] = tasks[i];
                 count++;
@@ -71,7 +73,13 @@ contract TaskManagerUpgradeable is ITaskManager, OwnableUpgradeable {
 
     function updateTask(uint64 _taskId, State _state, bytes calldata _result) external onlyOwner {
         Task storage task = tasks[_taskId];
-        require(_taskId == nextPendingId++ || task.state == State.Pending, InvalidTask(_taskId));
+        if (task.state == State.Pending) {
+            require(_taskId == pendingTask[pendingTaskIndex++], InvalidTask(_taskId));
+        }
+        if (_state == State.Pending){
+            pendingTask.push(_taskId);
+        }
+
         task.state = _state;
         task.updatedAt = block.timestamp;
         if (_result.length > 0) {
