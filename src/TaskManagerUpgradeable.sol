@@ -8,7 +8,7 @@ contract TaskManagerUpgradeable is ITaskManager, OwnableUpgradeable {
     address public taskSubmitter;
     uint64 public nextTaskId;
     uint64 public pendingTaskIndex;
-    uint64[] public pendingTask;
+    uint64[] public pendingTasks;
     uint64[] public preconfirmedTasks;
     bytes[] public preconfirmedTaskResults;
     mapping(uint64 => Task) public tasks;
@@ -56,7 +56,11 @@ contract TaskManagerUpgradeable is ITaskManager, OwnableUpgradeable {
 
     function submitTask(address _submitter, bytes calldata _context) external returns (uint64) {
         require(msg.sender == taskSubmitter, OnlyTaskSubmitter());
-        uint64 taskId = nextTaskId++;
+
+        bytes32 hash = keccak256(_context);
+        uint64 taskId = taskRecords[hash];
+        require(taskId == 0, AlreadyExistTask(taskId));
+        taskId = nextTaskId++;
         tasks[taskId] = Task({
             id: taskId,
             state: State.Created,
@@ -66,6 +70,7 @@ contract TaskManagerUpgradeable is ITaskManager, OwnableUpgradeable {
             context: _context,
             result: ""
         });
+        taskRecords[hash] = taskId;
 
         emit TaskSubmitted(taskId, _context, _submitter);
         return taskId;
@@ -74,12 +79,11 @@ contract TaskManagerUpgradeable is ITaskManager, OwnableUpgradeable {
     function updateTask(uint64 _taskId, State _state, bytes calldata _result) external onlyOwner {
         Task storage task = tasks[_taskId];
         if (task.state == State.Pending) {
-            require(_taskId == pendingTask[pendingTaskIndex++], InvalidTask(_taskId));
+            require(_taskId == pendingTasks[pendingTaskIndex++], InvalidTask(_taskId));
         }
-        if (_state == State.Pending){
-            pendingTask.push(_taskId);
+        if (_state == State.Pending) {
+            pendingTasks.push(_taskId);
         }
-
         task.state = _state;
         task.updatedAt = block.timestamp;
         if (_result.length > 0) {

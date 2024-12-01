@@ -31,6 +31,7 @@ interface ITaskManager {
     error EmptyTask();
     error OnlyTaskSubmitter();
     error InvalidTask(uint64 taskId);
+    error AlreadyExistTask(uint64 taskId);
 
     function submitTask(address _submitter, bytes calldata _context) external returns (uint64);
 
