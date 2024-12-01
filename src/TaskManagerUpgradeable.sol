@@ -77,6 +77,6 @@ contract TaskManagerUpgradeable is ITaskManager, OwnableUpgradeable {
         if (_result.length > 0) {
             task.result = _result;
         }
-        emit TaskUpdated(_taskId, task.submitter, block.timestamp, _result);
+        emit TaskUpdated(_taskId, task.submitter, block.timestamp,_state, _result);
     }
 }

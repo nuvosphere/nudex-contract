@@ -24,6 +24,7 @@ interface ITaskManager {
         uint64 indexed taskId,
         address indexed submitter,
         uint256 indexed updateTime,
+        State state,
         bytes result
     );
 
