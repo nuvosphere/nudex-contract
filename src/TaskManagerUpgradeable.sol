@@ -7,10 +7,13 @@ import {ITaskManager, State} from "./interfaces/ITaskManager.sol";
 contract TaskManagerUpgradeable is ITaskManager, OwnableUpgradeable {
     address public taskSubmitter;
     uint64 public nextTaskId;
-    uint64 public nextPendingId;
-    uint256[] public preconfirmedTasks;
+    uint64 public nextCreatedTaskId;
+    uint64 public pendingTaskIndex;
+    uint64[] public pendingTasks;
+    uint64[] public preconfirmedTasks;
     bytes[] public preconfirmedTaskResults;
-    mapping(uint256 => Task) public tasks;
+    mapping(uint64 => Task) public tasks;
+    mapping(bytes32 => uint64) public taskRecords;
 
     // _owner: votingManager
     function initialize(address _taskSubmitter, address _owner) public initializer {
@@ -36,7 +39,7 @@ contract TaskManagerUpgradeable is ITaskManager, OwnableUpgradeable {
         Task[] memory tempTasks = new Task[](nextTaskId);
         uint256 count = 0;
 
-        for (uint256 i = 0; i < nextTaskId; i++) {
+        for (uint64 i = 0; i < nextTaskId; i++) {
             if (tasks[i].state != State.Completed) {
                 tempTasks[count] = tasks[i];
                 count++;
@@ -54,7 +57,11 @@ contract TaskManagerUpgradeable is ITaskManager, OwnableUpgradeable {
 
     function submitTask(address _submitter, bytes calldata _context) external returns (uint64) {
         require(msg.sender == taskSubmitter, OnlyTaskSubmitter());
-        uint64 taskId = nextTaskId++;
+
+        bytes32 hash = keccak256(_context);
+        uint64 taskId = taskRecords[hash];
+        require(taskId == 0, AlreadyExistTask(taskId));
+        taskId = nextTaskId++;
         tasks[taskId] = Task({
             id: taskId,
             state: State.Created,
@@ -64,6 +71,7 @@ contract TaskManagerUpgradeable is ITaskManager, OwnableUpgradeable {
             context: _context,
             result: ""
         });
+        taskRecords[hash] = taskId;
 
         emit TaskSubmitted(taskId, _context, _submitter);
         return taskId;
@@ -71,12 +79,20 @@ contract TaskManagerUpgradeable is ITaskManager, OwnableUpgradeable {
 
     function updateTask(uint64 _taskId, State _state, bytes calldata _result) external onlyOwner {
         Task storage task = tasks[_taskId];
-        require(_taskId == nextPendingId++ || task.state == State.Pending, InvalidTask(_taskId));
+        if (task.state == State.Created) {
+            require(_taskId == nextCreatedTaskId++, InvalidTask(_taskId));
+        }
+        if (task.state == State.Pending) {
+            require(_taskId == pendingTasks[pendingTaskIndex++], InvalidPendingTask(_taskId));
+        }
+        if (_state == State.Pending) {
+            pendingTasks.push(_taskId);
+        }
         task.state = _state;
         task.updatedAt = block.timestamp;
         if (_result.length > 0) {
             task.result = _result;
         }
-        emit TaskUpdated(_taskId, task.submitter, block.timestamp, _result);
+        emit TaskUpdated(_taskId, task.submitter, block.timestamp,_state, _result);
     }
 }

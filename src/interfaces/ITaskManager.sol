@@ -24,12 +24,15 @@ interface ITaskManager {
         uint64 indexed taskId,
         address indexed submitter,
         uint256 indexed updateTime,
+        State state,
         bytes result
     );
 
     error EmptyTask();
     error OnlyTaskSubmitter();
     error InvalidTask(uint64 taskId);
+    error InvalidPendingTask(uint64 taskId);
+    error AlreadyExistTask(uint64 taskId);
 
     function submitTask(address _submitter, bytes calldata _context) external returns (uint64);
 
