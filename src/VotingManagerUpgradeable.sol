@@ -42,6 +42,7 @@ contract VotingManagerUpgradeable is IVotingManager, Initializable, ReentrancyGu
         tssSigner = _tssSigner;
         lastSubmissionTime = block.timestamp;
         nextSubmitter = participantManager.getRandomParticipant(nextSubmitter);
+        emit SubmitterChosen(nextSubmitter);
     }
 
     function setSignerAddress(
