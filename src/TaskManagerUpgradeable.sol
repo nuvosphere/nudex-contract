@@ -7,6 +7,7 @@ import {ITaskManager, State} from "./interfaces/ITaskManager.sol";
 contract TaskManagerUpgradeable is ITaskManager, OwnableUpgradeable {
     address public taskSubmitter;
     uint64 public nextTaskId;
+    uint64 public nextCreatedTaskId;
     uint64 public pendingTaskIndex;
     uint64[] public pendingTasks;
     uint64[] public preconfirmedTasks;
@@ -78,8 +79,11 @@ contract TaskManagerUpgradeable is ITaskManager, OwnableUpgradeable {
 
     function updateTask(uint64 _taskId, State _state, bytes calldata _result) external onlyOwner {
         Task storage task = tasks[_taskId];
+        if (task.state == State.Created) {
+            require(_taskId == nextCreatedTaskId++, InvalidTask(_taskId));
+        }
         if (task.state == State.Pending) {
-            require(_taskId == pendingTasks[pendingTaskIndex++], InvalidTask(_taskId));
+            require(_taskId == pendingTasks[pendingTaskIndex++], InvalidPendingTask(_taskId));
         }
         if (_state == State.Pending) {
             pendingTasks.push(_taskId);
