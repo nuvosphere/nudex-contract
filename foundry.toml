@@ -19,6 +19,7 @@ via_ir = true
 sepolia = "${SEPOLIA_RPC_URL}"
 localhost = "${LOCALHOST_RPC_URL}"
 goatTestnet = "${GOAT_TESTNET_RPC_URL}"
+bscTestnet = "${BSC_TESTNET_RPC_URL}"
 
 [etherscan]
 sepolia = { key = "${SEPOLIA_ETHERSCAN_API_KEY}" }
