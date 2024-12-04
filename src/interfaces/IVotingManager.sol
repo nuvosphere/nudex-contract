@@ -20,4 +20,5 @@ contract IVotingManager {
     error IncorrectSubmitter(address sender, address submitter);
     error RotationWindowNotPassed(uint256 current, uint256 window);
     error TaskAlreadyCompleted(uint256 taskId);
+    error InvalidAddress();
 }

@@ -48,7 +48,7 @@ contract Deposit is BaseTest {
         uint256 depositIndex = depositManager.getDeposits(user).length;
         assertEq(depositIndex, 0);
         uint256 depositAmount = 1 ether;
-        uint64 chainId = 0;
+        uint256 chainId = 0;
         bytes memory txInfo = "--- encoded tx info ---";
         bytes memory extraInfo = "--- extra info ---";
         bytes memory callData = abi.encodeWithSelector(
@@ -129,7 +129,7 @@ contract Deposit is BaseTest {
 
         // setup deposit info
         uint256 depositAmount = 0; // invalid amount
-        uint64 chainId = 0;
+        uint256 chainId = 0;
         bytes memory txInfo = "--- encoded tx info ---";
         bytes memory extraInfo = "--- extra info ---";
         bytes memory callData = abi.encodeWithSelector(
@@ -210,7 +210,7 @@ contract Deposit is BaseTest {
         // setup deposit info
         uint64 taskId = taskSubmitter.submitTask(TASK_CONTEXT);
         uint256 depositIndex = depositManager.getDeposits(user).length;
-        uint64 chainId = 0;
+        uint256 chainId = 0;
         bytes memory extraInfo = "--- extra info ---";
         bytes memory callData = abi.encodeWithSelector(
             IDepositManager.recordDeposit.selector,

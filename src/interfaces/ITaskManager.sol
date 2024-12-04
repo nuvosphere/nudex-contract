@@ -33,6 +33,7 @@ interface ITaskManager {
     error InvalidTask(uint64 taskId);
     error InvalidPendingTask(uint64 taskId);
     error AlreadyExistTask(uint64 taskId);
+    error InvalidAddress();
 
     function submitTask(address _submitter, bytes calldata _context) external returns (uint64);
 

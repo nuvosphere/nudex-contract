@@ -4,7 +4,7 @@ pragma solidity ^0.8.26;
 interface IDepositManager {
     struct DepositInfo {
         address targetAddress;
-        uint64 chainId;
+        uint256 chainId;
         uint256 amount;
         bytes txInfo;
         bytes extraInfo;
@@ -13,7 +13,7 @@ interface IDepositManager {
     struct WithdrawalInfo {
         address targetAddress;
         uint256 amount;
-        uint64 chainId;
+        uint256 chainId;
         bytes txInfo;
         bytes extraInfo;
     }
@@ -35,11 +35,12 @@ interface IDepositManager {
 
     error InvalidAmount();
     error InvalidInput();
+    error InvalidAddress();
 
     function recordDeposit(
         address targetAddress,
         uint256 amount,
-        uint64 chainId,
+        uint256 chainId,
         bytes memory txInfo,
         bytes memory extraInfo
     ) external returns (bytes memory);
@@ -47,7 +48,7 @@ interface IDepositManager {
     function recordWithdrawal(
         address targetAddress,
         uint256 amount,
-        uint64 chainId,
+        uint256 chainId,
         bytes memory txInfo,
         bytes memory extraInfo
     ) external returns (bytes memory);
