@@ -14,6 +14,7 @@ import {VotingManagerUpgradeable} from "../src/VotingManagerUpgradeable.sol";
 import {IVotingManager} from "../src/interfaces/IVotingManager.sol";
 import {Operation} from "../src/interfaces/IVotingManager.sol";
 import {State} from "../src/interfaces/ITaskManager.sol";
+import {UintToString} from "../src/libs/UintToString.sol";
 
 import {MockNuvoToken} from "../src/mocks/MockNuvoToken.sol";
 
@@ -114,24 +115,5 @@ contract BaseTest is Test {
         bytes32 digest = keccak256(_encodedData).toEthSignedMessageHash();
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(_privateKey, digest);
         return abi.encodePacked(r, s, v);
-    }
-
-    function uint256ToString(uint256 value) internal pure returns (string memory) {
-        if (value == 0) {
-            return "0";
-        }
-        uint256 temp = value;
-        uint256 digits;
-        while (temp != 0) {
-            digits++;
-            temp /= 10;
-        }
-        bytes memory buffer = new bytes(digits);
-        while (value != 0) {
-            digits -= 1;
-            buffer[digits] = bytes1(uint8(48 + uint256(value % 10)));
-            value /= 10;
-        }
-        return string(buffer);
     }
 }

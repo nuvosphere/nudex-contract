@@ -183,7 +183,7 @@ contract Participant is BaseTest {
         uint8 initNumOfParticipant = 3;
         address[] memory newParticipants = new address[](20);
         for (uint8 i; i < 20; ++i) {
-            newParticipants[i] = _addParticipant(makeAddr(uint256ToString(i)));
+            newParticipants[i] = _addParticipant(makeAddr(UintToString.uint256ToString(i)));
             assertEq(participantManager.getParticipants().length, initNumOfParticipant + i + 1);
         }
         assertEq(participantManager.getParticipants().length, 23);

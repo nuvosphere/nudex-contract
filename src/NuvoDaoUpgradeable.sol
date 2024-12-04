@@ -3,79 +3,18 @@ pragma solidity ^0.8.26;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {INuvoDao} from "./interfaces/INuvoDao.sol";
 import {INuvoLock} from "./interfaces/INuvoLock.sol";
 import {IProxy} from "./interfaces/IProxy.sol";
 
-contract NuvoDAOUpgradeable is OwnableUpgradeable {
-    event ProposalCreated(
-        uint256 id,
-        address proposer,
-        string description,
-        ProposalType proposalType,
-        ProposalCategory proposalCategory
-    );
-    event Voted(uint256 proposalId, address voter, uint256 weight, uint256 quadraticVotes);
-    event ProposalExecuted(uint256 id, bool passed);
-    event FundingProposalExecuted(
-        uint256 id,
-        address recipient,
-        uint256 amount,
-        address token,
-        string purpose
-    );
-    event BundleProposalExecuted(uint256 id, uint256[] executedProposalIds);
-    event Upgraded(address newImplementation);
-    event RewardClaimed(address claimer, uint256 amount);
+import {UintToString} from "./libs/UintToString.sol";
 
-    enum ProposalType {
-        Basic,
-        Funding,
-        Governance,
-        Bundle,
-        Upgrade
-    }
-    enum ProposalCategory {
-        Budget,
-        Policy,
-        Membership
-    }
-
-    struct Proposal {
-        uint256 id;
-        address proposer;
-        string description;
-        uint256 voteCount;
-        uint32 startTime;
-        uint256 endTime;
-        uint256 executionTime;
-        bool executed;
-        ProposalType proposalType;
-        ProposalCategory proposalCategory;
-        bytes parameters; // Dynamic parameters for governance or funding proposal execution
-    }
-
-    struct FundingProposalParameters {
-        address payable recipient;
-        uint256 amount;
-        address token; // Address of the ERC20 token, or address(0) for native cryptocurrency (e.g., ETH)
-        string purpose;
-    }
-
-    struct BundleProposalParameters {
-        uint256[] proposalIds;
-    }
-
-    struct UpgradeProposalParameters {
-        address newImplementation;
-    }
-
+contract NuvoDAOUpgradeable is INuvoDao, OwnableUpgradeable {
     mapping(uint256 => Proposal) public proposals;
-    mapping(uint256 => FundingProposalParameters) public fundingProposals;
-    mapping(uint256 => BundleProposalParameters) private bundleProposals; // FIXME: public mapping to struct of array not allowed
-    mapping(uint256 => UpgradeProposalParameters) public upgradeProposals;
+
     mapping(uint256 => mapping(address => uint256)) public votes;
     mapping(address => address) public delegation;
-    mapping(address => uint256) public delegatedVotes;
+    mapping(address => address[]) public delegatees;
     mapping(address => uint256) public activityScore;
     mapping(address => uint256) public participationRewards;
     mapping(address => uint256) public reputationScore;
@@ -85,12 +24,11 @@ contract NuvoDAOUpgradeable is OwnableUpgradeable {
     uint256 public constant MIN_LOCK_DURATION = 3 days;
 
     INuvoLock public nuvoLock;
-    address public proxyAddress;
     address public multisigWallet;
 
+    uint32 public proposalId;
     uint256 public quorumPercentage;
     uint256 public proposalFee;
-    uint256 public proposalId;
     uint256 public executionDelay;
     uint256 public fundingThreshold;
     uint256 public reputationDecayRate; // Rate at which reputation decays over time
@@ -103,8 +41,7 @@ contract NuvoDAOUpgradeable is OwnableUpgradeable {
         uint256 _proposalFee,
         uint256 _executionDelay,
         uint256 _fundingThreshold,
-        uint256 _reputationDecayRate,
-        address _proxyAddress
+        uint256 _reputationDecayRate
     ) public initializer {
         __Ownable_init(_owner);
         nuvoLock = _nuvoLock;
@@ -114,7 +51,6 @@ contract NuvoDAOUpgradeable is OwnableUpgradeable {
         executionDelay = _executionDelay;
         fundingThreshold = _fundingThreshold;
         reputationDecayRate = _reputationDecayRate;
-        proxyAddress = _proxyAddress;
     }
 
     modifier onlyMember() {
@@ -131,12 +67,16 @@ contract NuvoDAOUpgradeable is OwnableUpgradeable {
         _;
     }
 
-    function getVotingPower(address _member) public view returns (uint256) {
-        uint256 timeWeightedPower = nuvoLock.lockedBalanceOf(_member) *
-            (block.timestamp - nuvoLock.lockedTime(_member));
-        uint256 reputationBonus = reputationScore[_member] * 1e18; // Apply a multiplier to the reputation score
-        return
-            timeWeightedPower + reputationBonus + delegatedVotes[_member] + activityScore[_member];
+    function getVotingPower(address _member) public view returns (uint256 total) {
+        if (_member == address(0)) return 0;
+        return _getVotingPower(_member);
+    }
+
+    function getVotingPower(address[] memory _members) public view returns (uint256 total) {
+        if (_members.length == 0) return 0;
+        for (uint8 i; i < _members.length; ++i) {
+            total += _getVotingPower(_members[i]);
+        }
     }
 
     function delegateVote(address _delegate) external onlyMember {
@@ -146,80 +86,61 @@ contract NuvoDAOUpgradeable is OwnableUpgradeable {
             "Delegate must be a valid DAO member"
         );
 
-        // Revoke previous delegation if it exists
         address previousDelegate = delegation[msg.sender];
         if (previousDelegate != address(0)) {
-            delegatedVotes[previousDelegate] -= getVotingPower(msg.sender);
+            address[] storage delegatee = delegatees[previousDelegate];
+            for (uint8 i; i < delegatee.length; ++i) {
+                if (delegatee[i] == msg.sender) {
+                    delegatee[i] = delegatee[delegatee.length - 1];
+                    delegatee.pop();
+                    return;
+                }
+            }
         }
 
         // Set new delegation
         delegation[msg.sender] = _delegate;
-        delegatedVotes[_delegate] += getVotingPower(msg.sender);
+        delegatees[_delegate].push(msg.sender);
     }
 
     function removeDelegation() external onlyMember {
         address previousDelegate = delegation[msg.sender];
-        require(previousDelegate != address(0), "No delegation to remove");
-
-        delegatedVotes[previousDelegate] -= getVotingPower(msg.sender);
-        delegation[msg.sender] = address(0);
-    }
-
-    function decayReputation(address _member) public {
-        uint256 lastActiveTime = lastActive[_member];
-        uint256 timeInactive = block.timestamp - lastActiveTime;
-        uint256 decayAmount = timeInactive * reputationDecayRate;
-
-        if (reputationScore[_member] > decayAmount) {
-            reputationScore[_member] = reputationScore[_member] - decayAmount;
-        } else {
-            reputationScore[_member] = 0;
+        if (previousDelegate != address(0)) {
+            delegation[msg.sender] = address(0);
+            address[] storage delegatee = delegatees[previousDelegate];
+            for (uint8 i; i < delegatee.length; ++i) {
+                if (delegatee[i] == msg.sender) {
+                    delegatee[i] = delegatee[delegatee.length - 1];
+                    delegatee.pop();
+                    return;
+                }
+            }
         }
-
-        lastActive[_member] = block.timestamp;
     }
 
     function createProposal(
-        string memory _description,
         uint256 _votingPeriod,
         ProposalType _proposalType,
         ProposalCategory _proposalCategory,
+        string memory _description,
         bytes memory _parameters
     ) external payable onlyMember proposalFeePaid {
-        uint256 newProposalId = ++proposalId;
+        uint32 newProposalId = ++proposalId;
 
         proposals[newProposalId] = Proposal({
             id: newProposalId,
             proposer: msg.sender,
-            description: _description,
-            voteCount: 0,
-            startTime: uint32(block.timestamp),
-            endTime: block.timestamp + _votingPeriod,
-            executionTime: block.timestamp + _votingPeriod + executionDelay,
-            executed: false,
             proposalType: _proposalType,
             proposalCategory: _proposalCategory,
+            executed: false,
+            startTime: uint32(block.timestamp),
+            endTime: uint32(block.timestamp + _votingPeriod),
+            executionTime: uint32(block.timestamp + _votingPeriod + executionDelay),
+            voteCount: 0,
+            description: _description,
             parameters: _parameters
         });
-        if (_proposalType == ProposalType.Funding) {
-            FundingProposalParameters memory params = abi.decode(
-                _parameters,
-                (FundingProposalParameters)
-            );
-            fundingProposals[newProposalId] = params;
-        } else if (_proposalType == ProposalType.Bundle) {
-            BundleProposalParameters memory params = abi.decode(
-                _parameters,
-                (BundleProposalParameters)
-            );
-            bundleProposals[newProposalId] = params;
-        } else if (_proposalType == ProposalType.Upgrade) {
-            UpgradeProposalParameters memory params = abi.decode(
-                _parameters,
-                (UpgradeProposalParameters)
-            );
-            upgradeProposals[newProposalId] = params;
-        }
+
         emit ProposalCreated(
             newProposalId,
             msg.sender,
@@ -230,40 +151,34 @@ contract NuvoDAOUpgradeable is OwnableUpgradeable {
     }
 
     function vote(uint256 _proposalId, uint256 _voteCount) external onlyMember {
-        decayReputation(msg.sender);
-
         Proposal storage proposal = proposals[_proposalId];
-
         require(block.timestamp >= proposal.startTime, "Voting hasn't started yet");
         require(block.timestamp <= proposal.endTime, "Voting period has ended");
         require(votes[_proposalId][msg.sender] == 0, "You have already voted on this proposal");
 
+        _decayReputation(msg.sender);
+
         uint256 votingPower = getVotingPower(msg.sender);
         require(_voteCount <= votingPower, "Insufficient voting power");
 
-        // Quadratic Voting: Square the number of votes cast to calculate the cost
-        uint256 quadraticVotes = _voteCount * _voteCount;
-        require(quadraticVotes <= votingPower, "Quadratic vote exceeds voting power");
-
-        proposal.voteCount = proposal.voteCount + quadraticVotes;
-        votes[_proposalId][msg.sender] = quadraticVotes;
+        proposal.voteCount += _voteCount;
+        votes[_proposalId][msg.sender] = _voteCount;
+        _markAsVoted(_proposalId, delegatees[msg.sender]);
 
         // Increase activity score based on participation
-        activityScore[msg.sender] = activityScore[msg.sender] + 1;
+        activityScore[msg.sender] += 1;
 
         // Reward participation
-        participationRewards[msg.sender] = participationRewards[msg.sender] + quadraticVotes;
+        participationRewards[msg.sender] += _voteCount;
 
         // Increase reputation score
-        reputationScore[msg.sender] = reputationScore[msg.sender] + 1;
+        reputationScore[msg.sender] += 1;
 
-        lastActive[msg.sender] = block.timestamp;
-
-        emit Voted(_proposalId, msg.sender, votingPower, quadraticVotes);
+        emit Voted(_proposalId, msg.sender, votingPower, _voteCount);
     }
 
     function executeProposal(uint256 _proposalId) public onlyOwner {
-        Proposal storage proposal = proposals[_proposalId];
+        Proposal memory proposal = proposals[_proposalId];
         require(block.timestamp > proposal.endTime, "Voting period is not over yet");
         require(block.timestamp >= proposal.executionTime, "Execution delay not met");
         require(!proposal.executed, "Proposal already executed");
@@ -274,15 +189,15 @@ contract NuvoDAOUpgradeable is OwnableUpgradeable {
         bool passed = proposal.voteCount > (totalLockedTokens / 2) && proposal.voteCount >= quorum;
         if (passed) {
             if (proposal.proposalType == ProposalType.Funding) {
-                _executeFundingProposal(_proposalId);
+                _executeFundingProposal(proposal.parameters);
             } else if (proposal.proposalType == ProposalType.Governance) {
                 _executeGovernanceProposal(proposal.parameters);
             } else if (proposal.proposalType == ProposalType.Bundle) {
-                _executeBundleProposal(_proposalId);
+                _executeBundleProposal(proposal.parameters);
             } else if (proposal.proposalType == ProposalType.Upgrade) {
-                _executeUpgradeProposal(_proposalId);
+                _executeUpgradeProposal(proposal.parameters);
             } else {
-                _executeBasicProposal(_proposalId);
+                _executeBasicProposal(proposal.parameters);
             }
         }
         proposal.executed = true;
@@ -290,17 +205,19 @@ contract NuvoDAOUpgradeable is OwnableUpgradeable {
         emit ProposalExecuted(_proposalId, passed);
     }
 
-    function _executeBasicProposal(uint256 _proposalId) internal {
-        // Logic for basic proposal execution
-    }
-
-    function _executeFundingProposal(uint256 _proposalId) internal {
-        FundingProposalParameters memory params = fundingProposals[_proposalId];
+    function _executeFundingProposal(bytes memory _parameters) internal {
+        FundingProposalParameters memory params = abi.decode(
+            _parameters,
+            (FundingProposalParameters)
+        );
         require(params.amount > 0, "Invalid funding amount");
-        // FIXME: this can only be called by owner, is multisigWallet also the owner?
-        // if (params.amount >= fundingThreshold) {
-        //     require(msg.sender == multisigWallet, "Multisig approval required for large funding proposals");
-        // }
+        if (params.amount >= fundingThreshold) {
+            // FIXME: this can only be called by owner, is multisigWallet also the owner?
+            require(
+                msg.sender == multisigWallet,
+                "Multisig approval required for large funding proposals"
+            );
+        }
         if (params.token == address(0)) {
             // Handle native cryptocurrency (e.g., ETH)
             require(address(this).balance >= params.amount, "Insufficient balance");
@@ -310,13 +227,7 @@ contract NuvoDAOUpgradeable is OwnableUpgradeable {
             IERC20(params.token).transfer(params.recipient, params.amount);
         }
 
-        emit FundingProposalExecuted(
-            _proposalId,
-            params.recipient,
-            params.amount,
-            params.token,
-            params.purpose
-        );
+        emit FundingProposalExecuted(params.recipient, params.amount, params.token, params.purpose);
     }
 
     function _executeGovernanceProposal(bytes memory _parameters) internal {
@@ -350,27 +261,58 @@ contract NuvoDAOUpgradeable is OwnableUpgradeable {
         }
     }
 
-    function _executeBundleProposal(uint256 _proposalId) internal {
-        BundleProposalParameters memory params = bundleProposals[_proposalId];
-        uint256[] memory executedProposalIds = new uint256[](params.proposalIds.length);
+    function _executeBundleProposal(bytes memory _parameters) internal {
+        uint256[] memory proposalIds = abi.decode(_parameters, (uint256[]));
 
-        for (uint256 i = 0; i < params.proposalIds.length; i++) {
-            uint256 bundleProposalId = params.proposalIds[i];
+        for (uint256 i = 0; i < proposalIds.length; i++) {
+            uint256 bundleProposalId = proposalIds[i];
             Proposal storage bundleProposal = proposals[bundleProposalId];
 
             if (!bundleProposal.executed) {
                 executeProposal(bundleProposalId);
-                executedProposalIds[i] = bundleProposalId;
             }
         }
-
-        emit BundleProposalExecuted(_proposalId, executedProposalIds);
     }
 
-    function _executeUpgradeProposal(uint256 _proposalId) internal {
-        UpgradeProposalParameters memory params = upgradeProposals[_proposalId];
-        IProxy(proxyAddress).upgrade(params.newImplementation);
-        emit Upgraded(params.newImplementation);
+    function _executeUpgradeProposal(bytes memory _parameters) internal {
+        (address proxy, address newImplementation) = abi.decode(_parameters, (address, address));
+        IProxy(proxy).upgrade(newImplementation);
+        emit Upgraded(newImplementation);
+    }
+
+    function _executeBasicProposal(bytes memory _parameters) internal {
+        // Logic for basic proposal execution
+    }
+
+    function _decayReputation(address _member) internal {
+        uint256 decayAmount = (block.timestamp - lastActive[_member]) * reputationDecayRate;
+        if (reputationScore[_member] > decayAmount) {
+            reputationScore[_member] = reputationScore[_member] - decayAmount;
+        } else {
+            reputationScore[_member] = 0;
+        }
+        lastActive[_member] = block.timestamp;
+    }
+
+    function _getVotingPower(address _member) internal view returns (uint256 total) {
+        // delegation vote
+        total += getVotingPower(delegatees[_member]);
+        // timeWeightedPower
+        total +=
+            nuvoLock.lockedBalanceOf(_member) *
+            (block.timestamp - nuvoLock.lockedTime(_member));
+        // reputationBonus
+        total += reputationScore[_member] * 1e18; // TODO use a variable for multiplier
+        // activityScore
+        total += activityScore[_member];
+    }
+
+    function _markAsVoted(uint256 _proposalId, address[] memory _member) internal {
+        if (_member.length == 0) return;
+        for (uint8 i; i < _member.length; ++i) {
+            votes[_proposalId][_member[i]] = 1;
+            _markAsVoted(_proposalId, delegatees[_member[i]]);
+        }
     }
 
     function claimRewards() external {
@@ -438,38 +380,15 @@ contract NuvoDAOUpgradeable is OwnableUpgradeable {
             string(
                 abi.encodePacked(
                     "Total Members: ",
-                    uint2str(totalMembers),
+                    UintToString.uint256ToString(totalMembers),
                     ", Total Proposals: ",
-                    uint2str(totalProposals),
+                    UintToString.uint256ToString(totalProposals),
                     ", Total Votes: ",
-                    uint2str(totalVotes),
+                    UintToString.uint256ToString(totalVotes),
                     ", Total Reputation: ",
-                    uint2str(totalReputation)
+                    UintToString.uint256ToString(totalReputation)
                 )
             );
-    }
-
-    // Utility function to convert uint to string
-    function uint2str(uint _i) internal pure returns (string memory) {
-        if (_i == 0) {
-            return "0";
-        }
-        uint j = _i;
-        uint len;
-        while (j != 0) {
-            len++;
-            j /= 10;
-        }
-        bytes memory bstr = new bytes(len);
-        uint k = len;
-        while (_i != 0) {
-            k = k - 1;
-            uint8 temp = (48 + uint8(_i - (_i / 10) * 10));
-            bytes1 b1 = bytes1(temp);
-            bstr[k] = b1;
-            _i /= 10;
-        }
-        return string(bstr);
     }
 
     // Governance control functions (can only be executed via governance proposals)
