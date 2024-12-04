@@ -10,8 +10,10 @@ import {IProxy} from "./interfaces/IProxy.sol";
 import {UintToString} from "./libs/UintToString.sol";
 
 contract NuvoDAOUpgradeable is INuvoDao, OwnableUpgradeable {
-    mapping(uint256 => Proposal) public proposals;
+    uint256 public constant MIN_LOCK_AMOUNT = 10000 * 10 ** 18; // 10,000 Nuvo tokens
+    uint256 public constant MIN_LOCK_DURATION = 3 days;
 
+    mapping(uint256 => Proposal) public proposals;
     mapping(uint256 => mapping(address => uint256)) public votes;
     mapping(address => address) public delegation;
     mapping(address => address[]) public delegatees;
@@ -19,9 +21,6 @@ contract NuvoDAOUpgradeable is INuvoDao, OwnableUpgradeable {
     mapping(address => uint256) public participationRewards;
     mapping(address => uint256) public reputationScore;
     mapping(address => uint256) public lastActive;
-
-    uint256 public constant MIN_LOCK_AMOUNT = 10000 * 10 ** 18; // 10,000 Nuvo tokens
-    uint256 public constant MIN_LOCK_DURATION = 3 days;
 
     INuvoLock public nuvoLock;
     address public multisigWallet;
@@ -32,6 +31,8 @@ contract NuvoDAOUpgradeable is INuvoDao, OwnableUpgradeable {
     uint256 public executionDelay;
     uint256 public fundingThreshold;
     uint256 public reputationDecayRate; // Rate at which reputation decays over time
+    uint256 public activityScoreMultiplier;
+    uint256 public reputationScoreMultiplier;
 
     function initialize(
         address _owner,
@@ -41,6 +42,8 @@ contract NuvoDAOUpgradeable is INuvoDao, OwnableUpgradeable {
         uint256 _proposalFee,
         uint256 _executionDelay,
         uint256 _fundingThreshold,
+        uint256 _activityScoreMultiplier,
+        uint256 _reputationScoreMultiplier,
         uint256 _reputationDecayRate
     ) public initializer {
         __Ownable_init(_owner);
@@ -51,6 +54,8 @@ contract NuvoDAOUpgradeable is INuvoDao, OwnableUpgradeable {
         executionDelay = _executionDelay;
         fundingThreshold = _fundingThreshold;
         reputationDecayRate = _reputationDecayRate;
+        activityScoreMultiplier = _activityScoreMultiplier;
+        reputationScoreMultiplier = _reputationScoreMultiplier;
     }
 
     modifier onlyMember() {
@@ -59,11 +64,6 @@ contract NuvoDAOUpgradeable is INuvoDao, OwnableUpgradeable {
                 nuvoLock.lockedTime(msg.sender) >= MIN_LOCK_DURATION,
             "You must lock at least 10,000 Nuvo tokens for 3 days to participate."
         );
-        _;
-    }
-
-    modifier proposalFeePaid() {
-        require(msg.value >= proposalFee, "Proposal fee must be paid");
         _;
     }
 
@@ -124,7 +124,8 @@ contract NuvoDAOUpgradeable is INuvoDao, OwnableUpgradeable {
         ProposalCategory _proposalCategory,
         string memory _description,
         bytes memory _parameters
-    ) external payable onlyMember proposalFeePaid {
+    ) external payable onlyMember {
+        require(msg.value >= proposalFee, "Proposal fee must be paid");
         uint32 newProposalId = ++proposalId;
 
         proposals[newProposalId] = Proposal({
@@ -163,16 +164,14 @@ contract NuvoDAOUpgradeable is INuvoDao, OwnableUpgradeable {
 
         proposal.voteCount += _voteCount;
         votes[_proposalId][msg.sender] = _voteCount;
-        _markAsVoted(_proposalId, delegatees[msg.sender]);
+        _markAsVoted(_proposalId, delegatees[msg.sender]); // FIXME: this might use a lot of gas
 
-        // Increase activity score based on participation
+        // Increase activity & reputationscore
         activityScore[msg.sender] += 1;
+        reputationScore[msg.sender] += 1;
 
         // Reward participation
         participationRewards[msg.sender] += _voteCount;
-
-        // Increase reputation score
-        reputationScore[msg.sender] += 1;
 
         emit Voted(_proposalId, msg.sender, votingPower, _voteCount);
     }
@@ -186,6 +185,7 @@ contract NuvoDAOUpgradeable is INuvoDao, OwnableUpgradeable {
         uint256 totalLockedTokens = nuvoLock.totalLocked();
         uint256 quorum = (totalLockedTokens * quorumPercentage) / 100;
 
+        // FIXME: checked twice?
         bool passed = proposal.voteCount > (totalLockedTokens / 2) && proposal.voteCount >= quorum;
         if (passed) {
             if (proposal.proposalType == ProposalType.Funding) {
@@ -302,9 +302,9 @@ contract NuvoDAOUpgradeable is INuvoDao, OwnableUpgradeable {
             nuvoLock.lockedBalanceOf(_member) *
             (block.timestamp - nuvoLock.lockedTime(_member));
         // reputationBonus
-        total += reputationScore[_member] * 1e18; // TODO use a variable for multiplier
+        total += reputationScore[_member] * reputationScoreMultiplier;
         // activityScore
-        total += activityScore[_member];
+        total += activityScore[_member] * activityScoreMultiplier;
     }
 
     function _markAsVoted(uint256 _proposalId, address[] memory _member) internal {
