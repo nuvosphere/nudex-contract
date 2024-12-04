@@ -10,12 +10,7 @@ interface IAccountManager {
         EVM_TSS
     }
 
-    event AddressRegistered(
-        uint account,
-        Chain indexed chain,
-        uint index,
-        string indexed newAddress
-    );
+    event AddressRegistered(uint account, Chain indexed chain, uint index, string newAddress);
 
     error InvalidAddress();
     error InvalidAccountNumber(uint);

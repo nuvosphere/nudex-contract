@@ -25,10 +25,10 @@ contract NuvoProxy is ERC1967Proxy {
      * backed by the implementation at `_logic`, and optionally initialized with `_data` as explained in
      * {ERC1967Proxy-constructor}.
      */
-    constructor(address _logic, address _initialOwner) payable ERC1967Proxy(_logic, "") {
-        _admin = _initialOwner;
+    constructor(address _logic, address _proxyAdmin) payable ERC1967Proxy(_logic, "") {
+        _admin = _proxyAdmin;
         // Set the storage value and emit an event for ERC-1967 compatibility
-        ERC1967Utils.changeAdmin(_initialOwner);
+        ERC1967Utils.changeAdmin(_proxyAdmin);
     }
 
     /**
