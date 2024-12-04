@@ -5,9 +5,18 @@ node_modules
 # formatter
 .prettierrc
 
-# Hardhat files
+# remixd
+/.states
+
+# cache files
 /cache
+/cache_forge
 /artifacts
+/out
+/abi
+
+# Foundry
+/broadcast
 
 # TypeChain files
 /typechain
@@ -16,6 +25,7 @@ node_modules
 # solidity-coverage files
 /coverage
 /coverage.json
+lcov.info
 
 # Hardhat Ignition default folder for deployments against a local node
 ignition/deployments/chain-31337
