@@ -18,6 +18,7 @@ contract DepositManagerUpgradeable is IDepositManager, OwnableUpgradeable {
     }
 
     function getDeposits(address targetAddress) external view returns (DepositInfo[] memory) {
+        require(targetAddress != address(0), InvalidAddress());
         return deposits[targetAddress];
     }
 
@@ -25,6 +26,7 @@ contract DepositManagerUpgradeable is IDepositManager, OwnableUpgradeable {
         address targetAddress,
         uint256 index
     ) external view returns (DepositInfo memory) {
+        require(targetAddress != address(0), InvalidAddress());
         return deposits[targetAddress][index];
     }
 
@@ -36,17 +38,19 @@ contract DepositManagerUpgradeable is IDepositManager, OwnableUpgradeable {
         address targetAddress,
         uint256 index
     ) external view returns (WithdrawalInfo memory) {
+        require(targetAddress != address(0), InvalidAddress());
         return withdrawals[targetAddress][index];
     }
 
     function recordDeposit(
         address _targetAddress,
         uint256 _amount,
-        uint64 _chainId,
+        uint256 _chainId,
         bytes calldata _txInfo,
         bytes calldata _extraInfo
     ) external onlyOwner returns (bytes memory) {
         require(_amount > 0, InvalidAmount());
+        require(_targetAddress != address(0), InvalidAddress());
         deposits[_targetAddress].push(
             DepositInfo({
                 targetAddress: _targetAddress,
@@ -74,11 +78,12 @@ contract DepositManagerUpgradeable is IDepositManager, OwnableUpgradeable {
     function recordWithdrawal(
         address _targetAddress,
         uint256 _amount,
-        uint64 _chainId,
+        uint256 _chainId,
         bytes calldata _txInfo,
         bytes calldata _extraInfo
     ) external onlyOwner returns (bytes memory) {
         require(_amount > 0, InvalidAmount());
+        require(_targetAddress != address(0), InvalidAddress());
         withdrawals[_targetAddress].push(
             WithdrawalInfo({
                 targetAddress: _targetAddress,
