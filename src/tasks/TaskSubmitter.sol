@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import {ITaskManager} from "./interfaces/ITaskManager.sol";
+import {ITaskManager} from "../interfaces/ITaskManager.sol";
 
 contract TaskSubmitter {
     ITaskManager public taskManager;

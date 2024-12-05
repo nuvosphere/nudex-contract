@@ -7,8 +7,8 @@ import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transpa
 import {AccountManagerUpgradeable} from "../src/handlers/AccountManagerUpgradeable.sol";
 import {DepositManagerUpgradeable} from "../src/handlers/DepositManagerUpgradeable.sol";
 import {NuvoLockUpgradeable} from "../src/NuvoLockUpgradeable.sol";
-import {TaskManagerUpgradeable} from "../src/TaskManagerUpgradeable.sol";
-import {TaskSubmitter} from "../src/TaskSubmitter.sol";
+import {TaskManagerUpgradeable} from "../src/tasks/TaskManagerUpgradeable.sol";
+import {TaskSubmitter} from "../src/tasks/TaskSubmitter.sol";
 import {ParticipantManagerUpgradeable} from "../src/handlers/ParticipantManagerUpgradeable.sol";
 import {VotingManagerUpgradeable} from "../src/VotingManagerUpgradeable.sol";
 

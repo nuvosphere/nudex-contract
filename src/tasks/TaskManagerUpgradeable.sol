@@ -2,7 +2,7 @@
 pragma solidity ^0.8.26;
 
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import {ITaskManager, State} from "./interfaces/ITaskManager.sol";
+import {ITaskManager, State} from "../interfaces/ITaskManager.sol";
 
 contract TaskManagerUpgradeable is ITaskManager, OwnableUpgradeable {
     address public taskSubmitter;
