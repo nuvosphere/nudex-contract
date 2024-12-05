@@ -13,11 +13,17 @@ contract DepositManagerUpgradeable is IDepositManager, OwnableUpgradeable {
         __Ownable_init(_owner);
     }
 
+    /**
+     * @dev Get all deposit records of user.
+     */
     function getDeposits(address targetAddress) external view returns (DepositInfo[] memory) {
         require(targetAddress != address(0), InvalidAddress());
         return deposits[targetAddress];
     }
 
+    /**
+     * @dev Get n-th deposit record of user.
+     */
     function getDeposit(
         address targetAddress,
         uint256 index
@@ -26,10 +32,16 @@ contract DepositManagerUpgradeable is IDepositManager, OwnableUpgradeable {
         return deposits[targetAddress][index];
     }
 
+    /**
+     * @dev Get all withdraw records of user.
+     */
     function getWithdrawals(address targetAddress) external view returns (WithdrawalInfo[] memory) {
         return withdrawals[targetAddress];
     }
 
+    /**
+     * @dev Get n-th withdraw record of user.
+     */
     function getWithdrawal(
         address targetAddress,
         uint256 index
@@ -38,6 +50,9 @@ contract DepositManagerUpgradeable is IDepositManager, OwnableUpgradeable {
         return withdrawals[targetAddress][index];
     }
 
+    /**
+     * @dev Record deposit info.
+     */
     function recordDeposit(
         address _targetAddress,
         uint256 _amount,
@@ -59,18 +74,12 @@ contract DepositManagerUpgradeable is IDepositManager, OwnableUpgradeable {
 
         // TODO: mint inscription
         emit DepositRecorded(_targetAddress, _amount, _chainId, _txInfo, _extraInfo);
-        return
-            abi.encodePacked(
-                true,
-                uint8(1),
-                _targetAddress,
-                _amount,
-                _chainId,
-                _txInfo,
-                _extraInfo
-            );
+        return abi.encodePacked(uint8(1), _targetAddress, _amount, _chainId, _txInfo, _extraInfo);
     }
 
+    /**
+     * @dev Record withdraw info.
+     */
     function recordWithdrawal(
         address _targetAddress,
         uint256 _amount,
@@ -92,15 +101,6 @@ contract DepositManagerUpgradeable is IDepositManager, OwnableUpgradeable {
 
         // TODO: burn inscription?
         emit WithdrawalRecorded(_targetAddress, _amount, _chainId, _txInfo, _extraInfo);
-        return
-            abi.encodePacked(
-                true,
-                uint8(1),
-                _targetAddress,
-                _amount,
-                _chainId,
-                _txInfo,
-                _extraInfo
-            );
+        return abi.encodePacked(uint8(1), _targetAddress, _amount, _chainId, _txInfo, _extraInfo);
     }
 }

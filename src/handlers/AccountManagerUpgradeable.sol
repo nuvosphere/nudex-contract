@@ -13,6 +13,12 @@ contract AccountManagerUpgradeable is IAccountManager, OwnableUpgradeable {
         __Ownable_init(_owner);
     }
 
+    /**
+     * @dev Get registered address record.
+     * @param _account Account number, must be greater than 10000.
+     * @param _chain The chain type of the address.
+     * @param _index The index of adress.
+     */
     function getAddressRecord(
         uint256 _account,
         Chain _chain,
@@ -21,7 +27,13 @@ contract AccountManagerUpgradeable is IAccountManager, OwnableUpgradeable {
         return addressRecord[abi.encodePacked(_account, _chain, _index)];
     }
 
-    // register new deposit address for user account
+    /**
+     * @dev Register new deposit address for user account.
+     * @param _account Account number, must be greater than 10000.
+     * @param _chain The chain type of the address.
+     * @param _index The index of adress.
+     * @param _address The registering address.
+     */
     function registerNewAddress(
         uint256 _account,
         Chain _chain,
@@ -37,6 +49,6 @@ contract AccountManagerUpgradeable is IAccountManager, OwnableUpgradeable {
         addressRecord[abi.encodePacked(_account, _chain, _index)] = _address;
         userMapping[_address][_chain] = _account;
         emit AddressRegistered(_account, _chain, _index, _address);
-        return abi.encodePacked(true, uint8(1), _account, _chain, _index);
+        return abi.encodePacked(uint8(1), _account, _chain, _index);
     }
 }

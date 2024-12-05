@@ -145,9 +145,9 @@ contract NuvoDAOUpgradeable is INuvoDao, OwnableUpgradeable {
         emit ProposalCreated(
             newProposalId,
             msg.sender,
-            _description,
             _proposalType,
-            _proposalCategory
+            _proposalCategory,
+            _description
         );
     }
 

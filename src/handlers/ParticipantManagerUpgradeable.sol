@@ -28,6 +28,10 @@ contract ParticipantManagerUpgradeable is IParticipantManager, OwnableUpgradeabl
         }
     }
 
+    /**
+     * @dev Add new participant.
+     * @param newParticipant The new participant to be added.
+     */
     function addParticipant(address newParticipant) external onlyOwner returns (bytes memory) {
         require(!isParticipant[newParticipant], AlreadyParticipant(newParticipant));
         require(nuvoLock.lockedBalanceOf(newParticipant) > 0, NotEligible(newParticipant));
@@ -36,9 +40,13 @@ contract ParticipantManagerUpgradeable is IParticipantManager, OwnableUpgradeabl
         isParticipant[newParticipant] = true;
 
         emit ParticipantAdded(newParticipant);
-        return abi.encodePacked(true, uint8(1), newParticipant);
+        return abi.encodePacked(uint8(1), newParticipant);
     }
 
+    /**
+     * @dev Remove participant.
+     * @param participant The participant to be removed.
+     */
     function removeParticipant(address participant) external onlyOwner returns (bytes memory) {
         require(participants.length > 3, NotEnoughParticipant());
         require(isParticipant[participant], NotParticipant(participant));
@@ -53,14 +61,21 @@ contract ParticipantManagerUpgradeable is IParticipantManager, OwnableUpgradeabl
         }
 
         emit ParticipantRemoved(participant);
-        return abi.encodePacked(true, uint8(1), participant);
+        return abi.encodePacked(uint8(1), participant);
     }
 
+    /**
+     * @dev Get all participant.
+     */
     function getParticipants() external view returns (address[] memory) {
         return participants;
     }
 
-    function getRandomParticipant(address _salt) external view returns (address randParticipant) {
+    /**
+     * @dev Pick one random participant.
+     * @param _salt Salt for randomness.
+     */
+    function getRandomParticipant(uint256 _salt) external view returns (address randParticipant) {
         uint256 randomIndex = uint256(
             keccak256(
                 abi.encodePacked(

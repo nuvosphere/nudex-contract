@@ -9,6 +9,9 @@ import {ITaskManager, State} from "./interfaces/ITaskManager.sol";
 import {INuvoLock} from "./interfaces/INuvoLock.sol";
 import {IVotingManager, Operation} from "./interfaces/IVotingManager.sol";
 
+/**
+ * @dev Manage all onchain information.
+ */
 contract VotingManagerUpgradeable is IVotingManager, Initializable, ReentrancyGuardUpgradeable {
     IParticipantManager public participantManager;
     ITaskManager public taskManager;
@@ -41,10 +44,15 @@ contract VotingManagerUpgradeable is IVotingManager, Initializable, ReentrancyGu
 
         tssSigner = _tssSigner;
         lastSubmissionTime = block.timestamp;
-        nextSubmitter = participantManager.getRandomParticipant(nextSubmitter);
+        nextSubmitter = participantManager.getRandomParticipant(block.timestamp);
         emit SubmitterChosen(nextSubmitter);
     }
 
+    /**
+     * @dev Set new tssSigner address.
+     * @param _newSigner The new tssSigner address.
+     * @param _signature The signature for verification.
+     */
     function setSignerAddress(
         address _newSigner,
         bytes calldata _signature
@@ -55,6 +63,10 @@ contract VotingManagerUpgradeable is IVotingManager, Initializable, ReentrancyGu
         _rotateSubmitter();
     }
 
+    /**
+     * @dev Pick new random submitter if the current submitter is inactive for too long.
+     * @param _signature The signature for verification.
+     */
     function chooseNewSubmitter(bytes calldata _signature) external nonReentrant {
         require(
             participantManager.isParticipant(msg.sender),
@@ -80,6 +92,11 @@ contract VotingManagerUpgradeable is IVotingManager, Initializable, ReentrancyGu
         _rotateSubmitter();
     }
 
+    /**
+     * @dev Entry point for all task handlers
+     * @param _opts The batch operation to be executed.
+     * @param _signature The signature for verification.
+     */
     function verifyAndCall(
         Operation[] calldata _opts,
         bytes calldata _signature
@@ -108,14 +125,25 @@ contract VotingManagerUpgradeable is IVotingManager, Initializable, ReentrancyGu
         _rotateSubmitter();
     }
 
+    /**
+     * @dev Verify operation signature.
+     * @param _opts The batch operation to be executed.
+     * @param _signature The signature for verification.
+     * @param _nonce The nonce of tssSigner.
+     */
     function verifyOperation(
         Operation[] calldata _opts,
         bytes calldata _signature,
-        uint256 nonce
+        uint256 _nonce
     ) external view {
-        _verifyOperation(_opts, _signature, nonce);
+        _verifyOperation(_opts, _signature, _nonce);
     }
 
+    /**
+     * @dev Message hash helper function.
+     * @param _opts The batch operation to be executed.
+     * @param _nonce The nonce of tssSigner.
+     */
     function operationHash(
         Operation[] calldata _opts,
         uint256 nonce
@@ -124,6 +152,11 @@ contract VotingManagerUpgradeable is IVotingManager, Initializable, ReentrancyGu
         messageHash = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", hash));
     }
 
+    /**
+     * @dev Verify the validity of the operation.
+     * @param _opts The batch operation to be executed.
+     * @param _signature The signature for verification.
+     */
     function _verifyOperation(
         Operation[] calldata _opts,
         bytes calldata _signature,
@@ -133,6 +166,11 @@ contract VotingManagerUpgradeable is IVotingManager, Initializable, ReentrancyGu
         _verifySignature(keccak256(abi.encode(nonce, _opts)), _signature);
     }
 
+    /**
+     * @dev Verify the hash message.
+     * @param _hash The hashed message.
+     * @param _signature The signature for verification.
+     */
     function _verifySignature(bytes32 _hash, bytes calldata _signature) internal view {
         bytes32 messageHash = keccak256(
             abi.encodePacked("\x19Ethereum Signed Message:\n32", _hash)
@@ -142,13 +180,19 @@ contract VotingManagerUpgradeable is IVotingManager, Initializable, ReentrancyGu
         require(tssSigner == recoverAddr, InvalidSigner(msg.sender));
     }
 
+    /**
+     * @dev Pick a new random submiter from the participant list.
+     */
     function _rotateSubmitter() internal {
         nuvoLock.accumulateBonusPoints(msg.sender);
         lastSubmissionTime = block.timestamp;
-        nextSubmitter = participantManager.getRandomParticipant(nextSubmitter);
+        nextSubmitter = participantManager.getRandomParticipant(block.timestamp);
         emit SubmitterChosen(nextSubmitter);
     }
 
+    /**
+     * @dev Get rsv from signature.
+     */
     function _splitSignature(
         bytes memory sig
     ) internal pure returns (bytes32 r, bytes32 s, uint8 v) {

@@ -15,38 +15,48 @@ contract TaskManagerUpgradeable is ITaskManager, OwnableUpgradeable {
     mapping(uint64 => Task) public tasks;
     mapping(bytes32 => uint64) public taskRecords;
 
-    // _owner: votingManager
     function initialize(address _taskSubmitter, address _owner) public initializer {
         __Ownable_init(_owner);
         taskSubmitter = _taskSubmitter;
     }
 
+    /**
+     * @dev Set new task submitter.
+     * @param _taskSubmitter The new task submitter contract address.
+     */
     function setTaskSubmitter(address _taskSubmitter) external onlyOwner {
         require(_taskSubmitter != address(0), InvalidAddress());
         taskSubmitter = _taskSubmitter;
     }
 
+    /**
+     * @dev Get task state.
+     * @param _taskId Id of the task.
+     */
     function getTaskState(uint64 _taskId) external view returns (State) {
         return tasks[_taskId].state;
     }
 
+    /**
+     * @dev Get the latest task.
+     */
     function getLatestTask() external view returns (Task memory) {
         require(nextTaskId > 0, EmptyTask());
         return tasks[nextTaskId - 1];
     }
 
+    /**
+     * @dev Get all uncompleted tasks.
+     */
     function getUncompletedTasks() external view returns (Task[] memory) {
         Task[] memory tempTasks = new Task[](nextTaskId);
         uint256 count = 0;
-
         for (uint64 i = 0; i < nextTaskId; i++) {
             if (tasks[i].state != State.Completed) {
                 tempTasks[count] = tasks[i];
                 count++;
             }
         }
-
-        // Allocate exact size array and copy
         Task[] memory uncompletedTasks = new Task[](count);
         for (uint256 i = 0; i < count; i++) {
             uncompletedTasks[i] = tempTasks[i];
@@ -55,6 +65,11 @@ contract TaskManagerUpgradeable is ITaskManager, OwnableUpgradeable {
         return uncompletedTasks;
     }
 
+    /**
+     * @dev Add new task.
+     * @param _submitter The submitter of the task.
+     * @param _context The context of the task.
+     */
     function submitTask(address _submitter, bytes calldata _context) external returns (uint64) {
         require(msg.sender == taskSubmitter, OnlyTaskSubmitter());
 
@@ -77,6 +92,12 @@ contract TaskManagerUpgradeable is ITaskManager, OwnableUpgradeable {
         return taskId;
     }
 
+    /**
+     * @dev Update tast state.
+     * @param _taskId Id of the task.
+     * @param _state The new state of the tast.
+     * @param _result (Optional) The final result of the task.
+     */
     function updateTask(uint64 _taskId, State _state, bytes calldata _result) external onlyOwner {
         Task storage task = tasks[_taskId];
         if (task.state == State.Created) {

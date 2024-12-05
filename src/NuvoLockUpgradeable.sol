@@ -45,6 +45,9 @@ contract NuvoLockUpgradeable is INuvoLock, OwnableUpgradeable {
         lastPeriodNumber = getCurrentPeriod();
     }
 
+    /**
+     * @dev Get current time period index.
+     */
     function getCurrentPeriod() public view returns (uint32) {
         return uint32((block.timestamp - initTimestamp) / 1 weeks);
     }
@@ -57,12 +60,21 @@ contract NuvoLockUpgradeable is INuvoLock, OwnableUpgradeable {
         return block.timestamp - locks[_userAddr].startTime;
     }
 
+    /**
+     * @dev Set minimum lock threshold.
+     * @param _minLockAmount New min lock amount.
+     * @param _minLockPeriod New min lock period.
+     */
     function setMinLockInfo(uint256 _minLockAmount, uint32 _minLockPeriod) external onlyOwner {
         minLockAmount = _minLockAmount;
         minLockPeriod = _minLockPeriod;
         emit MinLockInfo(minLockAmount, minLockPeriod);
     }
 
+    /**
+     * @dev Set new reward per period.
+     * @param _newRewardPerPeriod New reward per period.
+     */
     function setRewardPerPeriod(uint256 _newRewardPerPeriod) external onlyOwner {
         // Accumulate rewards for all previous periods before updating the reward per period
         accumulateRewards();
@@ -73,6 +85,11 @@ contract NuvoLockUpgradeable is INuvoLock, OwnableUpgradeable {
         emit RewardPerPeriodUpdated(_newRewardPerPeriod, lastPeriodNumber);
     }
 
+    /**
+     * @dev Lock NuvoToken.
+     * @param _amount The lock token amount.
+     * @param _period The lock period.
+     */
     function lock(uint256 _amount, uint32 _period) external {
         require(_amount >= minLockAmount, AmountBelowMin(_amount));
         require(_period >= minLockPeriod, TimePeriodBelowMin(_period));
@@ -100,6 +117,9 @@ contract NuvoLockUpgradeable is INuvoLock, OwnableUpgradeable {
         emit Locked(msg.sender, _amount, unlockTime);
     }
 
+    /**
+     * @dev Unlock NuoToken.
+     */
     function unlock() external onlyUser {
         LockInfo storage lockInfo = locks[msg.sender];
         require(
@@ -120,6 +140,10 @@ contract NuvoLockUpgradeable is INuvoLock, OwnableUpgradeable {
         emit Unlocked(msg.sender, amount);
     }
 
+    /**
+     * @dev Add bonus point for user.
+     * @param _userAddr The user address.
+     */
     function accumulateBonusPoints(address _userAddr) external onlyOwner {
         require(locks[_userAddr].amount > 0, NotAUser(_userAddr));
 
@@ -133,6 +157,10 @@ contract NuvoLockUpgradeable is INuvoLock, OwnableUpgradeable {
         totalBonusPoints++;
     }
 
+    /**
+     * @dev Add demerit point for user
+     * @param _userAddr The user address.
+     */
     function accumulateDemeritPoints(address _userAddr) external onlyOwner {
         require(locks[_userAddr].amount > 0, NotAUser(_userAddr));
 
@@ -145,7 +173,9 @@ contract NuvoLockUpgradeable is INuvoLock, OwnableUpgradeable {
         locks[_userAddr].demeritPoints++;
     }
 
-    // calculate reward of every user for the last period
+    /**
+     * @dev Calculate reward of each user for the last period
+     */
     function accumulateRewards() public {
         uint32 currentPeriodNumber = getCurrentPeriod();
 
@@ -183,6 +213,9 @@ contract NuvoLockUpgradeable is INuvoLock, OwnableUpgradeable {
         }
     }
 
+    /**
+     * @dev Claim rewards.
+     */
     function claimRewards() external onlyUser {
         LockInfo storage lockInfo = locks[msg.sender];
         uint256 rewards = lockInfo.accumulatedRewards;

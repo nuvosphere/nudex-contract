@@ -3,6 +3,9 @@
 
 pragma solidity ^0.8.20;
 
+/**
+ * @dev Convert uint to string
+ */
 library UintToString {
     function uint256ToString(uint256 value) internal pure returns (string memory) {
         if (value == 0) {
