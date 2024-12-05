@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import {ERC1967Utils, ERC1967Proxy} from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import {ERC1967Utils, ERC1967Proxy, ProxyAdmin} from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 
 interface ITransparentUpgradeableProxy {
     /// @dev See {UUPSUpgradeable-upgradeToAndCall}
@@ -24,8 +24,13 @@ contract NuvoProxy is ERC1967Proxy {
      * @dev Initializes an upgradeable proxy managed by an instance of a {ProxyAdmin} with an `initialOwner`,
      * backed by the implementation at `_logic`, and optionally initialized with `_data` as explained in
      * {ERC1967Proxy-constructor}.
+     * @dev Warning: once _admin has been setup, it cannot be changed anymore. Use a ProxyAdmin for upgradeability.
      */
     constructor(address _logic, address _proxyAdmin) payable ERC1967Proxy(_logic, "") {
+        // @dev if _proxyAdmin is not set, this contract will be self-upgradeable
+        if (_proxyAdmin == address(0)) {
+            _proxyAdmin = address(this);
+        }
         _admin = _proxyAdmin;
         // Set the storage value and emit an event for ERC-1967 compatibility
         ERC1967Utils.changeAdmin(_proxyAdmin);
