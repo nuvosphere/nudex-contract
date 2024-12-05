@@ -6,7 +6,7 @@ import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/Messa
 import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 
 import {NuvoLockUpgradeable} from "../src/NuvoLockUpgradeable.sol";
-import {ParticipantManagerUpgradeable} from "../src/ParticipantManagerUpgradeable.sol";
+import {ParticipantManagerUpgradeable} from "../src/handlers/ParticipantManagerUpgradeable.sol";
 import {TaskManagerUpgradeable} from "../src/TaskManagerUpgradeable.sol";
 import {TaskSubmitter} from "../src/TaskSubmitter.sol";
 import {VotingManagerUpgradeable} from "../src/VotingManagerUpgradeable.sol";
@@ -39,6 +39,8 @@ contract BaseTest is Test {
     address public msgSender;
     address public tssSigner;
     uint256 public tssKey;
+
+    bytes public tempBytes = "Context";
 
     function setUp() public virtual {
         msgSender = makeAddr("msgSender");
@@ -115,5 +117,10 @@ contract BaseTest is Test {
         bytes32 digest = keccak256(_encodedData).toEthSignedMessageHash();
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(_privateKey, digest);
         return abi.encodePacked(r, s, v);
+    }
+
+    function _generateTaskContext() internal returns (bytes memory) {
+        tempBytes = abi.encodePacked(keccak256(tempBytes));
+        return tempBytes;
     }
 }

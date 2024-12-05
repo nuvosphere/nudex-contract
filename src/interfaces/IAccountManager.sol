@@ -11,10 +11,10 @@ interface IAccountManager {
     }
 
     event AddressRegistered(
-        uint account,
+        uint256 indexed account,
         Chain indexed chain,
-        uint index,
-        string indexed newAddress
+        uint256 indexed index,
+        string newAddress
     );
 
     error InvalidAddress();

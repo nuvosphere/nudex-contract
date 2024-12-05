@@ -2,7 +2,7 @@ pragma solidity ^0.8.0;
 
 import "./BaseTest.sol";
 
-import {AccountManagerUpgradeable} from "../src/AccountManagerUpgradeable.sol";
+import {AccountManagerUpgradeable} from "../src/handlers/AccountManagerUpgradeable.sol";
 import {IAccountManager} from "../src/interfaces/IAccountManager.sol";
 import {ITaskManager} from "../src/interfaces/ITaskManager.sol";
 
@@ -12,7 +12,6 @@ contract AccountCreation is BaseTest {
     AccountManagerUpgradeable public accountManager;
     address public amProxy;
 
-    bytes public constant TASK_CONTEXT = "--- encoded account creation task context ---";
     uint256 constant DEFAULT_ACCOUNT = 10001;
 
     function setUp() public override {
@@ -38,7 +37,7 @@ contract AccountCreation is BaseTest {
     function test_Create() public {
         vm.startPrank(msgSender);
         // submit task
-        uint64 taskId = taskSubmitter.submitTask(TASK_CONTEXT);
+        uint64 taskId = taskSubmitter.submitTask(_generateTaskContext());
         // process after tss picked up the task
         bytes memory callData = abi.encodeWithSelector(
             IAccountManager.registerNewAddress.selector,
@@ -69,7 +68,7 @@ contract AccountCreation is BaseTest {
         );
 
         // fail: already registered
-        taskId = taskSubmitter.submitTask(TASK_CONTEXT);
+        taskId = taskSubmitter.submitTask(_generateTaskContext());
         opts[0] = Operation(amProxy, State.Completed, taskId, callData);
         signature = _generateSignature(opts, tssKey);
 
@@ -89,7 +88,7 @@ contract AccountCreation is BaseTest {
 
     function test_CreateRevert() public {
         // fail case: deposit address as address zero
-        uint64 taskId = taskSubmitter.submitTask(TASK_CONTEXT);
+        uint64 taskId = taskSubmitter.submitTask(_generateTaskContext());
         bytes memory callData = abi.encodeWithSelector(
             IAccountManager.registerNewAddress.selector,
             DEFAULT_ACCOUNT,
@@ -108,7 +107,7 @@ contract AccountCreation is BaseTest {
         votingManager.verifyAndCall(opts, signature);
 
         // fail case: account number less than 10000
-        taskId = taskSubmitter.submitTask(TASK_CONTEXT);
+        taskId = taskSubmitter.submitTask(_generateTaskContext());
         callData = abi.encodeWithSelector(
             IAccountManager.registerNewAddress.selector,
             uint(9999),

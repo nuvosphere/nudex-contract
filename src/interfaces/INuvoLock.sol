@@ -11,12 +11,12 @@ interface INuvoToken {
 }
 
 interface INuvoLock {
-    event Locked(address indexed user, uint256 amount, uint32 unlockTime);
-    event Unlocked(address indexed user, uint256 amount);
+    event Locked(address indexed user, uint256 indexed amount, uint32 unlockTime);
+    event Unlocked(address indexed user, uint256 indexed amount);
     event MinLockInfo(uint256 indexed amount, uint256 indexed period);
     event RewardsAccumulated(address indexed user, uint256 rewards);
     event RewardsClaimed(address indexed user, uint256 rewards);
-    event RewardPerPeriodUpdated(uint256 newRewardPerPeriod, uint256 period);
+    event RewardPerPeriodUpdated(uint256 indexed newRewardPerPeriod, uint256 period);
     event DemeritPointsIncreased(address indexed submitter, uint256 points);
 
     error AlreadyLocked(address user);

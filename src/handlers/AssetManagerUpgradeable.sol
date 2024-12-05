@@ -2,7 +2,7 @@
 pragma solidity ^0.8.26;
 
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import {IAssetManager} from "./interfaces/IAssetManager.sol";
+import {IAssetManager} from "../interfaces/IAssetManager.sol";
 
 contract AssetManagerUpgradeable is IAssetManager, OwnableUpgradeable {
     // Mapping from asset identifiers to their details

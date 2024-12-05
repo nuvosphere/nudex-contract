@@ -9,8 +9,6 @@ contract NuvoLockTest is BaseTest {
 
     address public nuvoLockProxy;
 
-    bytes public constant TASK_CONTEXT = "--- encoded lock task context ---";
-
     function setUp() public override {
         super.setUp();
 
@@ -252,7 +250,7 @@ contract NuvoLockTest is BaseTest {
 
     function test_OwnerFunction() public {
         vm.startPrank(msgSender);
-        uint64 taskId = taskSubmitter.submitTask(TASK_CONTEXT);
+        uint64 taskId = taskSubmitter.submitTask(_generateTaskContext());
         nuvoToken.approve(address(nuvoLock), MIN_LOCK_AMOUNT);
         nuvoLock.lock(MIN_LOCK_AMOUNT, MIN_LOCK_PERIOD);
 
@@ -288,7 +286,7 @@ contract NuvoLockTest is BaseTest {
 
     function test_RewardPoint() public {
         vm.startPrank(msgSender);
-        uint64 taskId = taskSubmitter.submitTask(TASK_CONTEXT);
+        uint64 taskId = taskSubmitter.submitTask(_generateTaskContext());
         nuvoToken.approve(address(nuvoLock), MIN_LOCK_AMOUNT);
         nuvoLock.lock(MIN_LOCK_AMOUNT, MIN_LOCK_PERIOD);
 
@@ -372,7 +370,7 @@ contract NuvoLockTest is BaseTest {
     }
 
     function test_RewardRevert() public {
-        uint64 taskId = taskSubmitter.submitTask(TASK_CONTEXT);
+        uint64 taskId = taskSubmitter.submitTask(_generateTaskContext());
         uint256 newRewardPerPeriod = 3 ether;
         bytes memory callData = abi.encodeWithSelector(
             INuvoLock.setRewardPerPeriod.selector,

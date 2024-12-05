@@ -3,11 +3,11 @@ pragma solidity ^0.8.26;
 
 interface INuvoDao {
     event ProposalCreated(
-        uint256 id,
-        address proposer,
-        string description,
-        ProposalType proposalType,
-        ProposalCategory proposalCategory
+        uint256 indexed id,
+        address indexed proposer,
+        ProposalType indexed proposalType,
+        ProposalCategory proposalCategory,
+        string description
     );
     event Voted(uint256 proposalId, address voter, uint256 weight, uint256 quadraticVotes);
     event ProposalExecuted(uint256 id, bool passed);

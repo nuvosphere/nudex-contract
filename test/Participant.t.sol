@@ -12,8 +12,6 @@ contract Participant is BaseTest {
     address public participantManagerProxy;
     address public nextSubmitter;
 
-    bytes public constant TASK_CONTEXT = "--- encoded participant task context ---";
-
     function setUp() public override {
         super.setUp();
         participant1 = makeAddr("participant1");
@@ -64,7 +62,7 @@ contract Participant is BaseTest {
     }
 
     function test_AddParticipant() public {
-        uint64 taskId = taskSubmitter.submitTask(TASK_CONTEXT);
+        uint64 taskId = taskSubmitter.submitTask(_generateTaskContext());
         // create an eligible user
         address newParticipant = makeAddr("newParticipant");
         // fail: did not stake
@@ -99,7 +97,7 @@ contract Participant is BaseTest {
         participantManager.addParticipant(newParticipant);
 
         // successfully add new user
-        taskId = taskSubmitter.submitTask(TASK_CONTEXT);
+        taskId = taskSubmitter.submitTask(_generateTaskContext());
         callData = abi.encodeWithSelector(
             IParticipantManager.addParticipant.selector,
             newParticipant
@@ -112,7 +110,7 @@ contract Participant is BaseTest {
         votingManager.verifyAndCall(opts, signature);
 
         // fail: adding the same user again
-        taskId = taskSubmitter.submitTask(TASK_CONTEXT);
+        taskId = taskSubmitter.submitTask(_generateTaskContext());
         opts[0] = Operation(participantManagerProxy, State.Completed, taskId, callData);
         signature = _generateSignature(opts, tssKey);
         nextSubmitter = votingManager.nextSubmitter();
@@ -130,7 +128,7 @@ contract Participant is BaseTest {
         _addParticipant(newParticipant);
 
         // remove the added user
-        uint64 taskId = taskSubmitter.submitTask(TASK_CONTEXT);
+        uint64 taskId = taskSubmitter.submitTask(_generateTaskContext());
         bytes memory callData = abi.encodeWithSelector(
             IParticipantManager.removeParticipant.selector,
             newParticipant
@@ -145,7 +143,7 @@ contract Participant is BaseTest {
     }
 
     function test_RemoveParticipantRevert() public {
-        uint64 taskId = taskSubmitter.submitTask(TASK_CONTEXT);
+        uint64 taskId = taskSubmitter.submitTask(_generateTaskContext());
         // fail: cannot remove user when there is only 3 participant left
         bytes memory callData = abi.encodeWithSelector(
             IParticipantManager.removeParticipant.selector,
@@ -166,7 +164,7 @@ contract Participant is BaseTest {
         _addParticipant(newParticipant);
 
         // fail: remove a non-participant user
-        taskId = taskSubmitter.submitTask(TASK_CONTEXT);
+        taskId = taskSubmitter.submitTask(_generateTaskContext());
         callData = abi.encodeWithSelector(IParticipantManager.removeParticipant.selector, thisAddr);
         opts[0] = Operation(participantManagerProxy, State.Completed, taskId, callData);
         signature = _generateSignature(opts, tssKey);
@@ -193,7 +191,7 @@ contract Participant is BaseTest {
         Operation[] memory opts = new Operation[](20);
         for (uint8 i; i < 20; ++i) {
             // removing a participant
-            taskId = taskSubmitter.submitTask(TASK_CONTEXT);
+            taskId = taskSubmitter.submitTask(_generateTaskContext());
             callData = abi.encodeWithSelector(
                 IParticipantManager.removeParticipant.selector,
                 newParticipants[i]
@@ -208,7 +206,7 @@ contract Participant is BaseTest {
     }
 
     function _addParticipant(address _newParticipant) internal returns (address) {
-        uint64 taskId = taskSubmitter.submitTask(TASK_CONTEXT);
+        uint64 taskId = taskSubmitter.submitTask(_generateTaskContext());
         // create an eligible user
         nuvoToken.mint(_newParticipant, 100 ether);
         vm.startPrank(_newParticipant);

@@ -6,13 +6,12 @@ import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transpa
 
 import {MockNuvoToken} from "../src/mocks/MockNuvoToken.sol";
 
-import {AccountManagerUpgradeable} from "../src/AccountManagerUpgradeable.sol";
-import {DepositManagerUpgradeable} from "../src/DepositManagerUpgradeable.sol";
-import {NIP20Upgradeable} from "../src/NIP20Upgradeable.sol";
+import {AccountManagerUpgradeable} from "../src/handlers/AccountManagerUpgradeable.sol";
+import {DepositManagerUpgradeable} from "../src/handlers/DepositManagerUpgradeable.sol";
 import {NuvoLockUpgradeable} from "../src/NuvoLockUpgradeable.sol";
 import {TaskManagerUpgradeable} from "../src/TaskManagerUpgradeable.sol";
 import {TaskSubmitter} from "../src/TaskSubmitter.sol";
-import {ParticipantManagerUpgradeable} from "../src/ParticipantManagerUpgradeable.sol";
+import {ParticipantManagerUpgradeable} from "../src/handlers/ParticipantManagerUpgradeable.sol";
 import {VotingManagerUpgradeable} from "../src/VotingManagerUpgradeable.sol";
 
 // this contract is only used for contract testing
@@ -73,9 +72,7 @@ contract DeployTest is Script {
 
         // deploy depositManager and NIP20 contract
         DepositManagerUpgradeable depositManager = new DepositManagerUpgradeable();
-        // NIP20Upgradeable nip20 = new NIP20Upgradeable();
-        // nip20.initialize(address(depositManager));
-        depositManager.initialize(address(votingManager), address(0));
+        depositManager.initialize(address(votingManager));
         console.log("|DepositManager|", address(depositManager));
 
         // initialize votingManager link to all contracts

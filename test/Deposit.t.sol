@@ -2,16 +2,14 @@ pragma solidity ^0.8.0;
 
 import "./BaseTest.sol";
 
-import {DepositManagerUpgradeable} from "../src/DepositManagerUpgradeable.sol";
+import {DepositManagerUpgradeable} from "../src/handlers/DepositManagerUpgradeable.sol";
 import {IDepositManager} from "../src/interfaces/IDepositManager.sol";
-import {NIP20Upgradeable} from "../src/NIP20Upgradeable.sol";
 import {ITaskManager} from "../src/interfaces/ITaskManager.sol";
 
 contract Deposit is BaseTest {
     address public user;
 
     DepositManagerUpgradeable public depositManager;
-    NIP20Upgradeable public nip20;
 
     address public dmProxy;
 
@@ -23,12 +21,8 @@ contract Deposit is BaseTest {
 
         // deploy depositManager and NIP20 contract
         dmProxy = _deployProxy(address(new DepositManagerUpgradeable()), daoContract);
-        address nip20Proxy = _deployProxy(address(new NIP20Upgradeable()), daoContract);
-        nip20 = NIP20Upgradeable(nip20Proxy);
-        nip20.initialize(dmProxy);
-        assertEq(nip20.owner(), dmProxy);
         depositManager = DepositManagerUpgradeable(dmProxy);
-        depositManager.initialize(vmProxy, nip20Proxy);
+        depositManager.initialize(vmProxy);
         assertEq(depositManager.owner(), vmProxy);
 
         // initialize votingManager link to all contracts
@@ -162,11 +156,11 @@ contract Deposit is BaseTest {
         uint64[] memory taskIds = new uint64[](batchSize);
         address[] memory users = new address[](batchSize);
         uint256[] memory amounts = new uint256[](batchSize);
-        uint64[] memory chainIds = new uint64[](batchSize);
+        uint256[] memory chainIds = new uint256[](batchSize);
         bytes[] memory txInfos = new bytes[](batchSize);
         bytes[] memory extraInfos = new bytes[](batchSize);
         for (uint8 i; i < batchSize; ++i) {
-            taskIds[i] = taskSubmitter.submitTask(TASK_CONTEXT);
+            taskIds[i] = taskSubmitter.submitTask(abi.encodePacked(TASK_CONTEXT, i));
             users[i] = makeAddr(string(abi.encodePacked("user", i)));
             amounts[i] = 1 ether;
             chainIds[i] = 0;
@@ -252,7 +246,7 @@ contract Deposit is BaseTest {
         uint256 withdrawIndex = depositManager.getWithdrawals(user).length;
         assertEq(withdrawIndex, 0);
         uint256 withdrawAmount = 1 ether;
-        uint64 chainId = 0;
+        uint256 chainId = 0;
         bytes memory txInfo = "--- encoded tx info ---";
         bytes memory extraInfo = "--- extra info ---";
         bytes memory callData = abi.encodeWithSelector(
@@ -296,7 +290,7 @@ contract Deposit is BaseTest {
 
         // setup withdraw info
         uint256 withdrawAmount = 0; // invalid amount
-        uint64 chainId = 0;
+        uint256 chainId = 0;
         bytes memory txInfo = "--- encoded tx info ---";
         bytes memory extraInfo = "--- extra info ---";
         bytes memory callData = abi.encodeWithSelector(
@@ -329,11 +323,11 @@ contract Deposit is BaseTest {
         uint64[] memory taskIds = new uint64[](batchSize);
         address[] memory users = new address[](batchSize);
         uint256[] memory amounts = new uint256[](batchSize);
-        uint64[] memory chainIds = new uint64[](batchSize);
+        uint256[] memory chainIds = new uint256[](batchSize);
         bytes[] memory txInfos = new bytes[](batchSize);
         bytes[] memory extraInfos = new bytes[](batchSize);
         for (uint16 i; i < batchSize; ++i) {
-            taskIds[i] = taskSubmitter.submitTask(TASK_CONTEXT);
+            taskIds[i] = taskSubmitter.submitTask(abi.encodePacked(TASK_CONTEXT, i));
             users[i] = makeAddr(string(abi.encodePacked("user", i)));
             amounts[i] = 1 ether;
             chainIds[i] = 0;
