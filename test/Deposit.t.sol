@@ -162,11 +162,11 @@ contract Deposit is BaseTest {
         uint64[] memory taskIds = new uint64[](batchSize);
         address[] memory users = new address[](batchSize);
         uint256[] memory amounts = new uint256[](batchSize);
-        uint64[] memory chainIds = new uint64[](batchSize);
+        uint256[] memory chainIds = new uint256[](batchSize);
         bytes[] memory txInfos = new bytes[](batchSize);
         bytes[] memory extraInfos = new bytes[](batchSize);
         for (uint8 i; i < batchSize; ++i) {
-            taskIds[i] = taskSubmitter.submitTask(TASK_CONTEXT);
+            taskIds[i] = taskSubmitter.submitTask(abi.encodePacked(TASK_CONTEXT, i));
             users[i] = makeAddr(string(abi.encodePacked("user", i)));
             amounts[i] = 1 ether;
             chainIds[i] = 0;
@@ -252,7 +252,7 @@ contract Deposit is BaseTest {
         uint256 withdrawIndex = depositManager.getWithdrawals(user).length;
         assertEq(withdrawIndex, 0);
         uint256 withdrawAmount = 1 ether;
-        uint64 chainId = 0;
+        uint256 chainId = 0;
         bytes memory txInfo = "--- encoded tx info ---";
         bytes memory extraInfo = "--- extra info ---";
         bytes memory callData = abi.encodeWithSelector(
@@ -296,7 +296,7 @@ contract Deposit is BaseTest {
 
         // setup withdraw info
         uint256 withdrawAmount = 0; // invalid amount
-        uint64 chainId = 0;
+        uint256 chainId = 0;
         bytes memory txInfo = "--- encoded tx info ---";
         bytes memory extraInfo = "--- extra info ---";
         bytes memory callData = abi.encodeWithSelector(
@@ -329,11 +329,11 @@ contract Deposit is BaseTest {
         uint64[] memory taskIds = new uint64[](batchSize);
         address[] memory users = new address[](batchSize);
         uint256[] memory amounts = new uint256[](batchSize);
-        uint64[] memory chainIds = new uint64[](batchSize);
+        uint256[] memory chainIds = new uint256[](batchSize);
         bytes[] memory txInfos = new bytes[](batchSize);
         bytes[] memory extraInfos = new bytes[](batchSize);
         for (uint16 i; i < batchSize; ++i) {
-            taskIds[i] = taskSubmitter.submitTask(TASK_CONTEXT);
+            taskIds[i] = taskSubmitter.submitTask(abi.encodePacked(TASK_CONTEXT, i));
             users[i] = makeAddr(string(abi.encodePacked("user", i)));
             amounts[i] = 1 ether;
             chainIds[i] = 0;

@@ -40,6 +40,8 @@ contract BaseTest is Test {
     address public tssSigner;
     uint256 public tssKey;
 
+    bytes public tempBytes = "Context";
+
     function setUp() public virtual {
         msgSender = makeAddr("msgSender");
         (tssSigner, tssKey) = makeAddrAndKey("tss");
@@ -115,5 +117,10 @@ contract BaseTest is Test {
         bytes32 digest = keccak256(_encodedData).toEthSignedMessageHash();
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(_privateKey, digest);
         return abi.encodePacked(r, s, v);
+    }
+
+    function _generateTaskContext() internal returns (bytes memory) {
+        tempBytes = abi.encodePacked(keccak256(tempBytes));
+        return tempBytes;
     }
 }
