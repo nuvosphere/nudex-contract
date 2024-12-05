@@ -2,19 +2,15 @@
 pragma solidity ^0.8.26;
 
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import {IDepositManager} from "./interfaces/IDepositManager.sol";
-import {INIP20} from "./interfaces/INIP20.sol";
+import {IDepositManager} from "../interfaces/IDepositManager.sol";
 
 contract DepositManagerUpgradeable is IDepositManager, OwnableUpgradeable {
-    INIP20 public nip20Contract;
-
     mapping(address => DepositInfo[]) public deposits;
     mapping(address => WithdrawalInfo[]) public withdrawals;
 
     // _owner: Voting Manager contract
-    function initialize(address _owner, address _nip20Contract) public initializer {
+    function initialize(address _owner) public initializer {
         __Ownable_init(_owner);
-        nip20Contract = INIP20(_nip20Contract);
     }
 
     function getDeposits(address targetAddress) external view returns (DepositInfo[] memory) {

@@ -2,7 +2,7 @@
 pragma solidity ^0.8.26;
 
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import {IAccountManager} from "./interfaces/IAccountManager.sol";
+import {IAccountManager} from "../interfaces/IAccountManager.sol";
 
 contract AccountManagerUpgradeable is IAccountManager, OwnableUpgradeable {
     mapping(bytes => string) public addressRecord;

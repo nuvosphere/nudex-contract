@@ -2,7 +2,7 @@ pragma solidity ^0.8.0;
 
 import "./BaseTest.sol";
 
-import {AccountManagerUpgradeable} from "../src/AccountManagerUpgradeable.sol";
+import {AccountManagerUpgradeable} from "../src/handlers/AccountManagerUpgradeable.sol";
 import {IAccountManager} from "../src/interfaces/IAccountManager.sol";
 import {ITaskManager} from "../src/interfaces/ITaskManager.sol";
 

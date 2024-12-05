@@ -4,13 +4,12 @@ pragma solidity ^0.8.0;
 import {Script, console} from "forge-std/Script.sol";
 import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 
-import {AccountManagerUpgradeable} from "../src/AccountManagerUpgradeable.sol";
-import {DepositManagerUpgradeable} from "../src/DepositManagerUpgradeable.sol";
-import {NIP20Upgradeable} from "../src/NIP20Upgradeable.sol";
+import {AccountManagerUpgradeable} from "../src/handlers/AccountManagerUpgradeable.sol";
+import {DepositManagerUpgradeable} from "../src/handlers/DepositManagerUpgradeable.sol";
 import {NuvoLockUpgradeable} from "../src/NuvoLockUpgradeable.sol";
 import {TaskManagerUpgradeable} from "../src/TaskManagerUpgradeable.sol";
 import {TaskSubmitter} from "../src/TaskSubmitter.sol";
-import {ParticipantManagerUpgradeable} from "../src/ParticipantManagerUpgradeable.sol";
+import {ParticipantManagerUpgradeable} from "../src/handlers/ParticipantManagerUpgradeable.sol";
 import {VotingManagerUpgradeable} from "../src/VotingManagerUpgradeable.sol";
 
 contract Deploy is Script {
@@ -70,11 +69,8 @@ contract Deploy is Script {
 
         // deploy depositManager and NIP20 contract
         dmProxy = deployProxy(address(new DepositManagerUpgradeable()), daoContract);
-        nip20Proxy = deployProxy(address(new NIP20Upgradeable()), daoContract);
-        NIP20Upgradeable nip20 = NIP20Upgradeable(nip20Proxy);
-        nip20.initialize(dmProxy);
         DepositManagerUpgradeable depositManager = DepositManagerUpgradeable(dmProxy);
-        depositManager.initialize(vmProxy, nip20Proxy);
+        depositManager.initialize(vmProxy);
 
         // initialize votingManager link to all contracts
         VotingManagerUpgradeable votingManager = VotingManagerUpgradeable(vmProxy);

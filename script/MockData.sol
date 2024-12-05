@@ -5,7 +5,7 @@ import {Script, console} from "forge-std/Script.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 
 import {NuvoProxy, ITransparentUpgradeableProxy} from "../src/proxies/NuvoProxy.sol";
-import {AccountManagerUpgradeable} from "../src/AccountManagerUpgradeable.sol";
+import {AccountManagerUpgradeable} from "../src/handlers/AccountManagerUpgradeable.sol";
 import {IAccountManager} from "../src/interfaces/IAccountManager.sol";
 
 // this contract is only used for contract testing

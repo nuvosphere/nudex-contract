@@ -84,7 +84,7 @@ contract VotingManagerUpgradeable is IVotingManager, Initializable, ReentrancyGu
         Operation[] calldata _opts,
         bytes calldata _signature
     ) external onlyCurrentSubmitter nonReentrant {
-        _verifyOperation(_opts,_signature, tssNonce++);
+        _verifyOperation(_opts, _signature, tssNonce++);
         bool success;
         bytes memory result;
         Operation memory opt;
@@ -108,25 +108,29 @@ contract VotingManagerUpgradeable is IVotingManager, Initializable, ReentrancyGu
         _rotateSubmitter();
     }
 
-    function verifyOperation(Operation[] calldata _opts, bytes calldata _signature,uint256 nonce) external view {
-        _verifyOperation(_opts,_signature, nonce);
+    function verifyOperation(
+        Operation[] calldata _opts,
+        bytes calldata _signature,
+        uint256 nonce
+    ) external view {
+        _verifyOperation(_opts, _signature, nonce);
     }
 
-    function operationHash(Operation[] calldata _opts,uint256 nonce) external view returns (bytes32 hash, bytes32 messageHash) {
+    function operationHash(
+        Operation[] calldata _opts,
+        uint256 nonce
+    ) external pure returns (bytes32 hash, bytes32 messageHash) {
         hash = keccak256(abi.encode(nonce, _opts));
         messageHash = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", hash));
     }
 
-    function _verifyOperation(Operation[] calldata _opts, bytes calldata _signature, uint256 nonce) internal view {
+    function _verifyOperation(
+        Operation[] calldata _opts,
+        bytes calldata _signature,
+        uint256 nonce
+    ) internal view {
         require(_opts.length > 0, EmptyOperationsArray());
         _verifySignature(keccak256(abi.encode(nonce, _opts)), _signature);
-    }
-
-    function _rotateSubmitter() internal {
-        nuvoLock.accumulateBonusPoints(msg.sender);
-        lastSubmissionTime = block.timestamp;
-        nextSubmitter = participantManager.getRandomParticipant(nextSubmitter);
-        emit SubmitterChosen(nextSubmitter);
     }
 
     function _verifySignature(bytes32 _hash, bytes calldata _signature) internal view {
@@ -136,6 +140,13 @@ contract VotingManagerUpgradeable is IVotingManager, Initializable, ReentrancyGu
         (bytes32 r, bytes32 s, uint8 v) = _splitSignature(_signature);
         address recoverAddr = ecrecover(messageHash, v, r, s);
         require(tssSigner == recoverAddr, InvalidSigner(msg.sender));
+    }
+
+    function _rotateSubmitter() internal {
+        nuvoLock.accumulateBonusPoints(msg.sender);
+        lastSubmissionTime = block.timestamp;
+        nextSubmitter = participantManager.getRandomParticipant(nextSubmitter);
+        emit SubmitterChosen(nextSubmitter);
     }
 
     function _splitSignature(

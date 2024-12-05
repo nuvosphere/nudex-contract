@@ -2,16 +2,14 @@ pragma solidity ^0.8.0;
 
 import "./BaseTest.sol";
 
-import {DepositManagerUpgradeable} from "../src/DepositManagerUpgradeable.sol";
+import {DepositManagerUpgradeable} from "../src/handlers/DepositManagerUpgradeable.sol";
 import {IDepositManager} from "../src/interfaces/IDepositManager.sol";
-import {NIP20Upgradeable} from "../src/NIP20Upgradeable.sol";
 import {ITaskManager} from "../src/interfaces/ITaskManager.sol";
 
 contract Deposit is BaseTest {
     address public user;
 
     DepositManagerUpgradeable public depositManager;
-    NIP20Upgradeable public nip20;
 
     address public dmProxy;
 
@@ -23,12 +21,8 @@ contract Deposit is BaseTest {
 
         // deploy depositManager and NIP20 contract
         dmProxy = _deployProxy(address(new DepositManagerUpgradeable()), daoContract);
-        address nip20Proxy = _deployProxy(address(new NIP20Upgradeable()), daoContract);
-        nip20 = NIP20Upgradeable(nip20Proxy);
-        nip20.initialize(dmProxy);
-        assertEq(nip20.owner(), dmProxy);
         depositManager = DepositManagerUpgradeable(dmProxy);
-        depositManager.initialize(vmProxy, nip20Proxy);
+        depositManager.initialize(vmProxy);
         assertEq(depositManager.owner(), vmProxy);
 
         // initialize votingManager link to all contracts

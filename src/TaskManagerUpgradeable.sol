@@ -57,7 +57,6 @@ contract TaskManagerUpgradeable is ITaskManager, OwnableUpgradeable {
 
     function submitTask(address _submitter, bytes calldata _context) external returns (uint64) {
         require(msg.sender == taskSubmitter, OnlyTaskSubmitter());
-        require(_submitter != address(0), InvalidAddress());
 
         bytes32 hash = keccak256(_context);
         uint64 taskId = taskRecords[hash];
@@ -94,6 +93,6 @@ contract TaskManagerUpgradeable is ITaskManager, OwnableUpgradeable {
         if (_result.length > 0) {
             task.result = _result;
         }
-        emit TaskUpdated(_taskId, task.submitter, block.timestamp,_state, _result);
+        emit TaskUpdated(_taskId, task.submitter, block.timestamp, _state, _result);
     }
 }

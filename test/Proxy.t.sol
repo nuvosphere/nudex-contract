@@ -2,8 +2,8 @@ pragma solidity ^0.8.0;
 
 import "./BaseTest.sol";
 
-import {ITransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
-import {NuvoProxy, ProxyAdmin} from "../src/proxies/NuvoProxy.sol";
+import {ITransparentUpgradeableProxy, ProxyAdmin} from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import {NuvoProxy} from "../src/proxies/NuvoProxy.sol";
 import "../src/mocks/MockLogic.sol";
 
 contract CustomProxy is BaseTest {

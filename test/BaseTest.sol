@@ -6,7 +6,7 @@ import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/Messa
 import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 
 import {NuvoLockUpgradeable} from "../src/NuvoLockUpgradeable.sol";
-import {ParticipantManagerUpgradeable} from "../src/ParticipantManagerUpgradeable.sol";
+import {ParticipantManagerUpgradeable} from "../src/handlers/ParticipantManagerUpgradeable.sol";
 import {TaskManagerUpgradeable} from "../src/TaskManagerUpgradeable.sol";
 import {TaskSubmitter} from "../src/TaskSubmitter.sol";
 import {VotingManagerUpgradeable} from "../src/VotingManagerUpgradeable.sol";
