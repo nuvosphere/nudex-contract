@@ -9,6 +9,7 @@ contract TaskManagerUpgradeable is ITaskManager, OwnableUpgradeable {
     uint64 public nextTaskId;
     uint64 public nextCreatedTaskId;
     uint64 public pendingTaskIndex;
+    Task[] public uncompletedTasks;
     uint64[] public pendingTasks;
     uint64[] public preconfirmedTasks;
     bytes[] public preconfirmedTaskResults;
@@ -49,19 +50,6 @@ contract TaskManagerUpgradeable is ITaskManager, OwnableUpgradeable {
      * @dev Get all uncompleted tasks.
      */
     function getUncompletedTasks() external view returns (Task[] memory) {
-        Task[] memory tempTasks = new Task[](nextTaskId);
-        uint256 count = 0;
-        for (uint64 i = 0; i < nextTaskId; i++) {
-            if (tasks[i].state != State.Completed) {
-                tempTasks[count] = tasks[i];
-                count++;
-            }
-        }
-        Task[] memory uncompletedTasks = new Task[](count);
-        for (uint256 i = 0; i < count; i++) {
-            uncompletedTasks[i] = tempTasks[i];
-        }
-
         return uncompletedTasks;
     }
 
@@ -77,7 +65,7 @@ contract TaskManagerUpgradeable is ITaskManager, OwnableUpgradeable {
         uint64 taskId = taskRecords[hash];
         require(taskId == 0, AlreadyExistTask(taskId));
         taskId = nextTaskId++;
-        tasks[taskId] = Task({
+        Task memory newTask = Task({
             id: taskId,
             state: State.Created,
             submitter: _submitter,
@@ -86,7 +74,9 @@ contract TaskManagerUpgradeable is ITaskManager, OwnableUpgradeable {
             context: _context,
             result: ""
         });
+        tasks[taskId] = newTask;
         taskRecords[hash] = taskId;
+        uncompletedTasks.push(newTask);
 
         emit TaskSubmitted(taskId, _context, _submitter);
         return taskId;
@@ -108,6 +98,15 @@ contract TaskManagerUpgradeable is ITaskManager, OwnableUpgradeable {
         }
         if (_state == State.Pending) {
             pendingTasks.push(_taskId);
+        }
+        if (_state == State.Failed || _state == State.Completed) {
+            for (uint32 i; i < uncompletedTasks.length; ++i) {
+                if (uncompletedTasks[i].id == _taskId) {
+                    uncompletedTasks[i] = uncompletedTasks[uncompletedTasks.length - 1];
+                    uncompletedTasks.pop();
+                    break;
+                }
+            }
         }
         task.state = _state;
         task.updatedAt = block.timestamp;

@@ -146,9 +146,9 @@ contract VotingManagerUpgradeable is IVotingManager, Initializable, ReentrancyGu
      */
     function operationHash(
         Operation[] calldata _opts,
-        uint256 nonce
+        uint256 _nonce
     ) external pure returns (bytes32 hash, bytes32 messageHash) {
-        hash = keccak256(abi.encode(nonce, _opts));
+        hash = keccak256(abi.encode(_nonce, _opts));
         messageHash = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", hash));
     }
 
