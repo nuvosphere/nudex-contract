@@ -98,17 +98,19 @@ contract BaseTest is Test {
         return address(new TransparentUpgradeableProxy(_logic, _admin, ""));
     }
 
-    function _generateSignature(
+    // generate signature for operations
+    function _generateOptSignature(
         Operation[] memory _opt,
         uint256 _privateKey
     ) internal view returns (bytes memory) {
-        bytes memory encodedData = abi.encode(entryPoint.tssNonce(), _opt);
+        bytes memory encodedData = abi.encode(entryPoint.tssNonce(), block.chainid, _opt);
         bytes32 digest = keccak256(encodedData).toEthSignedMessageHash();
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(_privateKey, digest);
         return abi.encodePacked(r, s, v);
     }
 
-    function _generateSignature(
+    // generate signature for encoded data
+    function _generateDataSignature(
         bytes memory _encodedData,
         uint256 _privateKey
     ) internal pure returns (bytes memory) {

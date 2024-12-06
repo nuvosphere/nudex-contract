@@ -72,7 +72,7 @@ contract ParticipantTest is BaseTest {
         );
         Operation[] memory opts = new Operation[](1);
         opts[0] = Operation(participantHandlerProxy, State.Completed, taskId, callData);
-        bytes memory signature = _generateSignature(opts, tssKey);
+        bytes memory signature = _generateOptSignature(opts, tssKey);
         nextSubmitter = entryPoint.nextSubmitter();
         vm.expectEmit(true, true, true, true);
         emit IEntryPoint.OperationFailed(
@@ -103,7 +103,7 @@ contract ParticipantTest is BaseTest {
             newParticipant
         );
         opts[0] = Operation(participantHandlerProxy, State.Completed, taskId, callData);
-        signature = _generateSignature(opts, tssKey);
+        signature = _generateOptSignature(opts, tssKey);
         vm.prank(entryPoint.nextSubmitter());
         vm.expectEmit(true, true, true, true);
         emit IParticipantHandler.ParticipantAdded(newParticipant);
@@ -112,7 +112,7 @@ contract ParticipantTest is BaseTest {
         // fail: adding the same user again
         taskId = taskSubmitter.submitTask(_generateTaskContext());
         opts[0] = Operation(participantHandlerProxy, State.Completed, taskId, callData);
-        signature = _generateSignature(opts, tssKey);
+        signature = _generateOptSignature(opts, tssKey);
         nextSubmitter = entryPoint.nextSubmitter();
         vm.prank(nextSubmitter);
         vm.expectEmit(true, true, true, true);
@@ -135,7 +135,7 @@ contract ParticipantTest is BaseTest {
         );
         Operation[] memory opts = new Operation[](1);
         opts[0] = Operation(participantHandlerProxy, State.Completed, taskId, callData);
-        bytes memory signature = _generateSignature(opts, tssKey);
+        bytes memory signature = _generateOptSignature(opts, tssKey);
         vm.prank(entryPoint.nextSubmitter());
         vm.expectEmit(true, true, true, true);
         emit IParticipantHandler.ParticipantRemoved(newParticipant);
@@ -151,7 +151,7 @@ contract ParticipantTest is BaseTest {
         );
         Operation[] memory opts = new Operation[](1);
         opts[0] = Operation(participantHandlerProxy, State.Completed, taskId, callData);
-        bytes memory signature = _generateSignature(opts, tssKey);
+        bytes memory signature = _generateOptSignature(opts, tssKey);
         vm.prank(entryPoint.nextSubmitter());
         vm.expectEmit(true, true, true, true);
         emit IEntryPoint.OperationFailed(
@@ -167,7 +167,7 @@ contract ParticipantTest is BaseTest {
         taskId = taskSubmitter.submitTask(_generateTaskContext());
         callData = abi.encodeWithSelector(IParticipantHandler.removeParticipant.selector, thisAddr);
         opts[0] = Operation(participantHandlerProxy, State.Completed, taskId, callData);
-        signature = _generateSignature(opts, tssKey);
+        signature = _generateOptSignature(opts, tssKey);
         nextSubmitter = entryPoint.nextSubmitter();
         vm.expectEmit(true, true, true, true);
         emit IEntryPoint.OperationFailed(
@@ -198,7 +198,7 @@ contract ParticipantTest is BaseTest {
             );
             opts[i] = Operation(participantHandlerProxy, State.Completed, taskId, callData);
         }
-        bytes memory signature = _generateSignature(opts, tssKey);
+        bytes memory signature = _generateOptSignature(opts, tssKey);
         nextSubmitter = entryPoint.nextSubmitter();
         vm.prank(nextSubmitter);
         entryPoint.verifyAndCall(opts, signature);
@@ -221,7 +221,7 @@ contract ParticipantTest is BaseTest {
         );
         Operation[] memory opts = new Operation[](1);
         opts[0] = Operation(participantHandlerProxy, State.Completed, taskId, callData);
-        bytes memory signature = _generateSignature(opts, tssKey);
+        bytes memory signature = _generateOptSignature(opts, tssKey);
         vm.prank(entryPoint.nextSubmitter());
         entryPoint.verifyAndCall(opts, signature);
         return _newParticipant;

@@ -48,7 +48,7 @@ contract AccountCreationTest is BaseTest {
         );
         Operation[] memory opts = new Operation[](1);
         opts[0] = Operation(amProxy, State.Completed, taskId, callData);
-        bytes memory signature = _generateSignature(opts, tssKey);
+        bytes memory signature = _generateOptSignature(opts, tssKey);
         entryPoint.verifyAndCall(opts, signature);
 
         // check mappings|reverseMapping
@@ -70,7 +70,7 @@ contract AccountCreationTest is BaseTest {
         // fail: already registered
         taskId = taskSubmitter.submitTask(_generateTaskContext());
         opts[0] = Operation(amProxy, State.Completed, taskId, callData);
-        signature = _generateSignature(opts, tssKey);
+        signature = _generateOptSignature(opts, tssKey);
 
         vm.expectEmit(true, true, true, true);
         emit IEntryPoint.OperationFailed(
@@ -98,7 +98,7 @@ contract AccountCreationTest is BaseTest {
         );
         Operation[] memory opts = new Operation[](1);
         opts[0] = Operation(amProxy, State.Completed, taskId, callData);
-        bytes memory signature = _generateSignature(opts, tssKey);
+        bytes memory signature = _generateOptSignature(opts, tssKey);
         vm.expectEmit(true, true, true, true);
         emit IEntryPoint.OperationFailed(
             abi.encodeWithSelector((IAccountHandler.InvalidAddress.selector))
@@ -116,7 +116,7 @@ contract AccountCreationTest is BaseTest {
             depositAddress
         );
         opts[0] = Operation(amProxy, State.Completed, taskId, callData);
-        signature = _generateSignature(opts, tssKey);
+        signature = _generateOptSignature(opts, tssKey);
         vm.prank(msgSender);
         vm.expectEmit(true, true, true, true);
         emit IEntryPoint.OperationFailed(

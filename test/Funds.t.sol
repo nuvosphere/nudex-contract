@@ -55,7 +55,7 @@ contract FundsTest is BaseTest {
         );
         Operation[] memory opts = new Operation[](1);
         opts[0] = Operation(dmProxy, State.Completed, taskId, callData);
-        bytes memory signature = _generateSignature(opts, tssKey);
+        bytes memory signature = _generateOptSignature(opts, tssKey);
         // check event and result
         vm.expectEmit(true, true, true, true);
         emit IFundsHandler.DepositRecorded(user, depositAmount, chainId, txInfo, extraInfo);
@@ -91,7 +91,7 @@ contract FundsTest is BaseTest {
             extraInfo
         );
         opts[0] = Operation(dmProxy, State.Completed, taskId, callData);
-        signature = _generateSignature(opts, tssKey);
+        signature = _generateOptSignature(opts, tssKey);
 
         // check event and result
         vm.expectEmit(true, true, true, true);
@@ -133,7 +133,7 @@ contract FundsTest is BaseTest {
         );
         Operation[] memory opts = new Operation[](1);
         opts[0] = Operation(dmProxy, State.Completed, taskId, callData);
-        bytes memory signature = _generateSignature(opts, tssKey);
+        bytes memory signature = _generateOptSignature(opts, tssKey);
         // fail case: invalid amount
         vm.expectEmit(true, true, true, true);
         emit IEntryPoint.OperationFailed(
@@ -176,7 +176,7 @@ contract FundsTest is BaseTest {
         for (uint16 i; i < batchSize; ++i) {
             assertEq(uint8(taskManager.getTaskState(taskIds[i])), uint8(State.Created));
         }
-        bytes memory signature = _generateSignature(opts, tssKey);
+        bytes memory signature = _generateOptSignature(opts, tssKey);
         entryPoint.verifyAndCall(opts, signature);
         IFundsHandler.DepositInfo memory depositInfo;
         for (uint8 i; i < batchSize; ++i) {
@@ -213,7 +213,7 @@ contract FundsTest is BaseTest {
         );
         Operation[] memory opts = new Operation[](1);
         opts[0] = Operation(dmProxy, State.Completed, taskId, callData);
-        bytes memory signature = _generateSignature(opts, tssKey);
+        bytes memory signature = _generateOptSignature(opts, tssKey);
 
         // check event and result
         vm.prank(msgSender);
@@ -253,7 +253,7 @@ contract FundsTest is BaseTest {
         );
         Operation[] memory opts = new Operation[](1);
         opts[0] = Operation(dmProxy, State.Completed, taskId, callData);
-        bytes memory signature = _generateSignature(opts, tssKey);
+        bytes memory signature = _generateOptSignature(opts, tssKey);
         // check event and result
         vm.expectEmit(true, true, true, true);
         emit IFundsHandler.WithdrawalRecorded(user, withdrawAmount, chainId, txInfo, extraInfo);
@@ -297,7 +297,7 @@ contract FundsTest is BaseTest {
         );
         Operation[] memory opts = new Operation[](1);
         opts[0] = Operation(dmProxy, State.Completed, taskId, callData);
-        bytes memory signature = _generateSignature(opts, tssKey);
+        bytes memory signature = _generateOptSignature(opts, tssKey);
         // fail case: invalid amount
         vm.expectEmit(true, true, true, true);
         emit IEntryPoint.OperationFailed(
@@ -337,7 +337,7 @@ contract FundsTest is BaseTest {
             );
             opts[i] = Operation(dmProxy, State.Completed, taskIds[i], callData);
         }
-        bytes memory signature = _generateSignature(opts, tssKey);
+        bytes memory signature = _generateOptSignature(opts, tssKey);
         for (uint16 i; i < batchSize; ++i) {
             assertEq(uint8(taskManager.getTaskState(taskIds[i])), uint8(State.Created));
         }

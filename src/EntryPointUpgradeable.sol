@@ -58,7 +58,14 @@ contract EntryPointUpgradeable is IEntryPoint, Initializable, ReentrancyGuardUpg
         bytes calldata _signature
     ) external onlyCurrentSubmitter nonReentrant {
         require(_newSigner != address(0), InvalidAddress());
-        _verifySignature(keccak256(abi.encodePacked(tssNonce++, _newSigner)), _signature);
+        require(
+            _verifySignature(
+                keccak256(abi.encodePacked(tssNonce++, block.chainid, _newSigner)),
+                _signature
+            ),
+            InvalidSigner(msg.sender)
+        );
+
         tssSigner = _newSigner;
         _rotateSubmitter();
     }
@@ -79,9 +86,12 @@ contract EntryPointUpgradeable is IEntryPoint, Initializable, ReentrancyGuardUpg
             block.timestamp >= lastSubmissionTime + FORCE_ROTATION_WINDOW,
             RotationWindowNotPassed(block.timestamp, lastSubmissionTime + FORCE_ROTATION_WINDOW)
         );
-        _verifySignature(
-            keccak256(abi.encodePacked(tssNonce++, _uncompletedTaskCount)),
-            _signature
+        require(
+            _verifySignature(
+                keccak256(abi.encodePacked(tssNonce++, block.chainid, _uncompletedTaskCount)),
+                _signature
+            ),
+            InvalidSigner(msg.sender)
         );
         nuvoLock.accumulateDemeritPoints(nextSubmitter, _uncompletedTaskCount);
         emit SubmitterRotationRequested(msg.sender, nextSubmitter);
@@ -97,7 +107,7 @@ contract EntryPointUpgradeable is IEntryPoint, Initializable, ReentrancyGuardUpg
         Operation[] calldata _opts,
         bytes calldata _signature
     ) external onlyCurrentSubmitter nonReentrant {
-        _verifyOperation(_opts, _signature, tssNonce++);
+        require(_verifyOperation(_opts, tssNonce++, _signature), InvalidSigner(msg.sender));
         bool success;
         bytes memory result;
         Operation memory opt;
@@ -125,15 +135,15 @@ contract EntryPointUpgradeable is IEntryPoint, Initializable, ReentrancyGuardUpg
     /**
      * @dev Verify operation signature.
      * @param _opts The batch operation to be executed.
-     * @param _signature The signature for verification.
      * @param _nonce The nonce of tssSigner.
+     * @param _signature The signature for verification.
      */
     function verifyOperation(
         Operation[] calldata _opts,
-        bytes calldata _signature,
-        uint256 _nonce
-    ) external view {
-        _verifyOperation(_opts, _signature, _nonce);
+        uint256 _nonce,
+        bytes calldata _signature
+    ) external view returns (bool) {
+        return _verifyOperation(_opts, _nonce, _signature);
     }
 
     /**
@@ -152,15 +162,16 @@ contract EntryPointUpgradeable is IEntryPoint, Initializable, ReentrancyGuardUpg
     /**
      * @dev Verify the validity of the operation.
      * @param _opts The batch operation to be executed.
+     * @param _nonce The nonce of tssSigner.
      * @param _signature The signature for verification.
      */
     function _verifyOperation(
         Operation[] calldata _opts,
-        bytes calldata _signature,
-        uint256 nonce
-    ) internal view {
+        uint256 _nonce,
+        bytes calldata _signature
+    ) internal view returns (bool) {
         require(_opts.length > 0, EmptyOperationsArray());
-        _verifySignature(keccak256(abi.encode(nonce, _opts)), _signature);
+        return _verifySignature(keccak256(abi.encode(_nonce, block.chainid, _opts)), _signature);
     }
 
     /**
@@ -168,13 +179,16 @@ contract EntryPointUpgradeable is IEntryPoint, Initializable, ReentrancyGuardUpg
      * @param _hash The hashed message.
      * @param _signature The signature for verification.
      */
-    function _verifySignature(bytes32 _hash, bytes calldata _signature) internal view {
+    function _verifySignature(
+        bytes32 _hash,
+        bytes calldata _signature
+    ) internal view returns (bool) {
         bytes32 messageHash = keccak256(
             abi.encodePacked("\x19Ethereum Signed Message:\n32", _hash)
         );
         (bytes32 r, bytes32 s, uint8 v) = _splitSignature(_signature);
         address recoverAddr = ecrecover(messageHash, v, r, s);
-        require(tssSigner == recoverAddr, InvalidSigner(msg.sender));
+        return tssSigner == recoverAddr;
     }
 
     /**

@@ -42,7 +42,7 @@ contract TaskManagerTest is BaseTest {
         bytes memory taskResult = "--- encoded task result ---";
         Operation[] memory opts = new Operation[](1);
         opts[0] = Operation(address(0), State.Completed, taskId, taskResult);
-        bytes memory signature = _generateSignature(opts, tssKey);
+        bytes memory signature = _generateOptSignature(opts, tssKey);
         vm.expectEmit(true, true, true, true);
         emit ITaskManager.TaskUpdated(
             taskId,

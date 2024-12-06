@@ -25,8 +25,12 @@ contract EntryPointTest is BaseTest {
         uint256 demeritPoint = 1;
         skip(1 minutes);
         // finialize task
-        bytes memory encodedData = abi.encodePacked(entryPoint.tssNonce(), demeritPoint);
-        bytes memory signature = _generateSignature(encodedData, tssKey);
+        bytes memory encodedData = abi.encodePacked(
+            entryPoint.tssNonce(),
+            block.chainid,
+            demeritPoint
+        );
+        bytes memory signature = _generateDataSignature(encodedData, tssKey);
         vm.expectEmit(true, true, true, true);
         emit IEntryPoint.SubmitterRotationRequested(msgSender, msgSender);
         entryPoint.chooseNewSubmitter(demeritPoint, signature);
