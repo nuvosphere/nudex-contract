@@ -7,7 +7,7 @@ import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/Messa
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
 import {EntryPointUpgradeable} from "../src/EntryPointUpgradeable.sol";
-import {Operation} from "../src/interfaces/IVotingManager.sol";
+import {Operation} from "../src/interfaces/IEntryPoint.sol";
 
 contract SignatureGenerator is Script {
     using MessageHashUtils for bytes32;

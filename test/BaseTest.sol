@@ -6,13 +6,13 @@ import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/Messa
 import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 
 import {NuvoLockUpgradeable} from "../src/NuvoLockUpgradeable.sol";
-import {ParticipantManagerUpgradeable} from "../src/handlers/ParticipantManagerUpgradeable.sol";
+import {ParticipantHandlerUpgradeable} from "../src/handlers/ParticipantHandlerUpgradeable.sol";
 import {TaskManagerUpgradeable} from "../src/tasks/TaskManagerUpgradeable.sol";
 import {TaskSubmitter} from "../src/tasks/TaskSubmitter.sol";
 import {EntryPointUpgradeable} from "../src/EntryPointUpgradeable.sol";
 
-import {IVotingManager} from "../src/interfaces/IVotingManager.sol";
-import {Operation} from "../src/interfaces/IVotingManager.sol";
+import {IEntryPoint} from "../src/interfaces/IEntryPoint.sol";
+import {Operation} from "../src/interfaces/IEntryPoint.sol";
 import {State} from "../src/interfaces/ITaskManager.sol";
 import {UintToString} from "../src/libs/UintToString.sol";
 
@@ -27,7 +27,7 @@ contract BaseTest is Test {
     MockNuvoToken public nuvoToken;
 
     NuvoLockUpgradeable public nuvoLock;
-    ParticipantManagerUpgradeable public participantManager;
+    ParticipantHandlerUpgradeable public participantManager;
     TaskManagerUpgradeable public taskManager;
     TaskSubmitter public taskSubmitter;
     EntryPointUpgradeable public votingManager;
@@ -50,7 +50,6 @@ contract BaseTest is Test {
         // console.log("Addresses: ", address(this), msgSender);
 
         // deploy mock nuvoToken
-        // vm.prank(msgSender);
         nuvoToken = new MockNuvoToken();
         nuvoToken.mint(msgSender, 100 ether);
 
@@ -76,12 +75,12 @@ contract BaseTest is Test {
         taskManager.initialize(address(taskSubmitter), vmProxy);
         assertEq(taskManager.owner(), vmProxy);
 
-        // deploy ParticipantManagerUpgradeable
+        // deploy ParticipantHandlerUpgradeable
         address participantManagerProxy = _deployProxy(
-            address(new ParticipantManagerUpgradeable()),
+            address(new ParticipantHandlerUpgradeable()),
             daoContract
         );
-        participantManager = ParticipantManagerUpgradeable(participantManagerProxy);
+        participantManager = ParticipantHandlerUpgradeable(participantManagerProxy);
         address[] memory participants = new address[](3);
         participants[0] = msgSender;
         participants[1] = msgSender;

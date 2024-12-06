@@ -4,12 +4,12 @@ pragma solidity ^0.8.0;
 import {Script, console} from "forge-std/Script.sol";
 import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 
-import {AccountManagerUpgradeable} from "../src/handlers/AccountManagerUpgradeable.sol";
-import {DepositManagerUpgradeable} from "../src/handlers/DepositManagerUpgradeable.sol";
+import {AccountHandlerUpgradeable} from "../src/handlers/AccountHandlerUpgradeable.sol";
+import {FundsHandlerUpgradeable} from "../src/handlers/FundsHandlerUpgradeable.sol";
 import {NuvoLockUpgradeable} from "../src/NuvoLockUpgradeable.sol";
 import {TaskManagerUpgradeable} from "../src/tasks/TaskManagerUpgradeable.sol";
 import {TaskSubmitter} from "../src/tasks/TaskSubmitter.sol";
-import {ParticipantManagerUpgradeable} from "../src/handlers/ParticipantManagerUpgradeable.sol";
+import {ParticipantHandlerUpgradeable} from "../src/handlers/ParticipantHandlerUpgradeable.sol";
 import {EntryPointUpgradeable} from "../src/EntryPointUpgradeable.sol";
 
 contract Deploy is Script {
@@ -53,8 +53,8 @@ contract Deploy is Script {
         nuvoLock.initialize(nuvoToken, deployer, vmProxy, 1 weeks, 1 ether);
 
         // deploy participantManager
-        pmProxy = deployProxy(address(new ParticipantManagerUpgradeable()), daoContract);
-        ParticipantManagerUpgradeable participantManager = ParticipantManagerUpgradeable(pmProxy);
+        pmProxy = deployProxy(address(new ParticipantHandlerUpgradeable()), daoContract);
+        ParticipantHandlerUpgradeable participantManager = ParticipantHandlerUpgradeable(pmProxy);
         participantManager.initialize(address(0), vmProxy, initialParticipants);
 
         // deploy taskManager
@@ -63,13 +63,13 @@ contract Deploy is Script {
         taskManager.initialize(address(new TaskSubmitter(tmProxy)), vmProxy);
 
         // deploy accountManager
-        amProxy = deployProxy(address(new AccountManagerUpgradeable()), daoContract);
-        AccountManagerUpgradeable accountManager = AccountManagerUpgradeable(amProxy);
+        amProxy = deployProxy(address(new AccountHandlerUpgradeable()), daoContract);
+        AccountHandlerUpgradeable accountManager = AccountHandlerUpgradeable(amProxy);
         accountManager.initialize(vmProxy);
 
         // deploy depositManager and NIP20 contract
-        dmProxy = deployProxy(address(new DepositManagerUpgradeable()), daoContract);
-        DepositManagerUpgradeable depositManager = DepositManagerUpgradeable(dmProxy);
+        dmProxy = deployProxy(address(new FundsHandlerUpgradeable()), daoContract);
+        FundsHandlerUpgradeable depositManager = FundsHandlerUpgradeable(dmProxy);
         depositManager.initialize(vmProxy);
 
         // initialize votingManager link to all contracts

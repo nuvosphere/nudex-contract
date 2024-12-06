@@ -6,12 +6,12 @@ import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transpa
 
 import {MockNuvoToken} from "../src/mocks/MockNuvoToken.sol";
 
-import {AccountManagerUpgradeable} from "../src/handlers/AccountManagerUpgradeable.sol";
-import {DepositManagerUpgradeable} from "../src/handlers/DepositManagerUpgradeable.sol";
+import {AccountHandlerUpgradeable} from "../src/handlers/AccountHandlerUpgradeable.sol";
+import {FundsHandlerUpgradeable} from "../src/handlers/FundsHandlerUpgradeable.sol";
 import {NuvoLockUpgradeable} from "../src/NuvoLockUpgradeable.sol";
 import {TaskManagerUpgradeable} from "../src/tasks/TaskManagerUpgradeable.sol";
 import {TaskSubmitter} from "../src/tasks/TaskSubmitter.sol";
-import {ParticipantManagerUpgradeable} from "../src/handlers/ParticipantManagerUpgradeable.sol";
+import {ParticipantHandlerUpgradeable} from "../src/handlers/ParticipantHandlerUpgradeable.sol";
 import {EntryPointUpgradeable} from "../src/EntryPointUpgradeable.sol";
 
 // this contract is only used for contract testing
@@ -42,7 +42,7 @@ contract DeployTest is Script {
 
         // deploy votingManager proxy
         EntryPointUpgradeable votingManager = new EntryPointUpgradeable();
-        console.log("|VotingManager| ", address(votingManager));
+        console.log("|EntryPoint| ", address(votingManager));
 
         // deploy nuvoLock
         NuvoLockUpgradeable nuvoLock = new NuvoLockUpgradeable();
@@ -50,13 +50,13 @@ contract DeployTest is Script {
         console.log("|NuvoLock|", address(nuvoLock));
 
         // deploy participantManager
-        ParticipantManagerUpgradeable participantManager = new ParticipantManagerUpgradeable();
+        ParticipantHandlerUpgradeable participantManager = new ParticipantHandlerUpgradeable();
         participantManager.initialize(
             address(nuvoLock),
             address(votingManager),
             initialParticipants
         );
-        console.log("|ParticipantManager|", address(participantManager));
+        console.log("|ParticipantHandler|", address(participantManager));
 
         // deploy taskManager
         TaskManagerUpgradeable taskManager = new TaskManagerUpgradeable();
@@ -66,14 +66,14 @@ contract DeployTest is Script {
         console.log("|TaskManager|", address(taskManager));
 
         // deploy accountManager
-        AccountManagerUpgradeable accountManager = new AccountManagerUpgradeable();
+        AccountHandlerUpgradeable accountManager = new AccountHandlerUpgradeable();
         accountManager.initialize(address(votingManager));
-        console.log("|AccountManager|", address(accountManager));
+        console.log("|AccountHandler|", address(accountManager));
 
         // deploy depositManager and NIP20 contract
-        DepositManagerUpgradeable depositManager = new DepositManagerUpgradeable();
+        FundsHandlerUpgradeable depositManager = new FundsHandlerUpgradeable();
         depositManager.initialize(address(votingManager));
-        console.log("|DepositManager|", address(depositManager));
+        console.log("|FundsHandler|", address(depositManager));
 
         // initialize votingManager link to all contracts
         votingManager.initialize(

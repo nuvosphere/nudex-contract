@@ -6,7 +6,7 @@ import {ITransparentUpgradeableProxy, ProxyAdmin} from "@openzeppelin/contracts/
 import {NuvoProxy} from "../src/proxies/NuvoProxy.sol";
 import "../src/mocks/MockLogic.sol";
 
-contract CustomProxy is BaseTest {
+contract ProxyTest is BaseTest {
     MockLogic1 logic1;
     MockLogic2 logic2;
     ProxyAdmin proxyAdmin;

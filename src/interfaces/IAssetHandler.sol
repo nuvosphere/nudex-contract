@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-interface IAssetManager {
+interface IAssetHandler {
     enum AssetType {
         BTC,
         Ordinal,

@@ -4,16 +4,16 @@ pragma solidity ^0.8.26;
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 
-import {IParticipantManager} from "./interfaces/IParticipantManager.sol";
+import {IParticipantHandler} from "./interfaces/IParticipantHandler.sol";
 import {ITaskManager, State} from "./interfaces/ITaskManager.sol";
 import {INuvoLock} from "./interfaces/INuvoLock.sol";
-import {IVotingManager, Operation} from "./interfaces/IVotingManager.sol";
+import {IEntryPoint, Operation} from "./interfaces/IEntryPoint.sol";
 
 /**
  * @dev Manage all onchain information.
  */
-contract EntryPointUpgradeable is IVotingManager, Initializable, ReentrancyGuardUpgradeable {
-    IParticipantManager public participantManager;
+contract EntryPointUpgradeable is IEntryPoint, Initializable, ReentrancyGuardUpgradeable {
+    IParticipantHandler public participantManager;
     ITaskManager public taskManager;
     INuvoLock public nuvoLock;
 
@@ -38,7 +38,7 @@ contract EntryPointUpgradeable is IVotingManager, Initializable, ReentrancyGuard
     ) public initializer {
         __ReentrancyGuard_init();
 
-        participantManager = IParticipantManager(_participantManager);
+        participantManager = IParticipantHandler(_participantManager);
         taskManager = ITaskManager(_taskManager);
         nuvoLock = INuvoLock(_nuvoLock);
 
@@ -70,7 +70,7 @@ contract EntryPointUpgradeable is IVotingManager, Initializable, ReentrancyGuard
     function chooseNewSubmitter(bytes calldata _signature) external nonReentrant {
         require(
             participantManager.isParticipant(msg.sender),
-            IParticipantManager.NotParticipant(msg.sender)
+            IParticipantHandler.NotParticipant(msg.sender)
         );
         require(
             block.timestamp >= lastSubmissionTime + forcedRotationWindow,

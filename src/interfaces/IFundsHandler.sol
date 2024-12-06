@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-interface IDepositManager {
+interface IFundsHandler {
     struct DepositInfo {
         address targetAddress;
         uint256 chainId;

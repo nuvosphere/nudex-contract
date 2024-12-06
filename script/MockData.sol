@@ -5,8 +5,8 @@ import {Script, console} from "forge-std/Script.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 
 import {NuvoProxy, ITransparentUpgradeableProxy} from "../src/proxies/NuvoProxy.sol";
-import {AccountManagerUpgradeable} from "../src/handlers/AccountManagerUpgradeable.sol";
-import {IAccountManager} from "../src/interfaces/IAccountManager.sol";
+import {AccountHandlerUpgradeable} from "../src/handlers/AccountHandlerUpgradeable.sol";
+import {IAccountHandler} from "../src/interfaces/IAccountHandler.sol";
 
 // this contract is only used for contract testing
 contract MockData is Script {
@@ -17,16 +17,16 @@ contract MockData is Script {
         vm.startBroadcast(deployerPrivateKey);
 
         // deploy accountManager
-        AccountManagerUpgradeable accountManager = new AccountManagerUpgradeable();
+        AccountHandlerUpgradeable accountManager = new AccountHandlerUpgradeable();
         NuvoProxy proxy = new NuvoProxy(address(accountManager), vm.envAddress("PARTICIPANT_2"));
-        accountManager = AccountManagerUpgradeable(address(proxy));
+        accountManager = AccountHandlerUpgradeable(address(proxy));
         accountManager.initialize(address(deployer));
-        console.log("|AccountManager|", address(accountManager));
+        console.log("|AccountHandler|", address(accountManager));
 
         for (uint8 i; i < 10; ++i) {
             accountManager.registerNewAddress(
                 10001,
-                IAccountManager.Chain.EVM,
+                IAccountHandler.Chain.EVM,
                 i,
                 Strings.toHexString(makeAddr(Strings.toString(i)))
             );
@@ -34,38 +34,38 @@ contract MockData is Script {
 
         accountManager.registerNewAddress(
             10002,
-            IAccountManager.Chain.BTC,
+            IAccountHandler.Chain.BTC,
             0,
             "124wd5urvxo4H3naXR6QACP1MGVpLeikeR"
         );
         accountManager.registerNewAddress(
             10002,
-            IAccountManager.Chain.BTC,
+            IAccountHandler.Chain.BTC,
             1,
             "1HkJEUpgptueutWRFB1bjHGKA5wtKBoToW"
         );
         accountManager.registerNewAddress(
             10002,
-            IAccountManager.Chain.BTC,
+            IAccountHandler.Chain.BTC,
             2,
             "1PS21zbYxJZUzsHg91MfxUDbqkn7BEw2C5"
         );
 
         accountManager.registerNewAddress(
             10003,
-            IAccountManager.Chain.SOL,
+            IAccountHandler.Chain.SOL,
             0,
             "w9A6215VdjCgX9BVwK1ZXE7sKBuNGh7bdmeGBEs7625"
         );
         accountManager.registerNewAddress(
             10003,
-            IAccountManager.Chain.SOL,
+            IAccountHandler.Chain.SOL,
             1,
             "4WMARsRWo8x7oJRwTQ9LhbDuiAnzz5TF3WzpTCgACrfe"
         );
         accountManager.registerNewAddress(
             10003,
-            IAccountManager.Chain.SOL,
+            IAccountHandler.Chain.SOL,
             2,
             "8ymc6niJiF4imco29UU3z7mK11sCt9NdL3LjG3VkEYAC"
         );

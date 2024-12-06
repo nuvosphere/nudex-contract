@@ -10,7 +10,7 @@ struct Operation {
     bytes optData;
 }
 
-contract IVotingManager {
+contract IEntryPoint {
     event SubmitterChosen(address indexed newSubmitter);
     event SubmitterRotationRequested(address indexed requester, address indexed currentSubmitter);
     event OperationFailed(bytes indexed errInfo);

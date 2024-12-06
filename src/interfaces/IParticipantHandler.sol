@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-interface IParticipantManager {
+interface IParticipantHandler {
     event ParticipantAdded(address indexed participant);
     event ParticipantRemoved(address indexed participant);
 

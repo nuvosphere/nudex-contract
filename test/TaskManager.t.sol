@@ -4,7 +4,7 @@ import "./BaseTest.sol";
 
 import {ITaskManager} from "../src/interfaces/ITaskManager.sol";
 
-contract TaskManagment is BaseTest {
+contract TaskManagerTest is BaseTest {
     address public tmProxy;
 
     function setUp() public override {

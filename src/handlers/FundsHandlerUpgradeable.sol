@@ -2,9 +2,9 @@
 pragma solidity ^0.8.26;
 
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import {IDepositManager} from "../interfaces/IDepositManager.sol";
+import {IFundsHandler} from "../interfaces/IFundsHandler.sol";
 
-contract DepositManagerUpgradeable is IDepositManager, OwnableUpgradeable {
+contract FundsHandlerUpgradeable is IFundsHandler, OwnableUpgradeable {
     mapping(address => DepositInfo[]) public deposits;
     mapping(address => WithdrawalInfo[]) public withdrawals;
 

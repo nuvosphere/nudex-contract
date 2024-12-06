@@ -2,10 +2,10 @@
 pragma solidity ^0.8.26;
 
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import {IParticipantManager} from "../interfaces/IParticipantManager.sol";
+import {IParticipantHandler} from "../interfaces/IParticipantHandler.sol";
 import {INuvoLock} from "../interfaces/INuvoLock.sol";
 
-contract ParticipantManagerUpgradeable is IParticipantManager, OwnableUpgradeable {
+contract ParticipantHandlerUpgradeable is IParticipantHandler, OwnableUpgradeable {
     INuvoLock public nuvoLock;
 
     address[] public participants;

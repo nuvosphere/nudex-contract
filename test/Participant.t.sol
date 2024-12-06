@@ -2,9 +2,9 @@ pragma solidity ^0.8.0;
 
 import "./BaseTest.sol";
 
-import {IParticipantManager} from "../src/interfaces/IParticipantManager.sol";
+import {IParticipantHandler} from "../src/interfaces/IParticipantHandler.sol";
 
-contract Participant is BaseTest {
+contract ParticipantTest is BaseTest {
     address public user;
 
     address public participant1;
@@ -30,15 +30,15 @@ contract Participant is BaseTest {
         vm.stopPrank();
 
         participantManagerProxy = _deployProxy(
-            address(new ParticipantManagerUpgradeable()),
+            address(new ParticipantHandlerUpgradeable()),
             daoContract
         );
-        participantManager = ParticipantManagerUpgradeable(participantManagerProxy);
+        participantManager = ParticipantHandlerUpgradeable(participantManagerProxy);
         address[] memory participants = new address[](2);
         participants[0] = msgSender;
         participants[1] = participant1;
         // must have at least 3 participants
-        vm.expectRevert(IParticipantManager.NotEnoughParticipant.selector);
+        vm.expectRevert(IParticipantHandler.NotEnoughParticipant.selector);
         participantManager.initialize(address(nuvoLock), vmProxy, participants);
         participants = new address[](3);
         participants[0] = msgSender;
@@ -67,7 +67,7 @@ contract Participant is BaseTest {
         address newParticipant = makeAddr("newParticipant");
         // fail: did not stake
         bytes memory callData = abi.encodeWithSelector(
-            IParticipantManager.addParticipant.selector,
+            IParticipantHandler.addParticipant.selector,
             newParticipant
         );
         Operation[] memory opts = new Operation[](1);
@@ -75,8 +75,8 @@ contract Participant is BaseTest {
         bytes memory signature = _generateSignature(opts, tssKey);
         nextSubmitter = votingManager.nextSubmitter();
         vm.expectEmit(true, true, true, true);
-        emit IVotingManager.OperationFailed(
-            abi.encodeWithSelector(IParticipantManager.NotEligible.selector, newParticipant)
+        emit IEntryPoint.OperationFailed(
+            abi.encodeWithSelector(IParticipantHandler.NotEligible.selector, newParticipant)
         );
         vm.prank(nextSubmitter);
         votingManager.verifyAndCall(opts, signature);
@@ -99,14 +99,14 @@ contract Participant is BaseTest {
         // successfully add new user
         taskId = taskSubmitter.submitTask(_generateTaskContext());
         callData = abi.encodeWithSelector(
-            IParticipantManager.addParticipant.selector,
+            IParticipantHandler.addParticipant.selector,
             newParticipant
         );
         opts[0] = Operation(participantManagerProxy, State.Completed, taskId, callData);
         signature = _generateSignature(opts, tssKey);
         vm.prank(votingManager.nextSubmitter());
         vm.expectEmit(true, true, true, true);
-        emit IParticipantManager.ParticipantAdded(newParticipant);
+        emit IParticipantHandler.ParticipantAdded(newParticipant);
         votingManager.verifyAndCall(opts, signature);
 
         // fail: adding the same user again
@@ -116,8 +116,8 @@ contract Participant is BaseTest {
         nextSubmitter = votingManager.nextSubmitter();
         vm.prank(nextSubmitter);
         vm.expectEmit(true, true, true, true);
-        emit IVotingManager.OperationFailed(
-            abi.encodeWithSelector(IParticipantManager.AlreadyParticipant.selector, newParticipant)
+        emit IEntryPoint.OperationFailed(
+            abi.encodeWithSelector(IParticipantHandler.AlreadyParticipant.selector, newParticipant)
         );
         votingManager.verifyAndCall(opts, signature);
     }
@@ -130,7 +130,7 @@ contract Participant is BaseTest {
         // remove the added user
         uint64 taskId = taskSubmitter.submitTask(_generateTaskContext());
         bytes memory callData = abi.encodeWithSelector(
-            IParticipantManager.removeParticipant.selector,
+            IParticipantHandler.removeParticipant.selector,
             newParticipant
         );
         Operation[] memory opts = new Operation[](1);
@@ -138,7 +138,7 @@ contract Participant is BaseTest {
         bytes memory signature = _generateSignature(opts, tssKey);
         vm.prank(votingManager.nextSubmitter());
         vm.expectEmit(true, true, true, true);
-        emit IParticipantManager.ParticipantRemoved(newParticipant);
+        emit IParticipantHandler.ParticipantRemoved(newParticipant);
         votingManager.verifyAndCall(opts, signature);
     }
 
@@ -146,7 +146,7 @@ contract Participant is BaseTest {
         uint64 taskId = taskSubmitter.submitTask(_generateTaskContext());
         // fail: cannot remove user when there is only 3 participant left
         bytes memory callData = abi.encodeWithSelector(
-            IParticipantManager.removeParticipant.selector,
+            IParticipantHandler.removeParticipant.selector,
             msgSender
         );
         Operation[] memory opts = new Operation[](1);
@@ -154,8 +154,8 @@ contract Participant is BaseTest {
         bytes memory signature = _generateSignature(opts, tssKey);
         vm.prank(votingManager.nextSubmitter());
         vm.expectEmit(true, true, true, true);
-        emit IVotingManager.OperationFailed(
-            abi.encodeWithSelector(IParticipantManager.NotEnoughParticipant.selector)
+        emit IEntryPoint.OperationFailed(
+            abi.encodeWithSelector(IParticipantHandler.NotEnoughParticipant.selector)
         );
         votingManager.verifyAndCall(opts, signature);
 
@@ -165,13 +165,13 @@ contract Participant is BaseTest {
 
         // fail: remove a non-participant user
         taskId = taskSubmitter.submitTask(_generateTaskContext());
-        callData = abi.encodeWithSelector(IParticipantManager.removeParticipant.selector, thisAddr);
+        callData = abi.encodeWithSelector(IParticipantHandler.removeParticipant.selector, thisAddr);
         opts[0] = Operation(participantManagerProxy, State.Completed, taskId, callData);
         signature = _generateSignature(opts, tssKey);
         nextSubmitter = votingManager.nextSubmitter();
         vm.expectEmit(true, true, true, true);
-        emit IVotingManager.OperationFailed(
-            abi.encodeWithSelector(IParticipantManager.NotParticipant.selector, thisAddr)
+        emit IEntryPoint.OperationFailed(
+            abi.encodeWithSelector(IParticipantHandler.NotParticipant.selector, thisAddr)
         );
         vm.prank(nextSubmitter);
         votingManager.verifyAndCall(opts, signature);
@@ -193,7 +193,7 @@ contract Participant is BaseTest {
             // removing a participant
             taskId = taskSubmitter.submitTask(_generateTaskContext());
             callData = abi.encodeWithSelector(
-                IParticipantManager.removeParticipant.selector,
+                IParticipantHandler.removeParticipant.selector,
                 newParticipants[i]
             );
             opts[i] = Operation(participantManagerProxy, State.Completed, taskId, callData);
@@ -216,7 +216,7 @@ contract Participant is BaseTest {
 
         // add new user through votingManager
         bytes memory callData = abi.encodeWithSelector(
-            IParticipantManager.addParticipant.selector,
+            IParticipantHandler.addParticipant.selector,
             _newParticipant
         );
         Operation[] memory opts = new Operation[](1);

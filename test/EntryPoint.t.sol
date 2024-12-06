@@ -4,7 +4,7 @@ import "./BaseTest.sol";
 
 import {ITaskManager} from "../src/interfaces/ITaskManager.sol";
 
-contract VotingManager is BaseTest {
+contract EntryPointTest is BaseTest {
     address public tmProxy;
 
     function setUp() public override {
@@ -24,7 +24,6 @@ contract VotingManager is BaseTest {
         vm.startPrank(msgSender);
         // submit task
         bytes memory taskContext = "--- task context ---";
-        uint64 taskId = taskSubmitter.submitTask(taskContext);
         skip(1 minutes);
         // finialize task
         bytes memory encodedData = abi.encodePacked(
@@ -33,7 +32,7 @@ contract VotingManager is BaseTest {
         );
         bytes memory signature = _generateSignature(encodedData, tssKey);
         vm.expectEmit(true, true, true, true);
-        emit IVotingManager.SubmitterRotationRequested(msgSender, msgSender);
+        emit IEntryPoint.SubmitterRotationRequested(msgSender, msgSender);
         votingManager.chooseNewSubmitter(signature);
         vm.stopPrank();
     }
