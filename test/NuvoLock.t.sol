@@ -275,11 +275,11 @@ contract NuvoLockTest is BaseTest {
         vm.stopPrank();
         skip(1 weeks);
         vm.startPrank(vmProxy);
-        nuvoLock.accumulateBonusPoints(msgSender);
+        nuvoLock.accumulateBonusPoints(msgSender, 1);
         (, , , , , uint256 bonusPoints, , ) = nuvoLock.locks(msgSender);
         assertEq(bonusPoints, 2);
         skip(1 weeks);
-        nuvoLock.accumulateDemeritPoints(msgSender);
+        nuvoLock.accumulateDemeritPoints(msgSender, 1);
         (, , , , , , , uint256 demeritPoint) = nuvoLock.locks(msgSender);
         assertEq(demeritPoint, 1);
     }
@@ -343,7 +343,7 @@ contract NuvoLockTest is BaseTest {
         // when demeritPoint is applied
         vm.revertTo(snapshot);
         vm.prank(vmProxy);
-        nuvoLock.accumulateDemeritPoints(msgSender);
+        nuvoLock.accumulateDemeritPoints(msgSender, 1);
         {
             (, , , , , uint256 bonusPoints, , uint256 demeritPoints) = nuvoLock.locks(msgSender);
             assertEq(bonusPoints, 1);
@@ -383,10 +383,6 @@ contract NuvoLockTest is BaseTest {
         vm.prank(msgSender);
         vm.expectRevert(abi.encodeWithSelector(INuvoLock.NotAUser.selector, msgSender));
         votingManager.verifyAndCall(opts, signature);
-
-        vm.prank(vmProxy);
-        vm.expectRevert(abi.encodeWithSelector(INuvoLock.NotAUser.selector, msgSender));
-        nuvoLock.accumulateDemeritPoints(msgSender);
 
         vm.startPrank(msgSender);
         nuvoToken.approve(address(nuvoLock), MIN_LOCK_AMOUNT);

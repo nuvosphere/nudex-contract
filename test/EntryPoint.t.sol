@@ -22,18 +22,14 @@ contract EntryPointTest is BaseTest {
 
     function test_ChooseNewSubmitter() public {
         vm.startPrank(msgSender);
-        // submit task
-        bytes memory taskContext = "--- task context ---";
+        uint256 demeritPoint = 1;
         skip(1 minutes);
         // finialize task
-        bytes memory encodedData = abi.encodePacked(
-            votingManager.tssNonce(),
-            bytes("chooseNewSubmitter")
-        );
+        bytes memory encodedData = abi.encodePacked(votingManager.tssNonce(), demeritPoint);
         bytes memory signature = _generateSignature(encodedData, tssKey);
         vm.expectEmit(true, true, true, true);
         emit IEntryPoint.SubmitterRotationRequested(msgSender, msgSender);
-        votingManager.chooseNewSubmitter(signature);
+        votingManager.chooseNewSubmitter(demeritPoint, signature);
         vm.stopPrank();
     }
 }

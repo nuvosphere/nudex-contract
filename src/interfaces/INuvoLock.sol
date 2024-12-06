@@ -71,9 +71,9 @@ interface INuvoLock {
 
     function unlock() external;
 
-    function accumulateBonusPoints(address participant) external;
+    function accumulateBonusPoints(address participant, uint256 amount) external;
 
-    function accumulateDemeritPoints(address participant) external;
+    function accumulateDemeritPoints(address participant, uint256 amount) external;
 
     function setMinLockInfo(uint256 _minLockAmount, uint32 _minLockPeriod) external;
 

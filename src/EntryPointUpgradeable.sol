@@ -18,8 +18,8 @@ contract EntryPointUpgradeable is IEntryPoint, Initializable, ReentrancyGuardUpg
     INuvoLock public nuvoLock;
 
     uint256 public lastSubmissionTime;
-    uint256 public constant forcedRotationWindow = 1 minutes;
-    uint256 public constant taskCompletionThreshold = 1 hours;
+    uint256 public constant FORCE_ROTATION_WINDOW = 1 minutes;
+    uint256 public constant TASK_COMPLETION_THRESHOLD = 1 hours;
 
     uint256 public tssNonce;
     address public tssSigner;
@@ -67,27 +67,23 @@ contract EntryPointUpgradeable is IEntryPoint, Initializable, ReentrancyGuardUpg
      * @dev Pick new random submitter if the current submitter is inactive for too long.
      * @param _signature The signature for verification.
      */
-    function chooseNewSubmitter(bytes calldata _signature) external nonReentrant {
+    function chooseNewSubmitter(
+        uint256 _uncompletedTaskCount,
+        bytes calldata _signature
+    ) external nonReentrant {
         require(
             participantManager.isParticipant(msg.sender),
             IParticipantHandler.NotParticipant(msg.sender)
         );
         require(
-            block.timestamp >= lastSubmissionTime + forcedRotationWindow,
-            RotationWindowNotPassed(block.timestamp, lastSubmissionTime + forcedRotationWindow)
+            block.timestamp >= lastSubmissionTime + FORCE_ROTATION_WINDOW,
+            RotationWindowNotPassed(block.timestamp, lastSubmissionTime + FORCE_ROTATION_WINDOW)
         );
         _verifySignature(
-            keccak256(abi.encodePacked(tssNonce++, bytes("chooseNewSubmitter"))),
+            keccak256(abi.encodePacked(tssNonce++, _uncompletedTaskCount)),
             _signature
         );
-        // Check for uncompleted tasks and apply demerit points if needed
-        ITaskManager.Task[] memory uncompletedTasks = taskManager.getUncompletedTasks();
-        for (uint256 i = 0; i < uncompletedTasks.length; i++) {
-            if (block.timestamp > uncompletedTasks[i].createdAt + taskCompletionThreshold) {
-                //uncompleted tasks
-                nuvoLock.accumulateDemeritPoints(nextSubmitter);
-            }
-        }
+        nuvoLock.accumulateDemeritPoints(nextSubmitter, _uncompletedTaskCount);
         emit SubmitterRotationRequested(msg.sender, nextSubmitter);
         _rotateSubmitter();
     }
@@ -185,7 +181,7 @@ contract EntryPointUpgradeable is IEntryPoint, Initializable, ReentrancyGuardUpg
      * @dev Pick a new random submiter from the participant list.
      */
     function _rotateSubmitter() internal {
-        nuvoLock.accumulateBonusPoints(msg.sender);
+        nuvoLock.accumulateBonusPoints(msg.sender, 1);
         lastSubmissionTime = block.timestamp;
         nextSubmitter = participantManager.getRandomParticipant(block.timestamp);
         emit SubmitterChosen(nextSubmitter);

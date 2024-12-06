@@ -144,7 +144,7 @@ contract NuvoLockUpgradeable is INuvoLock, OwnableUpgradeable {
      * @dev Add bonus point for user.
      * @param _userAddr The user address.
      */
-    function accumulateBonusPoints(address _userAddr) external onlyOwner {
+    function accumulateBonusPoints(address _userAddr, uint256 _amount) external onlyOwner {
         require(locks[_userAddr].amount > 0, NotAUser(_userAddr));
 
         // Check if the reward period has ended and accumulate rewards if necessary
@@ -153,24 +153,22 @@ contract NuvoLockUpgradeable is INuvoLock, OwnableUpgradeable {
         }
 
         // Accumulate points
-        locks[_userAddr].bonusPoints++;
-        totalBonusPoints++;
+        locks[_userAddr].bonusPoints += _amount;
+        totalBonusPoints += _amount;
     }
 
     /**
      * @dev Add demerit point for user
      * @param _userAddr The user address.
      */
-    function accumulateDemeritPoints(address _userAddr) external onlyOwner {
-        require(locks[_userAddr].amount > 0, NotAUser(_userAddr));
-
+    function accumulateDemeritPoints(address _userAddr, uint256 _amount) external onlyOwner {
         // Check if the reward period has ended and accumulate rewards if necessary
         if (getCurrentPeriod() > lastPeriodNumber) {
             accumulateRewards();
         }
 
         // Accumulate points
-        locks[_userAddr].demeritPoints++;
+        locks[_userAddr].demeritPoints += _amount;
     }
 
     /**
