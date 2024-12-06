@@ -9,7 +9,7 @@ contract ParticipantTest is BaseTest {
 
     address public participant1;
     address public participant2;
-    address public participantManagerProxy;
+    address public participantHandlerProxy;
     address public nextSubmitter;
 
     function setUp() public override {
@@ -29,35 +29,35 @@ contract ParticipantTest is BaseTest {
         nuvoLock.lock(MIN_LOCK_AMOUNT, MIN_LOCK_PERIOD);
         vm.stopPrank();
 
-        participantManagerProxy = _deployProxy(
+        participantHandlerProxy = _deployProxy(
             address(new ParticipantHandlerUpgradeable()),
             daoContract
         );
-        participantManager = ParticipantHandlerUpgradeable(participantManagerProxy);
+        participantHandler = ParticipantHandlerUpgradeable(participantHandlerProxy);
         address[] memory participants = new address[](2);
         participants[0] = msgSender;
         participants[1] = participant1;
         // must have at least 3 participants
         vm.expectRevert(IParticipantHandler.NotEnoughParticipant.selector);
-        participantManager.initialize(address(nuvoLock), vmProxy, participants);
+        participantHandler.initialize(address(nuvoLock), vmProxy, participants);
         participants = new address[](3);
         participants[0] = msgSender;
         participants[1] = participant1;
         participants[2] = participant2;
-        participantManager.initialize(address(nuvoLock), vmProxy, participants);
-        assertEq(participantManager.getParticipants().length, 3);
+        participantHandler.initialize(address(nuvoLock), vmProxy, participants);
+        assertEq(participantHandler.getParticipants().length, 3);
 
-        votingManager = EntryPointUpgradeable(vmProxy);
-        votingManager.initialize(
+        entryPoint = EntryPointUpgradeable(vmProxy);
+        entryPoint.initialize(
             tssSigner, // tssSigner
-            participantManagerProxy, // participantManager
+            participantHandlerProxy, // participantHandler
             address(taskManager), // taskManager
             address(nuvoLock) // nuvoLock
         );
         assert(
-            votingManager.nextSubmitter() == msgSender ||
-                votingManager.nextSubmitter() == participant1 ||
-                votingManager.nextSubmitter() == participant2
+            entryPoint.nextSubmitter() == msgSender ||
+                entryPoint.nextSubmitter() == participant1 ||
+                entryPoint.nextSubmitter() == participant2
         );
     }
 
@@ -71,15 +71,15 @@ contract ParticipantTest is BaseTest {
             newParticipant
         );
         Operation[] memory opts = new Operation[](1);
-        opts[0] = Operation(participantManagerProxy, State.Completed, taskId, callData);
+        opts[0] = Operation(participantHandlerProxy, State.Completed, taskId, callData);
         bytes memory signature = _generateSignature(opts, tssKey);
-        nextSubmitter = votingManager.nextSubmitter();
+        nextSubmitter = entryPoint.nextSubmitter();
         vm.expectEmit(true, true, true, true);
         emit IEntryPoint.OperationFailed(
             abi.encodeWithSelector(IParticipantHandler.NotEligible.selector, newParticipant)
         );
         vm.prank(nextSubmitter);
-        votingManager.verifyAndCall(opts, signature);
+        entryPoint.verifyAndCall(opts, signature);
 
         vm.startPrank(newParticipant);
         nuvoToken.mint(newParticipant, 100 ether);
@@ -94,7 +94,7 @@ contract ParticipantTest is BaseTest {
                 thisAddr
             )
         );
-        participantManager.addParticipant(newParticipant);
+        participantHandler.addParticipant(newParticipant);
 
         // successfully add new user
         taskId = taskSubmitter.submitTask(_generateTaskContext());
@@ -102,24 +102,24 @@ contract ParticipantTest is BaseTest {
             IParticipantHandler.addParticipant.selector,
             newParticipant
         );
-        opts[0] = Operation(participantManagerProxy, State.Completed, taskId, callData);
+        opts[0] = Operation(participantHandlerProxy, State.Completed, taskId, callData);
         signature = _generateSignature(opts, tssKey);
-        vm.prank(votingManager.nextSubmitter());
+        vm.prank(entryPoint.nextSubmitter());
         vm.expectEmit(true, true, true, true);
         emit IParticipantHandler.ParticipantAdded(newParticipant);
-        votingManager.verifyAndCall(opts, signature);
+        entryPoint.verifyAndCall(opts, signature);
 
         // fail: adding the same user again
         taskId = taskSubmitter.submitTask(_generateTaskContext());
-        opts[0] = Operation(participantManagerProxy, State.Completed, taskId, callData);
+        opts[0] = Operation(participantHandlerProxy, State.Completed, taskId, callData);
         signature = _generateSignature(opts, tssKey);
-        nextSubmitter = votingManager.nextSubmitter();
+        nextSubmitter = entryPoint.nextSubmitter();
         vm.prank(nextSubmitter);
         vm.expectEmit(true, true, true, true);
         emit IEntryPoint.OperationFailed(
             abi.encodeWithSelector(IParticipantHandler.AlreadyParticipant.selector, newParticipant)
         );
-        votingManager.verifyAndCall(opts, signature);
+        entryPoint.verifyAndCall(opts, signature);
     }
 
     function test_RemoveParticipant() public {
@@ -134,12 +134,12 @@ contract ParticipantTest is BaseTest {
             newParticipant
         );
         Operation[] memory opts = new Operation[](1);
-        opts[0] = Operation(participantManagerProxy, State.Completed, taskId, callData);
+        opts[0] = Operation(participantHandlerProxy, State.Completed, taskId, callData);
         bytes memory signature = _generateSignature(opts, tssKey);
-        vm.prank(votingManager.nextSubmitter());
+        vm.prank(entryPoint.nextSubmitter());
         vm.expectEmit(true, true, true, true);
         emit IParticipantHandler.ParticipantRemoved(newParticipant);
-        votingManager.verifyAndCall(opts, signature);
+        entryPoint.verifyAndCall(opts, signature);
     }
 
     function test_RemoveParticipantRevert() public {
@@ -150,14 +150,14 @@ contract ParticipantTest is BaseTest {
             msgSender
         );
         Operation[] memory opts = new Operation[](1);
-        opts[0] = Operation(participantManagerProxy, State.Completed, taskId, callData);
+        opts[0] = Operation(participantHandlerProxy, State.Completed, taskId, callData);
         bytes memory signature = _generateSignature(opts, tssKey);
-        vm.prank(votingManager.nextSubmitter());
+        vm.prank(entryPoint.nextSubmitter());
         vm.expectEmit(true, true, true, true);
         emit IEntryPoint.OperationFailed(
             abi.encodeWithSelector(IParticipantHandler.NotEnoughParticipant.selector)
         );
-        votingManager.verifyAndCall(opts, signature);
+        entryPoint.verifyAndCall(opts, signature);
 
         // add one valid partcipant
         address newParticipant = makeAddr("newParticipant");
@@ -166,15 +166,15 @@ contract ParticipantTest is BaseTest {
         // fail: remove a non-participant user
         taskId = taskSubmitter.submitTask(_generateTaskContext());
         callData = abi.encodeWithSelector(IParticipantHandler.removeParticipant.selector, thisAddr);
-        opts[0] = Operation(participantManagerProxy, State.Completed, taskId, callData);
+        opts[0] = Operation(participantHandlerProxy, State.Completed, taskId, callData);
         signature = _generateSignature(opts, tssKey);
-        nextSubmitter = votingManager.nextSubmitter();
+        nextSubmitter = entryPoint.nextSubmitter();
         vm.expectEmit(true, true, true, true);
         emit IEntryPoint.OperationFailed(
             abi.encodeWithSelector(IParticipantHandler.NotParticipant.selector, thisAddr)
         );
         vm.prank(nextSubmitter);
-        votingManager.verifyAndCall(opts, signature);
+        entryPoint.verifyAndCall(opts, signature);
     }
 
     function test_massAddAndRemove() public {
@@ -182,9 +182,9 @@ contract ParticipantTest is BaseTest {
         address[] memory newParticipants = new address[](20);
         for (uint8 i; i < 20; ++i) {
             newParticipants[i] = _addParticipant(makeAddr(UintToString.uint256ToString(i)));
-            assertEq(participantManager.getParticipants().length, initNumOfParticipant + i + 1);
+            assertEq(participantHandler.getParticipants().length, initNumOfParticipant + i + 1);
         }
-        assertEq(participantManager.getParticipants().length, 23);
+        assertEq(participantHandler.getParticipants().length, 23);
         initNumOfParticipant = 23;
         uint64 taskId;
         bytes memory callData;
@@ -196,13 +196,13 @@ contract ParticipantTest is BaseTest {
                 IParticipantHandler.removeParticipant.selector,
                 newParticipants[i]
             );
-            opts[i] = Operation(participantManagerProxy, State.Completed, taskId, callData);
+            opts[i] = Operation(participantHandlerProxy, State.Completed, taskId, callData);
         }
         bytes memory signature = _generateSignature(opts, tssKey);
-        nextSubmitter = votingManager.nextSubmitter();
+        nextSubmitter = entryPoint.nextSubmitter();
         vm.prank(nextSubmitter);
-        votingManager.verifyAndCall(opts, signature);
-        assertEq(participantManager.getParticipants().length, 3);
+        entryPoint.verifyAndCall(opts, signature);
+        assertEq(participantHandler.getParticipants().length, 3);
     }
 
     function _addParticipant(address _newParticipant) internal returns (address) {
@@ -214,16 +214,16 @@ contract ParticipantTest is BaseTest {
         nuvoLock.lock(MIN_LOCK_AMOUNT, MIN_LOCK_PERIOD);
         vm.stopPrank();
 
-        // add new user through votingManager
+        // add new user through entryPoint
         bytes memory callData = abi.encodeWithSelector(
             IParticipantHandler.addParticipant.selector,
             _newParticipant
         );
         Operation[] memory opts = new Operation[](1);
-        opts[0] = Operation(participantManagerProxy, State.Completed, taskId, callData);
+        opts[0] = Operation(participantHandlerProxy, State.Completed, taskId, callData);
         bytes memory signature = _generateSignature(opts, tssKey);
-        vm.prank(votingManager.nextSubmitter());
-        votingManager.verifyAndCall(opts, signature);
+        vm.prank(entryPoint.nextSubmitter());
+        entryPoint.verifyAndCall(opts, signature);
         return _newParticipant;
     }
 }

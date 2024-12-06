@@ -9,7 +9,7 @@ import {ITaskManager} from "../src/interfaces/ITaskManager.sol";
 contract FundsTest is BaseTest {
     address public user;
 
-    FundsHandlerUpgradeable public depositManager;
+    FundsHandlerUpgradeable public fundsHandler;
 
     address public dmProxy;
 
@@ -19,17 +19,17 @@ contract FundsTest is BaseTest {
         super.setUp();
         user = makeAddr("user");
 
-        // deploy depositManager and NIP20 contract
+        // deploy fundsHandler
         dmProxy = _deployProxy(address(new FundsHandlerUpgradeable()), daoContract);
-        depositManager = FundsHandlerUpgradeable(dmProxy);
-        depositManager.initialize(vmProxy);
-        assertEq(depositManager.owner(), vmProxy);
+        fundsHandler = FundsHandlerUpgradeable(dmProxy);
+        fundsHandler.initialize(vmProxy);
+        assertEq(fundsHandler.owner(), vmProxy);
 
-        // initialize votingManager link to all contracts
-        votingManager = EntryPointUpgradeable(vmProxy);
-        votingManager.initialize(
+        // initialize entryPoint link to all contracts
+        entryPoint = EntryPointUpgradeable(vmProxy);
+        entryPoint.initialize(
             tssSigner, // tssSigner
-            address(participantManager), // participantManager
+            address(participantHandler), // participantHandler
             address(taskManager), // taskManager
             address(nuvoLock) // nuvoLock
         );
@@ -39,7 +39,7 @@ contract FundsTest is BaseTest {
         vm.startPrank(msgSender);
         // setup deposit info
         uint64 taskId = taskSubmitter.submitTask(TASK_CONTEXT);
-        uint256 depositIndex = depositManager.getDeposits(user).length;
+        uint256 depositIndex = fundsHandler.getDeposits(user).length;
         assertEq(depositIndex, 0);
         uint256 depositAmount = 1 ether;
         uint256 chainId = 0;
@@ -59,12 +59,9 @@ contract FundsTest is BaseTest {
         // check event and result
         vm.expectEmit(true, true, true, true);
         emit IFundsHandler.DepositRecorded(user, depositAmount, chainId, txInfo, extraInfo);
-        votingManager.verifyAndCall(opts, signature);
+        entryPoint.verifyAndCall(opts, signature);
 
-        IFundsHandler.DepositInfo memory depositInfo = depositManager.getDeposit(
-            user,
-            depositIndex
-        );
+        IFundsHandler.DepositInfo memory depositInfo = fundsHandler.getDeposit(user, depositIndex);
         assertEq(
             abi.encodePacked(user, depositAmount, chainId, txInfo, extraInfo),
             abi.encodePacked(
@@ -79,7 +76,7 @@ contract FundsTest is BaseTest {
         // second deposit
         // setup deposit info
         taskId = taskSubmitter.submitTask(TASK_CONTEXT);
-        depositIndex = depositManager.getDeposits(user).length;
+        depositIndex = fundsHandler.getDeposits(user).length;
         assertEq(depositIndex, 1); // should have increased by 1
         depositAmount = 5 ether;
         chainId = 10;
@@ -99,8 +96,8 @@ contract FundsTest is BaseTest {
         // check event and result
         vm.expectEmit(true, true, true, true);
         emit IFundsHandler.DepositRecorded(user, depositAmount, chainId, txInfo, extraInfo);
-        votingManager.verifyAndCall(opts, signature);
-        depositInfo = depositManager.getDeposit(user, depositIndex);
+        entryPoint.verifyAndCall(opts, signature);
+        depositInfo = fundsHandler.getDeposit(user, depositIndex);
         assertEq(
             abi.encodePacked(user, depositAmount, chainId, txInfo, extraInfo),
             abi.encodePacked(
@@ -142,7 +139,7 @@ contract FundsTest is BaseTest {
         emit IEntryPoint.OperationFailed(
             abi.encodeWithSelector(IFundsHandler.InvalidAmount.selector)
         );
-        votingManager.verifyAndCall(opts, signature);
+        entryPoint.verifyAndCall(opts, signature);
         vm.stopPrank();
     }
 
@@ -180,11 +177,11 @@ contract FundsTest is BaseTest {
             assertEq(uint8(taskManager.getTaskState(taskIds[i])), uint8(State.Created));
         }
         bytes memory signature = _generateSignature(opts, tssKey);
-        votingManager.verifyAndCall(opts, signature);
+        entryPoint.verifyAndCall(opts, signature);
         IFundsHandler.DepositInfo memory depositInfo;
         for (uint8 i; i < batchSize; ++i) {
             assertEq(uint8(taskManager.getTaskState(taskIds[i])), uint8(State.Completed));
-            depositInfo = depositManager.getDeposit(users[i], 0);
+            depositInfo = fundsHandler.getDeposit(users[i], 0);
             assertEq(
                 abi.encodePacked(users[i], amounts[i], chainIds[i], txInfos[i], extraInfos[i]),
                 abi.encodePacked(
@@ -203,7 +200,7 @@ contract FundsTest is BaseTest {
         vm.assume(_amount > 0);
         // setup deposit info
         uint64 taskId = taskSubmitter.submitTask(TASK_CONTEXT);
-        uint256 depositIndex = depositManager.getDeposits(user).length;
+        uint256 depositIndex = fundsHandler.getDeposits(user).length;
         uint256 chainId = 0;
         bytes memory extraInfo = "--- extra info ---";
         bytes memory callData = abi.encodeWithSelector(
@@ -222,11 +219,8 @@ contract FundsTest is BaseTest {
         vm.prank(msgSender);
         vm.expectEmit(true, true, true, true);
         emit IFundsHandler.DepositRecorded(_user, _amount, chainId, _txInfo, extraInfo);
-        votingManager.verifyAndCall(opts, signature);
-        IFundsHandler.DepositInfo memory depositInfo = depositManager.getDeposit(
-            _user,
-            depositIndex
-        );
+        entryPoint.verifyAndCall(opts, signature);
+        IFundsHandler.DepositInfo memory depositInfo = fundsHandler.getDeposit(_user, depositIndex);
         assertEq(
             abi.encodePacked(_user, _amount, chainId, _txInfo, extraInfo),
             abi.encodePacked(
@@ -243,7 +237,7 @@ contract FundsTest is BaseTest {
         vm.startPrank(msgSender);
         // setup withdrawal info
         uint64 taskId = taskSubmitter.submitTask(TASK_CONTEXT);
-        uint256 withdrawIndex = depositManager.getWithdrawals(user).length;
+        uint256 withdrawIndex = fundsHandler.getWithdrawals(user).length;
         assertEq(withdrawIndex, 0);
         uint256 withdrawAmount = 1 ether;
         uint256 chainId = 0;
@@ -263,8 +257,8 @@ contract FundsTest is BaseTest {
         // check event and result
         vm.expectEmit(true, true, true, true);
         emit IFundsHandler.WithdrawalRecorded(user, withdrawAmount, chainId, txInfo, extraInfo);
-        votingManager.verifyAndCall(opts, signature);
-        IFundsHandler.WithdrawalInfo memory withdrawInfo = depositManager.getWithdrawal(
+        entryPoint.verifyAndCall(opts, signature);
+        IFundsHandler.WithdrawalInfo memory withdrawInfo = fundsHandler.getWithdrawal(
             user,
             withdrawIndex
         );
@@ -309,7 +303,7 @@ contract FundsTest is BaseTest {
         emit IEntryPoint.OperationFailed(
             abi.encodeWithSelector(IFundsHandler.InvalidAmount.selector)
         );
-        votingManager.verifyAndCall(opts, signature);
+        entryPoint.verifyAndCall(opts, signature);
         vm.stopPrank();
     }
 
@@ -347,11 +341,11 @@ contract FundsTest is BaseTest {
         for (uint16 i; i < batchSize; ++i) {
             assertEq(uint8(taskManager.getTaskState(taskIds[i])), uint8(State.Created));
         }
-        votingManager.verifyAndCall(opts, signature);
+        entryPoint.verifyAndCall(opts, signature);
         IFundsHandler.WithdrawalInfo memory withdrawalInfo;
         for (uint16 i; i < batchSize; ++i) {
             assertEq(uint8(taskManager.getTaskState(taskIds[i])), uint8(State.Completed));
-            withdrawalInfo = depositManager.getWithdrawal(users[i], 0);
+            withdrawalInfo = fundsHandler.getWithdrawal(users[i], 0);
             assertEq(
                 abi.encodePacked(users[i], amounts[i], chainIds[i], txInfos[i], extraInfos[i]),
                 abi.encodePacked(

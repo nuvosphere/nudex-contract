@@ -28,11 +28,11 @@ contract NuvoLockTest is BaseTest {
         vm.prank(rewardSource);
         nuvoToken.approve(nuvoLockProxy, 100 ether);
 
-        // initialize votingManager link to all contracts
-        votingManager = EntryPointUpgradeable(vmProxy);
-        votingManager.initialize(
+        // initialize entryPoint link to all contracts
+        entryPoint = EntryPointUpgradeable(vmProxy);
+        entryPoint.initialize(
             tssSigner, // tssSigner
-            address(participantManager), // participantManager
+            address(participantHandler), // participantHandler
             address(taskManager), // taskManager
             address(nuvoLock) // nuvoLock
         );
@@ -268,7 +268,7 @@ contract NuvoLockTest is BaseTest {
         bytes memory signature = _generateSignature(opts, tssKey);
         vm.expectEmit(true, true, true, true);
         emit INuvoLock.MinLockInfo(newLockAmount, newLockPeriod);
-        votingManager.verifyAndCall(opts, signature);
+        entryPoint.verifyAndCall(opts, signature);
         assertEq(nuvoLock.minLockAmount(), newLockAmount);
         assertEq(nuvoLock.minLockPeriod(), newLockPeriod);
 
@@ -304,7 +304,7 @@ contract NuvoLockTest is BaseTest {
 
         vm.expectEmit(true, true, true, true);
         emit INuvoLock.RewardPerPeriodUpdated(newRewardPerPeriod, lastPeriodNumber);
-        votingManager.verifyAndCall(opts, signature);
+        entryPoint.verifyAndCall(opts, signature);
         assertEq(nuvoLock.rewardPerPeriod(lastPeriodNumber), newRewardPerPeriod);
         {
             (, , , , , uint256 bonusPoints, , ) = nuvoLock.locks(msgSender);
@@ -382,7 +382,7 @@ contract NuvoLockTest is BaseTest {
 
         vm.prank(msgSender);
         vm.expectRevert(abi.encodeWithSelector(INuvoLock.NotAUser.selector, msgSender));
-        votingManager.verifyAndCall(opts, signature);
+        entryPoint.verifyAndCall(opts, signature);
 
         vm.startPrank(msgSender);
         nuvoToken.approve(address(nuvoLock), MIN_LOCK_AMOUNT);

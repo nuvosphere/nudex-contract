@@ -10,11 +10,11 @@ contract EntryPointTest is BaseTest {
     function setUp() public override {
         super.setUp();
 
-        // initialize votingManager link to all contracts
-        votingManager = EntryPointUpgradeable(vmProxy);
-        votingManager.initialize(
+        // initialize entryPoint link to all contracts
+        entryPoint = EntryPointUpgradeable(vmProxy);
+        entryPoint.initialize(
             tssSigner, // tssSigner
-            address(participantManager), // participantManager
+            address(participantHandler), // participantHandler
             address(taskManager), // taskManager
             address(nuvoLock) // nuvoLock
         );
@@ -25,11 +25,11 @@ contract EntryPointTest is BaseTest {
         uint256 demeritPoint = 1;
         skip(1 minutes);
         // finialize task
-        bytes memory encodedData = abi.encodePacked(votingManager.tssNonce(), demeritPoint);
+        bytes memory encodedData = abi.encodePacked(entryPoint.tssNonce(), demeritPoint);
         bytes memory signature = _generateSignature(encodedData, tssKey);
         vm.expectEmit(true, true, true, true);
         emit IEntryPoint.SubmitterRotationRequested(msgSender, msgSender);
-        votingManager.chooseNewSubmitter(demeritPoint, signature);
+        entryPoint.chooseNewSubmitter(demeritPoint, signature);
         vm.stopPrank();
     }
 }

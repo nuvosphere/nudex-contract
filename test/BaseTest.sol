@@ -27,10 +27,10 @@ contract BaseTest is Test {
     MockNuvoToken public nuvoToken;
 
     NuvoLockUpgradeable public nuvoLock;
-    ParticipantHandlerUpgradeable public participantManager;
+    ParticipantHandlerUpgradeable public participantHandler;
     TaskManagerUpgradeable public taskManager;
     TaskSubmitter public taskSubmitter;
-    EntryPointUpgradeable public votingManager;
+    EntryPointUpgradeable public entryPoint;
 
     address public vmProxy;
 
@@ -47,13 +47,12 @@ contract BaseTest is Test {
         (tssSigner, tssKey) = makeAddrAndKey("tss");
         daoContract = makeAddr("dao");
         thisAddr = address(this);
-        // console.log("Addresses: ", address(this), msgSender);
 
         // deploy mock nuvoToken
         nuvoToken = new MockNuvoToken();
         nuvoToken.mint(msgSender, 100 ether);
 
-        // deploy votingManager proxy
+        // deploy entryPoint proxy
         vmProxy = _deployProxy(address(new EntryPointUpgradeable()), daoContract);
 
         // deploy NuvoLockUpgradeable
@@ -76,17 +75,17 @@ contract BaseTest is Test {
         assertEq(taskManager.owner(), vmProxy);
 
         // deploy ParticipantHandlerUpgradeable
-        address participantManagerProxy = _deployProxy(
+        address participantHandlerProxy = _deployProxy(
             address(new ParticipantHandlerUpgradeable()),
             daoContract
         );
-        participantManager = ParticipantHandlerUpgradeable(participantManagerProxy);
+        participantHandler = ParticipantHandlerUpgradeable(participantHandlerProxy);
         address[] memory participants = new address[](3);
         participants[0] = msgSender;
         participants[1] = msgSender;
         participants[2] = msgSender;
-        participantManager.initialize(address(nuvoLock), vmProxy, participants);
-        assertEq(participantManager.owner(), vmProxy);
+        participantHandler.initialize(address(nuvoLock), vmProxy, participants);
+        assertEq(participantHandler.owner(), vmProxy);
 
         // setups
         vm.startPrank(msgSender);
@@ -103,7 +102,7 @@ contract BaseTest is Test {
         Operation[] memory _opt,
         uint256 _privateKey
     ) internal view returns (bytes memory) {
-        bytes memory encodedData = abi.encode(votingManager.tssNonce(), _opt);
+        bytes memory encodedData = abi.encode(entryPoint.tssNonce(), _opt);
         bytes32 digest = keccak256(encodedData).toEthSignedMessageHash();
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(_privateKey, digest);
         return abi.encodePacked(r, s, v);

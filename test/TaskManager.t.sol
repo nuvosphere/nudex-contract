@@ -17,11 +17,11 @@ contract TaskManagerTest is BaseTest {
         taskManager.initialize(address(taskSubmitter), vmProxy);
         assertEq(taskManager.owner(), vmProxy);
 
-        // initialize votingManager link to all contracts
-        votingManager = EntryPointUpgradeable(vmProxy);
-        votingManager.initialize(
+        // initialize entryPoint link to all contracts
+        entryPoint = EntryPointUpgradeable(vmProxy);
+        entryPoint.initialize(
             tssSigner, // tssSigner
-            address(participantManager), // participantManager
+            address(participantHandler), // participantHandler
             tmProxy, // taskManager
             address(nuvoLock) // nuvoLock
         );
@@ -51,7 +51,7 @@ contract TaskManagerTest is BaseTest {
             State.Completed,
             taskResult
         );
-        votingManager.verifyAndCall(opts, signature);
+        entryPoint.verifyAndCall(opts, signature);
         vm.stopPrank();
     }
 }

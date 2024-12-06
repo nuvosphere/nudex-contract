@@ -9,7 +9,7 @@ import {ITaskManager} from "../src/interfaces/ITaskManager.sol";
 contract AccountCreationTest is BaseTest {
     string public depositAddress;
 
-    AccountHandlerUpgradeable public accountManager;
+    AccountHandlerUpgradeable public accountHandler;
     address public amProxy;
 
     uint256 constant DEFAULT_ACCOUNT = 10001;
@@ -18,17 +18,17 @@ contract AccountCreationTest is BaseTest {
         super.setUp();
         depositAddress = "new_address";
 
-        // deploy accountManager
+        // deploy accountHandler
         amProxy = _deployProxy(address(new AccountHandlerUpgradeable()), daoContract);
-        accountManager = AccountHandlerUpgradeable(amProxy);
-        accountManager.initialize(vmProxy);
-        assertEq(accountManager.owner(), vmProxy);
+        accountHandler = AccountHandlerUpgradeable(amProxy);
+        accountHandler.initialize(vmProxy);
+        assertEq(accountHandler.owner(), vmProxy);
 
-        // initialize votingManager link to all contracts
-        votingManager = EntryPointUpgradeable(vmProxy);
-        votingManager.initialize(
+        // initialize entryPoint link to all contracts
+        entryPoint = EntryPointUpgradeable(vmProxy);
+        entryPoint.initialize(
             tssSigner, // tssSigner
-            address(participantManager), // participantManager
+            address(participantHandler), // participantHandler
             address(taskManager), // taskManager
             address(nuvoLock) // nuvoLock
         );
@@ -49,21 +49,21 @@ contract AccountCreationTest is BaseTest {
         Operation[] memory opts = new Operation[](1);
         opts[0] = Operation(amProxy, State.Completed, taskId, callData);
         bytes memory signature = _generateSignature(opts, tssKey);
-        votingManager.verifyAndCall(opts, signature);
+        entryPoint.verifyAndCall(opts, signature);
 
         // check mappings|reverseMapping
         assertEq(
-            accountManager.getAddressRecord(DEFAULT_ACCOUNT, IAccountHandler.Chain.BTC, uint(0)),
+            accountHandler.getAddressRecord(DEFAULT_ACCOUNT, IAccountHandler.Chain.BTC, uint(0)),
             depositAddress
         );
         assertEq(
-            accountManager.addressRecord(
+            accountHandler.addressRecord(
                 abi.encodePacked(DEFAULT_ACCOUNT, IAccountHandler.Chain.BTC, uint(0))
             ),
             depositAddress
         );
         assertEq(
-            accountManager.userMapping(depositAddress, IAccountHandler.Chain.BTC),
+            accountHandler.userMapping(depositAddress, IAccountHandler.Chain.BTC),
             DEFAULT_ACCOUNT
         );
 
@@ -77,12 +77,12 @@ contract AccountCreationTest is BaseTest {
             abi.encodeWithSelector(
                 IAccountHandler.RegisteredAccount.selector,
                 DEFAULT_ACCOUNT,
-                accountManager.addressRecord(
+                accountHandler.addressRecord(
                     abi.encodePacked(DEFAULT_ACCOUNT, IAccountHandler.Chain.BTC, uint(0))
                 )
             )
         );
-        votingManager.verifyAndCall(opts, signature);
+        entryPoint.verifyAndCall(opts, signature);
         vm.stopPrank();
     }
 
@@ -104,7 +104,7 @@ contract AccountCreationTest is BaseTest {
             abi.encodeWithSelector((IAccountHandler.InvalidAddress.selector))
         );
         vm.prank(msgSender);
-        votingManager.verifyAndCall(opts, signature);
+        entryPoint.verifyAndCall(opts, signature);
 
         // fail case: account number less than 10000
         taskId = taskSubmitter.submitTask(_generateTaskContext());
@@ -122,7 +122,7 @@ contract AccountCreationTest is BaseTest {
         emit IEntryPoint.OperationFailed(
             abi.encodeWithSelector(IAccountHandler.InvalidAccountNumber.selector, 9999)
         );
-        votingManager.verifyAndCall(opts, signature);
+        entryPoint.verifyAndCall(opts, signature);
     }
 
     function testFuzz_CreateFuzz(
@@ -135,20 +135,20 @@ contract AccountCreationTest is BaseTest {
         vm.assume(_chain < 3);
         vm.assume(bytes(_address).length > 0);
         IAccountHandler.Chain chain = IAccountHandler.Chain(_chain);
-        vm.startPrank(address(votingManager));
+        vm.startPrank(address(entryPoint));
         if (_account > 10000) {
-            accountManager.registerNewAddress(_account, chain, _index, _address);
+            accountHandler.registerNewAddress(_account, chain, _index, _address);
             // check mappings|reverseMapping
             assertEq(
-                accountManager.addressRecord(abi.encodePacked(_account, chain, _index)),
+                accountHandler.addressRecord(abi.encodePacked(_account, chain, _index)),
                 _address
             );
-            assertEq(accountManager.userMapping(_address, chain), _account);
+            assertEq(accountHandler.userMapping(_address, chain), _account);
         } else {
             vm.expectRevert(
                 abi.encodeWithSelector(IAccountHandler.InvalidAccountNumber.selector, _account)
             );
-            accountManager.registerNewAddress(_account, chain, _index, _address);
+            accountHandler.registerNewAddress(_account, chain, _index, _address);
             vm.stopPrank();
         }
     }
