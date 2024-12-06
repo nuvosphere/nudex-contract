@@ -25,7 +25,7 @@ contract AccountCreation is BaseTest {
         assertEq(accountManager.owner(), vmProxy);
 
         // initialize votingManager link to all contracts
-        votingManager = VotingManagerUpgradeable(vmProxy);
+        votingManager = EntryPointUpgradeable(vmProxy);
         votingManager.initialize(
             tssSigner, // tssSigner
             address(participantManager), // participantManager

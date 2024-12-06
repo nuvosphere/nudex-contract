@@ -49,6 +49,6 @@ contract AccountManagerUpgradeable is IAccountManager, OwnableUpgradeable {
         addressRecord[abi.encodePacked(_account, _chain, _index)] = _address;
         userMapping[_address][_chain] = _account;
         emit AddressRegistered(_account, _chain, _index, _address);
-        return abi.encodePacked(uint8(1), _account, _chain, _index);
+        return abi.encodePacked(uint8(1), _account, _chain, _index, _address);
     }
 }

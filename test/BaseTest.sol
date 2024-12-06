@@ -9,7 +9,7 @@ import {NuvoLockUpgradeable} from "../src/NuvoLockUpgradeable.sol";
 import {ParticipantManagerUpgradeable} from "../src/handlers/ParticipantManagerUpgradeable.sol";
 import {TaskManagerUpgradeable} from "../src/tasks/TaskManagerUpgradeable.sol";
 import {TaskSubmitter} from "../src/tasks/TaskSubmitter.sol";
-import {VotingManagerUpgradeable} from "../src/VotingManagerUpgradeable.sol";
+import {EntryPointUpgradeable} from "../src/EntryPointUpgradeable.sol";
 
 import {IVotingManager} from "../src/interfaces/IVotingManager.sol";
 import {Operation} from "../src/interfaces/IVotingManager.sol";
@@ -30,7 +30,7 @@ contract BaseTest is Test {
     ParticipantManagerUpgradeable public participantManager;
     TaskManagerUpgradeable public taskManager;
     TaskSubmitter public taskSubmitter;
-    VotingManagerUpgradeable public votingManager;
+    EntryPointUpgradeable public votingManager;
 
     address public vmProxy;
 
@@ -55,7 +55,7 @@ contract BaseTest is Test {
         nuvoToken.mint(msgSender, 100 ether);
 
         // deploy votingManager proxy
-        vmProxy = _deployProxy(address(new VotingManagerUpgradeable()), daoContract);
+        vmProxy = _deployProxy(address(new EntryPointUpgradeable()), daoContract);
 
         // deploy NuvoLockUpgradeable
         address nuvoLockProxy = _deployProxy(address(new NuvoLockUpgradeable()), daoContract);

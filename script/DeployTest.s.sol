@@ -12,7 +12,7 @@ import {NuvoLockUpgradeable} from "../src/NuvoLockUpgradeable.sol";
 import {TaskManagerUpgradeable} from "../src/tasks/TaskManagerUpgradeable.sol";
 import {TaskSubmitter} from "../src/tasks/TaskSubmitter.sol";
 import {ParticipantManagerUpgradeable} from "../src/handlers/ParticipantManagerUpgradeable.sol";
-import {VotingManagerUpgradeable} from "../src/VotingManagerUpgradeable.sol";
+import {EntryPointUpgradeable} from "../src/EntryPointUpgradeable.sol";
 
 // this contract is only used for contract testing
 contract DeployTest is Script {
@@ -41,7 +41,7 @@ contract DeployTest is Script {
         console.log("|NuvoToken|", address(nuvoToken));
 
         // deploy votingManager proxy
-        VotingManagerUpgradeable votingManager = new VotingManagerUpgradeable();
+        EntryPointUpgradeable votingManager = new EntryPointUpgradeable();
         console.log("|VotingManager| ", address(votingManager));
 
         // deploy nuvoLock

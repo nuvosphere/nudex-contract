@@ -47,7 +47,7 @@ contract Participant is BaseTest {
         participantManager.initialize(address(nuvoLock), vmProxy, participants);
         assertEq(participantManager.getParticipants().length, 3);
 
-        votingManager = VotingManagerUpgradeable(vmProxy);
+        votingManager = EntryPointUpgradeable(vmProxy);
         votingManager.initialize(
             tssSigner, // tssSigner
             participantManagerProxy, // participantManager

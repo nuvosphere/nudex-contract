@@ -6,17 +6,17 @@ import {Script, console} from "forge-std/Script.sol";
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
-import {VotingManagerUpgradeable} from "../src/VotingManagerUpgradeable.sol";
+import {EntryPointUpgradeable} from "../src/EntryPointUpgradeable.sol";
 import {Operation} from "../src/interfaces/IVotingManager.sol";
 
 contract SignatureGenerator is Script {
     using MessageHashUtils for bytes32;
     using ECDSA for bytes32;
 
-    VotingManagerUpgradeable votingManager;
+    EntryPointUpgradeable votingManager;
 
     function setUp() public {
-        votingManager = VotingManagerUpgradeable(vm.envAddress("VOTING_MANAGER_ADDR"));
+        votingManager = EntryPointUpgradeable(vm.envAddress("VOTING_MANAGER_ADDR"));
     }
 
     // forge script --rpc-url localhost script/SignatureGenerator.sol --sig "run((address,uint8, uint64, bytes)[],uint256)"

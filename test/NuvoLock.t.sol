@@ -29,7 +29,7 @@ contract NuvoLockTest is BaseTest {
         nuvoToken.approve(nuvoLockProxy, 100 ether);
 
         // initialize votingManager link to all contracts
-        votingManager = VotingManagerUpgradeable(vmProxy);
+        votingManager = EntryPointUpgradeable(vmProxy);
         votingManager.initialize(
             tssSigner, // tssSigner
             address(participantManager), // participantManager

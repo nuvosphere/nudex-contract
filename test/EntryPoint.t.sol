@@ -11,7 +11,7 @@ contract VotingManager is BaseTest {
         super.setUp();
 
         // initialize votingManager link to all contracts
-        votingManager = VotingManagerUpgradeable(vmProxy);
+        votingManager = EntryPointUpgradeable(vmProxy);
         votingManager.initialize(
             tssSigner, // tssSigner
             address(participantManager), // participantManager

@@ -12,7 +12,7 @@ import {IVotingManager, Operation} from "./interfaces/IVotingManager.sol";
 /**
  * @dev Manage all onchain information.
  */
-contract VotingManagerUpgradeable is IVotingManager, Initializable, ReentrancyGuardUpgradeable {
+contract EntryPointUpgradeable is IVotingManager, Initializable, ReentrancyGuardUpgradeable {
     IParticipantManager public participantManager;
     ITaskManager public taskManager;
     INuvoLock public nuvoLock;
@@ -115,6 +115,7 @@ contract VotingManagerUpgradeable is IVotingManager, Initializable, ReentrancyGu
                 if (!success) {
                     // fail
                     taskManager.updateTask(opt.taskId, State.Failed, "");
+                    // for recording revert message
                     emit OperationFailed(result);
                 } else {
                     // success

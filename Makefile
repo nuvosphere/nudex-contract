@@ -33,4 +33,4 @@ abi:
 	forge inspect  NuvoDAOUpgradeable abi > ./abi/NuvoDao.json
 	forge inspect  NuvoLockUpgradeable abi > ./abi/NuvoLock.json
 	forge inspect  ParticipantManagerUpgradeable abi > ./abi/ParticipantManager.json
-	forge inspect  VotingManagerUpgradeable abi > ./abi/VotingManager.json
+	forge inspect  EntryPointUpgradeable abi > ./abi/VotingManager.json

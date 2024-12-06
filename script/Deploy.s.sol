@@ -10,7 +10,7 @@ import {NuvoLockUpgradeable} from "../src/NuvoLockUpgradeable.sol";
 import {TaskManagerUpgradeable} from "../src/tasks/TaskManagerUpgradeable.sol";
 import {TaskSubmitter} from "../src/tasks/TaskSubmitter.sol";
 import {ParticipantManagerUpgradeable} from "../src/handlers/ParticipantManagerUpgradeable.sol";
-import {VotingManagerUpgradeable} from "../src/VotingManagerUpgradeable.sol";
+import {EntryPointUpgradeable} from "../src/EntryPointUpgradeable.sol";
 
 contract Deploy is Script {
     address nuvoToken;
@@ -45,7 +45,7 @@ contract Deploy is Script {
         vm.startBroadcast(deployerPrivateKey);
 
         // deploy votingManager proxy
-        vmProxy = deployProxy(address(new VotingManagerUpgradeable()), daoContract);
+        vmProxy = deployProxy(address(new EntryPointUpgradeable()), daoContract);
 
         // deploy nuvoLock
         lockProxy = deployProxy(address(new NuvoLockUpgradeable()), daoContract);
@@ -73,7 +73,7 @@ contract Deploy is Script {
         depositManager.initialize(vmProxy);
 
         // initialize votingManager link to all contracts
-        VotingManagerUpgradeable votingManager = VotingManagerUpgradeable(vmProxy);
+        EntryPointUpgradeable votingManager = EntryPointUpgradeable(vmProxy);
         votingManager.initialize(
             tssSigner, // tssSigner
             pmProxy, // participantManager

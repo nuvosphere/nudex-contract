@@ -18,7 +18,7 @@ contract TaskManagment is BaseTest {
         assertEq(taskManager.owner(), vmProxy);
 
         // initialize votingManager link to all contracts
-        votingManager = VotingManagerUpgradeable(vmProxy);
+        votingManager = EntryPointUpgradeable(vmProxy);
         votingManager.initialize(
             tssSigner, // tssSigner
             address(participantManager), // participantManager
@@ -44,7 +44,13 @@ contract TaskManagment is BaseTest {
         opts[0] = Operation(address(0), State.Completed, taskId, taskResult);
         bytes memory signature = _generateSignature(opts, tssKey);
         vm.expectEmit(true, true, true, true);
-        emit ITaskManager.TaskUpdated(taskId, msgSender, block.timestamp,State.Completed, taskResult);
+        emit ITaskManager.TaskUpdated(
+            taskId,
+            msgSender,
+            block.timestamp,
+            State.Completed,
+            taskResult
+        );
         votingManager.verifyAndCall(opts, signature);
         vm.stopPrank();
     }
