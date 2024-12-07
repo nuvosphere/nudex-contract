@@ -23,7 +23,7 @@ contract ProxyTest is BaseTest {
         vm.startPrank(msgSender);
         // setup as logic1
         NuvoProxy proxy = new NuvoProxy(address(logic1), address(proxyAdmin));
-        assertEq(proxy.admin(), address(proxyAdmin));
+        assertEq(proxy.proxyAdmin(), address(proxyAdmin));
         MockLogic1 proxyLogic = MockLogic1(address(proxy));
         assertEq(proxyLogic.v(), logic1.v());
         assertEq(proxyLogic.show(), logic1.show());
@@ -49,7 +49,7 @@ contract ProxyTest is BaseTest {
         // setup as logic1
         MockSelfUpgrade logic = new MockSelfUpgrade();
         NuvoProxy proxy = new NuvoProxy(address(logic), address(0));
-        assertEq(proxy.admin(), address(proxy));
+        assertEq(proxy.proxyAdmin(), address(proxy));
         MockSelfUpgrade proxyLogic = MockSelfUpgrade(address(proxy));
         assertEq(proxyLogic.v(), logic.v());
 

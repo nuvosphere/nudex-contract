@@ -8,7 +8,7 @@ import {AccountHandlerUpgradeable} from "../src/handlers/AccountHandlerUpgradeab
 import {FundsHandlerUpgradeable} from "../src/handlers/FundsHandlerUpgradeable.sol";
 import {NuvoLockUpgradeable} from "../src/NuvoLockUpgradeable.sol";
 import {TaskManagerUpgradeable} from "../src/tasks/TaskManagerUpgradeable.sol";
-import {TaskSubmitter} from "../src/tasks/TaskSubmitter.sol";
+import {TaskSubmitterUpgradeable} from "../src/tasks/TaskSubmitterUpgradeable.sol";
 import {ParticipantHandlerUpgradeable} from "../src/handlers/ParticipantHandlerUpgradeable.sol";
 import {EntryPointUpgradeable} from "../src/EntryPointUpgradeable.sol";
 
@@ -60,7 +60,7 @@ contract Deploy is Script {
         // deploy taskManager
         tmProxy = deployProxy(address(new TaskManagerUpgradeable()), daoContract);
         TaskManagerUpgradeable taskManager = TaskManagerUpgradeable(tmProxy);
-        taskManager.initialize(address(new TaskSubmitter(tmProxy)), vmProxy);
+        taskManager.initialize(address(new TaskSubmitterUpgradeable(tmProxy)), vmProxy);
 
         // deploy accountManager
         amProxy = deployProxy(address(new AccountHandlerUpgradeable()), daoContract);

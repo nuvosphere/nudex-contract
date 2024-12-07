@@ -5,24 +5,15 @@ import "./BaseTest.sol";
 import {ITaskManager} from "../src/interfaces/ITaskManager.sol";
 
 contract TaskManagerTest is BaseTest {
-    address public tmProxy;
-
     function setUp() public override {
         super.setUp();
-
-        // deploy taskManager
-        tmProxy = _deployProxy(address(new TaskManagerUpgradeable()), daoContract);
-        taskSubmitter = new TaskSubmitter(tmProxy);
-        taskManager = TaskManagerUpgradeable(tmProxy);
-        taskManager.initialize(address(taskSubmitter), vmProxy);
-        assertEq(taskManager.owner(), vmProxy);
 
         // initialize entryPoint link to all contracts
         entryPoint = EntryPointUpgradeable(vmProxy);
         entryPoint.initialize(
             tssSigner, // tssSigner
             address(participantHandler), // participantHandler
-            tmProxy, // taskManager
+            address(taskManager), // taskManager
             address(nuvoLock) // nuvoLock
         );
     }
@@ -31,7 +22,7 @@ contract TaskManagerTest is BaseTest {
         vm.startPrank(msgSender);
         // submit task
         uint64 taskId = taskManager.nextTaskId();
-        bytes memory taskContext = "--- encoded account creation task context ---";
+        bytes memory taskContext = _generateTaskContext();
         vm.expectEmit(true, true, true, true);
         emit ITaskManager.TaskSubmitted(taskId, taskContext, msgSender);
         taskSubmitter.submitTask(taskContext);

@@ -8,7 +8,7 @@ import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transpa
 import {NuvoLockUpgradeable} from "../src/NuvoLockUpgradeable.sol";
 import {ParticipantHandlerUpgradeable} from "../src/handlers/ParticipantHandlerUpgradeable.sol";
 import {TaskManagerUpgradeable} from "../src/tasks/TaskManagerUpgradeable.sol";
-import {TaskSubmitter} from "../src/tasks/TaskSubmitter.sol";
+import {TaskSubmitterUpgradeable} from "../src/tasks/TaskSubmitterUpgradeable.sol";
 import {EntryPointUpgradeable} from "../src/EntryPointUpgradeable.sol";
 
 import {IEntryPoint} from "../src/interfaces/IEntryPoint.sol";
@@ -29,7 +29,7 @@ contract BaseTest is Test {
     NuvoLockUpgradeable public nuvoLock;
     ParticipantHandlerUpgradeable public participantHandler;
     TaskManagerUpgradeable public taskManager;
-    TaskSubmitter public taskSubmitter;
+    TaskSubmitterUpgradeable public taskSubmitter;
     EntryPointUpgradeable public entryPoint;
 
     address public vmProxy;
@@ -67,9 +67,17 @@ contract BaseTest is Test {
         );
         assertEq(nuvoLock.owner(), vmProxy);
 
-        // deploy taskManager
+        // deploy taskManager and taskSubmitter
         address tmProxy = _deployProxy(address(new TaskManagerUpgradeable()), daoContract);
-        taskSubmitter = new TaskSubmitter(tmProxy);
+        address tsProxy = _deployProxy(
+            address(new TaskSubmitterUpgradeable(address(tmProxy))),
+            daoContract
+        );
+        taskSubmitter = TaskSubmitterUpgradeable(tsProxy);
+        taskSubmitter.initialize(vmProxy);
+        // add msgSender to whitelist
+        vm.prank(vmProxy);
+        taskSubmitter.setWhitelist(uint8(0), msgSender);
         taskManager = TaskManagerUpgradeable(tmProxy);
         taskManager.initialize(address(taskSubmitter), vmProxy);
         assertEq(taskManager.owner(), vmProxy);
@@ -120,7 +128,7 @@ contract BaseTest is Test {
     }
 
     function _generateTaskContext() internal returns (bytes memory) {
-        tempBytes = abi.encodePacked(keccak256(tempBytes));
+        tempBytes = abi.encodePacked(uint8(0), keccak256(tempBytes));
         return tempBytes;
     }
 }

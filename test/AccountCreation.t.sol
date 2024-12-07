@@ -87,6 +87,7 @@ contract AccountCreationTest is BaseTest {
     }
 
     function test_CreateRevert() public {
+        vm.startPrank(msgSender);
         // fail case: deposit address as address zero
         uint64 taskId = taskSubmitter.submitTask(_generateTaskContext());
         bytes memory callData = abi.encodeWithSelector(
@@ -103,7 +104,6 @@ contract AccountCreationTest is BaseTest {
         emit IEntryPoint.OperationFailed(
             abi.encodeWithSelector((IAccountHandler.InvalidAddress.selector))
         );
-        vm.prank(msgSender);
         entryPoint.verifyAndCall(opts, signature);
 
         // fail case: account number less than 10000
@@ -117,12 +117,12 @@ contract AccountCreationTest is BaseTest {
         );
         opts[0] = Operation(amProxy, State.Completed, taskId, callData);
         signature = _generateOptSignature(opts, tssKey);
-        vm.prank(msgSender);
         vm.expectEmit(true, true, true, true);
         emit IEntryPoint.OperationFailed(
             abi.encodeWithSelector(IAccountHandler.InvalidAccountNumber.selector, 9999)
         );
         entryPoint.verifyAndCall(opts, signature);
+        vm.stopPrank();
     }
 
     function testFuzz_CreateFuzz(

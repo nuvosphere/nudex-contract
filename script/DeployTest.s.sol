@@ -10,7 +10,7 @@ import {AccountHandlerUpgradeable} from "../src/handlers/AccountHandlerUpgradeab
 import {FundsHandlerUpgradeable} from "../src/handlers/FundsHandlerUpgradeable.sol";
 import {NuvoLockUpgradeable} from "../src/NuvoLockUpgradeable.sol";
 import {TaskManagerUpgradeable} from "../src/tasks/TaskManagerUpgradeable.sol";
-import {TaskSubmitter} from "../src/tasks/TaskSubmitter.sol";
+import {TaskSubmitterUpgradeable} from "../src/tasks/TaskSubmitterUpgradeable.sol";
 import {ParticipantHandlerUpgradeable} from "../src/handlers/ParticipantHandlerUpgradeable.sol";
 import {EntryPointUpgradeable} from "../src/EntryPointUpgradeable.sol";
 
@@ -60,8 +60,8 @@ contract DeployTest is Script {
 
         // deploy taskManager
         TaskManagerUpgradeable taskManager = new TaskManagerUpgradeable();
-        TaskSubmitter taskSubmitter = new TaskSubmitter(address(taskManager));
-        console.log("|TaskSubmitter|", address(taskSubmitter));
+        TaskSubmitterUpgradeable taskSubmitter = new TaskSubmitterUpgradeable(address(taskManager));
+        console.log("|TaskSubmitterUpgradeable|", address(taskSubmitter));
         taskManager.initialize(address(taskSubmitter), address(votingManager));
         console.log("|TaskManager|", address(taskManager));
 

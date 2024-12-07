@@ -13,8 +13,6 @@ contract FundsTest is BaseTest {
 
     address public dmProxy;
 
-    bytes public constant TASK_CONTEXT = "--- encoded deposit task context ---";
-
     function setUp() public override {
         super.setUp();
         user = makeAddr("user");
@@ -38,7 +36,7 @@ contract FundsTest is BaseTest {
     function test_Deposit() public {
         vm.startPrank(msgSender);
         // setup deposit info
-        uint64 taskId = taskSubmitter.submitTask(TASK_CONTEXT);
+        uint64 taskId = taskSubmitter.submitTask(_generateTaskContext());
         uint256 depositIndex = fundsHandler.getDeposits(user).length;
         assertEq(depositIndex, 0);
         uint256 depositAmount = 1 ether;
@@ -75,7 +73,7 @@ contract FundsTest is BaseTest {
 
         // second deposit
         // setup deposit info
-        taskId = taskSubmitter.submitTask(TASK_CONTEXT);
+        taskId = taskSubmitter.submitTask(_generateTaskContext());
         depositIndex = fundsHandler.getDeposits(user).length;
         assertEq(depositIndex, 1); // should have increased by 1
         depositAmount = 5 ether;
@@ -114,7 +112,7 @@ contract FundsTest is BaseTest {
     function test_DepositRevert() public {
         vm.startPrank(msgSender);
         // --- submit task ---
-        uint64 taskId = taskSubmitter.submitTask(TASK_CONTEXT);
+        uint64 taskId = taskSubmitter.submitTask(_generateTaskContext());
 
         // --- tss verify deposit ---
 
@@ -157,7 +155,7 @@ contract FundsTest is BaseTest {
         bytes[] memory txInfos = new bytes[](batchSize);
         bytes[] memory extraInfos = new bytes[](batchSize);
         for (uint8 i; i < batchSize; ++i) {
-            taskIds[i] = taskSubmitter.submitTask(abi.encodePacked(TASK_CONTEXT, i));
+            taskIds[i] = taskSubmitter.submitTask(_generateTaskContext());
             users[i] = makeAddr(string(abi.encodePacked("user", i)));
             amounts[i] = 1 ether;
             chainIds[i] = 0;
@@ -197,9 +195,10 @@ contract FundsTest is BaseTest {
     }
 
     function testFuzz_DepositFuzz(address _user, uint256 _amount, bytes memory _txInfo) public {
+        vm.startPrank(msgSender);
         vm.assume(_amount > 0);
         // setup deposit info
-        uint64 taskId = taskSubmitter.submitTask(TASK_CONTEXT);
+        uint64 taskId = taskSubmitter.submitTask(_generateTaskContext());
         uint256 depositIndex = fundsHandler.getDeposits(user).length;
         uint256 chainId = 0;
         bytes memory extraInfo = "--- extra info ---";
@@ -216,7 +215,6 @@ contract FundsTest is BaseTest {
         bytes memory signature = _generateOptSignature(opts, tssKey);
 
         // check event and result
-        vm.prank(msgSender);
         vm.expectEmit(true, true, true, true);
         emit IFundsHandler.DepositRecorded(_user, _amount, chainId, _txInfo, extraInfo);
         entryPoint.verifyAndCall(opts, signature);
@@ -231,12 +229,13 @@ contract FundsTest is BaseTest {
                 depositInfo.extraInfo
             )
         );
+        vm.stopPrank();
     }
 
     function test_Withdraw() public {
         vm.startPrank(msgSender);
         // setup withdrawal info
-        uint64 taskId = taskSubmitter.submitTask(TASK_CONTEXT);
+        uint64 taskId = taskSubmitter.submitTask(_generateTaskContext());
         uint256 withdrawIndex = fundsHandler.getWithdrawals(user).length;
         assertEq(withdrawIndex, 0);
         uint256 withdrawAmount = 1 ether;
@@ -278,7 +277,7 @@ contract FundsTest is BaseTest {
     function test_WithdrawRevert() public {
         vm.startPrank(msgSender);
         // --- submit task ---
-        uint64 taskId = taskSubmitter.submitTask(TASK_CONTEXT);
+        uint64 taskId = taskSubmitter.submitTask(_generateTaskContext());
 
         // --- tss verify withdraw ---
 
@@ -321,7 +320,7 @@ contract FundsTest is BaseTest {
         bytes[] memory txInfos = new bytes[](batchSize);
         bytes[] memory extraInfos = new bytes[](batchSize);
         for (uint16 i; i < batchSize; ++i) {
-            taskIds[i] = taskSubmitter.submitTask(abi.encodePacked(TASK_CONTEXT, i));
+            taskIds[i] = taskSubmitter.submitTask(_generateTaskContext());
             users[i] = makeAddr(string(abi.encodePacked("user", i)));
             amounts[i] = 1 ether;
             chainIds[i] = 0;

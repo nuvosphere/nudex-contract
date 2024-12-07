@@ -370,6 +370,7 @@ contract NuvoLockTest is BaseTest {
     }
 
     function test_RewardRevert() public {
+        vm.prank(msgSender);
         uint64 taskId = taskSubmitter.submitTask(_generateTaskContext());
         uint256 newRewardPerPeriod = 3 ether;
         bytes memory callData = abi.encodeWithSelector(
