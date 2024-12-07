@@ -4,6 +4,7 @@ pragma solidity ^0.8.26;
 interface IParticipantHandler {
     event ParticipantAdded(address indexed participant);
     event ParticipantRemoved(address indexed participant);
+    event ParticipantsReset(address[] indexed participants);
 
     error AlreadyParticipant(address);
     error NotEligible(address);

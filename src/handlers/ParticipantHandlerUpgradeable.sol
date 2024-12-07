@@ -29,38 +29,61 @@ contract ParticipantHandlerUpgradeable is IParticipantHandler, OwnableUpgradeabl
 
     /**
      * @dev Add new participant.
-     * @param newParticipant The new participant to be added.
+     * @param _newParticipant The new participant to be added.
      */
-    function addParticipant(address newParticipant) external onlyOwner returns (bytes memory) {
-        require(!isParticipant[newParticipant], AlreadyParticipant(newParticipant));
-        require(nuvoLock.lockedBalanceOf(newParticipant) > 0, NotEligible(newParticipant));
+    function addParticipant(address _newParticipant) external onlyOwner returns (bytes memory) {
+        require(!isParticipant[_newParticipant], AlreadyParticipant(_newParticipant));
+        require(nuvoLock.lockedBalanceOf(_newParticipant) > 0, NotEligible(_newParticipant));
 
-        isParticipant[newParticipant] = true;
-        participants.push(newParticipant);
+        isParticipant[_newParticipant] = true;
+        participants.push(_newParticipant);
 
-        emit ParticipantAdded(newParticipant);
-        return abi.encodePacked(uint8(1), newParticipant);
+        emit ParticipantAdded(_newParticipant);
+        return abi.encodePacked(uint8(1), _newParticipant);
     }
 
     /**
      * @dev Remove participant.
-     * @param participant The participant to be removed.
+     * @param _participant The participant to be removed.
      */
-    function removeParticipant(address participant) external onlyOwner returns (bytes memory) {
+    function removeParticipant(address _participant) external onlyOwner returns (bytes memory) {
         require(participants.length > 3, NotEnoughParticipant());
-        require(isParticipant[participant], NotParticipant(participant));
+        require(isParticipant[_participant], NotParticipant(_participant));
 
-        isParticipant[participant] = false;
-        for (uint256 i = 0; i < participants.length; i++) {
-            if (participants[i] == participant) {
+        isParticipant[_participant] = false;
+        for (uint8 i; i < participants.length; i++) {
+            if (participants[i] == _participant) {
                 participants[i] = participants[participants.length - 1];
                 participants.pop();
                 break;
             }
         }
 
-        emit ParticipantRemoved(participant);
-        return abi.encodePacked(uint8(1), participant);
+        emit ParticipantRemoved(_participant);
+        return abi.encodePacked(uint8(1), _participant);
+    }
+
+    /**
+     * @dev Reset the whole participants.
+     * @param _newParticipants The new participant list.
+     */
+    function resetParticipants(
+        address[] calldata _newParticipants
+    ) external onlyOwner returns (bytes memory) {
+        require(_newParticipants.length > 2, NotEnoughParticipant());
+        // remove old participants
+        for (uint8 i; i < participants.length; i++) {
+            isParticipant[participants[i]] = false;
+        }
+        // add new participants
+        for (uint8 i; i < _newParticipants.length; ++i) {
+            require(isParticipant[_newParticipants[i]], NotParticipant(_newParticipants[i]));
+            isParticipant[_newParticipants[i]] = true;
+        }
+        participants = _newParticipants;
+
+        emit ParticipantsReset(_newParticipants);
+        return abi.encodePacked(uint8(1), _newParticipants);
     }
 
     /**
