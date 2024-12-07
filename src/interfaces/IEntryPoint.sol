@@ -21,4 +21,5 @@ contract IEntryPoint {
     error RotationWindowNotPassed(uint256 current, uint256 window);
     error TaskAlreadyCompleted(uint256 taskId);
     error InvalidAddress();
+    error ExceedMaxOptCount();
 }

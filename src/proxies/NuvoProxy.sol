@@ -39,7 +39,7 @@ contract NuvoProxy is ERC1967Proxy {
     /**
      * @dev Returns the admin of this proxy.
      */
-    function admin() public view virtual returns (address) {
+    function proxyAdmin() public view virtual returns (address) {
         return _admin;
     }
 

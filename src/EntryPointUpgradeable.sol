@@ -13,13 +13,13 @@ import {IEntryPoint, Operation} from "./interfaces/IEntryPoint.sol";
  * @dev Manage all onchain information.
  */
 contract EntryPointUpgradeable is IEntryPoint, Initializable, ReentrancyGuardUpgradeable {
-    IParticipantHandler public participantManager;
+    IParticipantHandler public participantHandler;
     ITaskManager public taskManager;
     INuvoLock public nuvoLock;
 
     uint256 public lastSubmissionTime;
     uint256 public constant FORCE_ROTATION_WINDOW = 1 minutes;
-    uint256 public constant TASK_COMPLETION_THRESHOLD = 1 hours;
+    uint256 public constant MAX_OPT_COUNT = 1 hours;
 
     uint256 public tssNonce;
     address public tssSigner;
@@ -30,21 +30,29 @@ contract EntryPointUpgradeable is IEntryPoint, Initializable, ReentrancyGuardUpg
         _;
     }
 
+    /**
+     * @dev Initializes the contract.
+     * @param _tssSigner The address of tssSigner.
+     * @param _participantHandler The address of ParticipantHandler contract address.
+     * @param _taskManager The address of TaskManag contract address.
+     * @param _nuvoLock The address of NuvoLock contract address.
+     */
     function initialize(
         address _tssSigner,
-        address _participantManager,
+        address _participantHandler,
         address _taskManager,
         address _nuvoLock
     ) public initializer {
         __ReentrancyGuard_init();
 
-        participantManager = IParticipantHandler(_participantManager);
+        participantHandler = IParticipantHandler(_participantHandler);
         taskManager = ITaskManager(_taskManager);
         nuvoLock = INuvoLock(_nuvoLock);
 
+        require(_tssSigner != address(0), InvalidAddress());
         tssSigner = _tssSigner;
         lastSubmissionTime = block.timestamp;
-        nextSubmitter = participantManager.getRandomParticipant(block.timestamp);
+        nextSubmitter = participantHandler.getRandomParticipant(block.timestamp);
         emit SubmitterChosen(nextSubmitter);
     }
 
@@ -79,7 +87,7 @@ contract EntryPointUpgradeable is IEntryPoint, Initializable, ReentrancyGuardUpg
         bytes calldata _signature
     ) external nonReentrant {
         require(
-            participantManager.isParticipant(msg.sender),
+            participantHandler.isParticipant(msg.sender),
             IParticipantHandler.NotParticipant(msg.sender)
         );
         require(
@@ -107,6 +115,7 @@ contract EntryPointUpgradeable is IEntryPoint, Initializable, ReentrancyGuardUpg
         Operation[] calldata _opts,
         bytes calldata _signature
     ) external onlyCurrentSubmitter nonReentrant {
+        require(_opts.length <= MAX_OPT_COUNT, ExceedMaxOptCount());
         require(_verifyOperation(_opts, tssNonce++, _signature), InvalidSigner(msg.sender));
         bool success;
         bytes memory result;
@@ -197,7 +206,7 @@ contract EntryPointUpgradeable is IEntryPoint, Initializable, ReentrancyGuardUpg
     function _rotateSubmitter() internal {
         nuvoLock.accumulateBonusPoints(msg.sender, 1);
         lastSubmissionTime = block.timestamp;
-        nextSubmitter = participantManager.getRandomParticipant(block.timestamp);
+        nextSubmitter = participantHandler.getRandomParticipant(block.timestamp);
         emit SubmitterChosen(nextSubmitter);
     }
 

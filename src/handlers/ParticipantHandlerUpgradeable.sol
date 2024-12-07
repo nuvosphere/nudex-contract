@@ -11,7 +11,7 @@ contract ParticipantHandlerUpgradeable is IParticipantHandler, OwnableUpgradeabl
     address[] public participants;
     mapping(address => bool) public isParticipant;
 
-    // _owner: votingManager
+    // _owner: EntryPoint
     function initialize(
         address _nuvoLock,
         address _owner,
@@ -20,7 +20,6 @@ contract ParticipantHandlerUpgradeable is IParticipantHandler, OwnableUpgradeabl
         __Ownable_init(_owner);
         nuvoLock = INuvoLock(_nuvoLock);
 
-        // FIXME: do we check the eligibility of these address?
         require(_initialParticipants.length > 2, NotEnoughParticipant());
         participants = _initialParticipants;
         for (uint256 i; i < _initialParticipants.length; ++i) {
@@ -36,8 +35,8 @@ contract ParticipantHandlerUpgradeable is IParticipantHandler, OwnableUpgradeabl
         require(!isParticipant[newParticipant], AlreadyParticipant(newParticipant));
         require(nuvoLock.lockedBalanceOf(newParticipant) > 0, NotEligible(newParticipant));
 
-        participants.push(newParticipant);
         isParticipant[newParticipant] = true;
+        participants.push(newParticipant);
 
         emit ParticipantAdded(newParticipant);
         return abi.encodePacked(uint8(1), newParticipant);
