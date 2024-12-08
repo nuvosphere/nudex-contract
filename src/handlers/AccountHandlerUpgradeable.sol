@@ -8,7 +8,7 @@ contract AccountHandlerUpgradeable is IAccountHandler, OwnableUpgradeable {
     mapping(bytes => string) public addressRecord;
     mapping(string depositAddress => mapping(Chain => uint256 account)) public userMapping;
 
-    // _owner: Voting Manager contract
+    // _owner: EntryPoint contract
     function initialize(address _owner) public initializer {
         __Ownable_init(_owner);
     }

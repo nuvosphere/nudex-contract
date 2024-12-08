@@ -4,20 +4,21 @@ pragma solidity ^0.8.26;
 interface IAssetHandler {
     enum AssetType {
         BTC,
+        EVM,
         Ordinal,
-        ERC20,
         Inscription
     }
 
     struct Asset {
         string name; // Common name of the asset
         string nuDexName; // Name of the asset within nuDex
-        AssetType assetType; // Type of the asset (BTC, Ordinal, ERC20, Inscription)
-        address contractAddress; // Address for ERC20, Inscription, or 0x0 for BTC/Ordinal
+        AssetType assetType; // Type of the asset (BTC, EVM, Ordinal, Inscription)
+        address contractAddress; // Address for ERC20, Inscription, or 0x0 for BTC/Ordinal/Native token
         uint256 chainId; // Chain ID for EVM-based assets, or specific IDs for BTC/Ordinal
         bool isListed; // Whether the asset is listed
     }
 
+    // events
     event AssetListed(
         bytes32 indexed assetId,
         string name,
@@ -27,6 +28,11 @@ interface IAssetHandler {
         uint256 chainId
     );
     event AssetDelisted(bytes32 indexed assetId);
+    event Deposit(bytes32 indexed assetId, bytes32 indexed addr, uint256 indexed amount);
+    event Withdraw(bytes32 indexed assetId, bytes32 indexed addr, uint256 indexed amount);
+
+    // errors
+    error InsufficientBalance(bytes32 assetId, bytes32 addr);
 
     // Create a unique identifier for an asset based on its type, address, and chain ID
     function getAssetIdentifier(

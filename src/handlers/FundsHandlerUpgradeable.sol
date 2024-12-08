@@ -8,7 +8,7 @@ contract FundsHandlerUpgradeable is IFundsHandler, OwnableUpgradeable {
     mapping(address => DepositInfo[]) public deposits;
     mapping(address => WithdrawalInfo[]) public withdrawals;
 
-    // _owner: Voting Manager contract
+    // _owner: EntryPoint contract
     function initialize(address _owner) public initializer {
         __Ownable_init(_owner);
     }
