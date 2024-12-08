@@ -18,7 +18,7 @@ contract FundsTest is BaseTest {
         user = makeAddr("user");
 
         // deploy fundsHandler
-        dmProxy = _deployProxy(address(new FundsHandlerUpgradeable()), daoContract);
+        dmProxy = _deployProxy(address(new FundsHandlerUpgradeable(address(0))), daoContract);
         fundsHandler = FundsHandlerUpgradeable(dmProxy);
         fundsHandler.initialize(vmProxy);
         assertEq(fundsHandler.owner(), vmProxy);

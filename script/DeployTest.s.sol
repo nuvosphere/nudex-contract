@@ -7,6 +7,7 @@ import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transpa
 import {MockNuvoToken} from "../src/mocks/MockNuvoToken.sol";
 
 import {AccountHandlerUpgradeable} from "../src/handlers/AccountHandlerUpgradeable.sol";
+import {AssetHandlerUpgradeable} from "../src/handlers/AssetHandlerUpgradeable.sol";
 import {FundsHandlerUpgradeable} from "../src/handlers/FundsHandlerUpgradeable.sol";
 import {NuvoLockUpgradeable} from "../src/NuvoLockUpgradeable.sol";
 import {TaskManagerUpgradeable} from "../src/tasks/TaskManagerUpgradeable.sol";
@@ -70,8 +71,13 @@ contract DeployTest is Script {
         accountManager.initialize(address(votingManager));
         console.log("|AccountHandler|", address(accountManager));
 
-        // deploy depositManager and NIP20 contract
-        FundsHandlerUpgradeable depositManager = new FundsHandlerUpgradeable();
+        // deploy accountManager
+        AssetHandlerUpgradeable assetHandler = new AssetHandlerUpgradeable();
+        assetHandler.initialize(address(votingManager));
+        console.log("|AssetHandler|", address(assetHandler));
+
+        // deploy depositManager
+        FundsHandlerUpgradeable depositManager = new FundsHandlerUpgradeable(address(assetHandler));
         depositManager.initialize(address(votingManager));
         console.log("|FundsHandler|", address(depositManager));
 

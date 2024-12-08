@@ -7,14 +7,12 @@ import {IFundsHandler} from "../interfaces/IFundsHandler.sol";
 import {INIP20} from "../interfaces/INIP20.sol";
 
 contract FundsHandlerUpgradeable is IFundsHandler, OwnableUpgradeable {
-    INIP20 private immutable nip20;
     IAssetHandler private immutable assetHandler;
 
     mapping(address => DepositInfo[]) public deposits;
     mapping(address => WithdrawalInfo[]) public withdrawals;
 
-    constructor(address _nip20, address _assetHandler) {
-        nip20 = INIP20(_nip20);
+    constructor(address _assetHandler) {
         assetHandler = IAssetHandler(_assetHandler);
     }
 
@@ -81,9 +79,9 @@ contract FundsHandlerUpgradeable is IFundsHandler, OwnableUpgradeable {
                 extraInfo: _extraInfo
             })
         );
-        bytes32 ticker = bytes32(_context[0:64]);
-        nip20.NIP20TokenEvent_mintb(_targetAddress, ticker, _amount);
         // TODO:
+        // bytes32 ticker = bytes32(0x00);
+        // emit INIP20.NIP20TokenEvent_mintb(_targetAddress, ticker, _amount);
         // assetHandler.deposit()
         emit DepositRecorded(_targetAddress, _amount, _chainId, _txInfo, _extraInfo);
         return abi.encodePacked(uint8(1), _targetAddress, _amount, _chainId, _txInfo, _extraInfo);

@@ -9,14 +9,12 @@ contract TaskSubmitterUpgradeable is AccessControlUpgradeable {
     bytes32 public constant FUNDS_ROLE = keccak256("FUNDS_ROLE");
 
     ITaskManager public immutable taskManager;
-    INIP20 private immutable nip20;
 
     uint256 public minDepositAmount;
     uint256 public minWithdrawAmount;
 
-    constructor(address _taskManager, address _nip20) {
+    constructor(address _taskManager) {
         taskManager = ITaskManager(_taskManager);
-        nip20 = INIP20(_nip20);
     }
 
     function initialize(address _owner) public initializer {
@@ -53,11 +51,8 @@ contract TaskSubmitterUpgradeable is AccessControlUpgradeable {
         uint256 _amount,
         bytes32 _ticker
     ) external onlyRole(FUNDS_ROLE) returns (uint64) {
-        require(
-            uint256(bytes32(_context[0:64])) >= minWithdrawAmount,
-            "Below Min Withdraw Amount."
-        );
-        nip20.NIP20TokenEvent_burnb(_user, _ticker, _amount);
+        require(_amount >= minWithdrawAmount, "Below Min Withdraw Amount.");
+        emit INIP20.NIP20TokenEvent_burnb(_user, _ticker, _amount);
         return taskManager.submitTask(_user, abi.encodePacked(_user, _amount, _ticker));
     }
 }
