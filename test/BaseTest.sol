@@ -77,7 +77,7 @@ contract BaseTest is Test {
         taskSubmitter.initialize(vmProxy);
         // add msgSender to whitelist
         vm.prank(vmProxy);
-        taskSubmitter.setWhitelist(uint8(0), msgSender);
+        taskSubmitter.grantRole(bytes32(0x00), msgSender);
         taskManager = TaskManagerUpgradeable(tmProxy);
         taskManager.initialize(address(taskSubmitter), vmProxy);
         assertEq(taskManager.owner(), vmProxy);
@@ -128,7 +128,7 @@ contract BaseTest is Test {
     }
 
     function _generateTaskContext() internal returns (bytes memory) {
-        tempBytes = abi.encodePacked(uint8(0), keccak256(tempBytes));
+        tempBytes = abi.encodePacked(keccak256(tempBytes));
         return tempBytes;
     }
 }
