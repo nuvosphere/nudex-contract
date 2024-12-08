@@ -52,7 +52,7 @@ contract EntryPointUpgradeable is IEntryPoint, Initializable, ReentrancyGuardUpg
         require(_tssSigner != address(0), InvalidAddress());
         tssSigner = _tssSigner;
         lastSubmissionTime = block.timestamp;
-        nextSubmitter = participantHandler.getRandomParticipant(block.timestamp);
+        nextSubmitter = participantHandler.getRandomParticipant(nextSubmitter);
         emit SubmitterChosen(nextSubmitter);
     }
 
@@ -206,7 +206,7 @@ contract EntryPointUpgradeable is IEntryPoint, Initializable, ReentrancyGuardUpg
     function _rotateSubmitter() internal {
         nuvoLock.accumulateBonusPoints(msg.sender, 1);
         lastSubmissionTime = block.timestamp;
-        nextSubmitter = participantHandler.getRandomParticipant(block.timestamp);
+        nextSubmitter = participantHandler.getRandomParticipant(nextSubmitter);
         emit SubmitterChosen(nextSubmitter);
     }
 

@@ -19,5 +19,5 @@ interface IParticipantHandler {
 
     function getParticipants() external view returns (address[] memory);
 
-    function getRandomParticipant(uint256 _salt) external view returns (address randParticipant);
+    function getRandomParticipant(address _salt) external view returns (address randParticipant);
 }

@@ -78,6 +78,10 @@ contract ParticipantHandlerUpgradeable is IParticipantHandler, OwnableUpgradeabl
         // add new participants
         for (uint8 i; i < _newParticipants.length; ++i) {
             require(isParticipant[_newParticipants[i]], NotParticipant(_newParticipants[i]));
+            require(
+                nuvoLock.lockedBalanceOf(_newParticipants[i]) > 0,
+                NotEligible(_newParticipants[i])
+            );
             isParticipant[_newParticipants[i]] = true;
         }
         participants = _newParticipants;
@@ -97,7 +101,7 @@ contract ParticipantHandlerUpgradeable is IParticipantHandler, OwnableUpgradeabl
      * @dev Pick one random participant.
      * @param _salt Salt for randomness.
      */
-    function getRandomParticipant(uint256 _salt) external view returns (address randParticipant) {
+    function getRandomParticipant(address _salt) external view returns (address randParticipant) {
         uint256 randomIndex = uint256(
             keccak256(
                 abi.encodePacked(
