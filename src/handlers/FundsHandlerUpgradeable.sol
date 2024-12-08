@@ -2,11 +2,21 @@
 pragma solidity ^0.8.26;
 
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {IAssetHandler} from "../interfaces/IAssetHandler.sol";
 import {IFundsHandler} from "../interfaces/IFundsHandler.sol";
+import {INIP20} from "../interfaces/INIP20.sol";
 
 contract FundsHandlerUpgradeable is IFundsHandler, OwnableUpgradeable {
+    INIP20 private immutable nip20;
+    IAssetHandler private immutable assetHandler;
+
     mapping(address => DepositInfo[]) public deposits;
     mapping(address => WithdrawalInfo[]) public withdrawals;
+
+    constructor(address _nip20, address _assetHandler) {
+        nip20 = INIP20(_nip20);
+        assetHandler = IAssetHandler(_assetHandler);
+    }
 
     // _owner: EntryPoint contract
     function initialize(address _owner) public initializer {
@@ -71,8 +81,10 @@ contract FundsHandlerUpgradeable is IFundsHandler, OwnableUpgradeable {
                 extraInfo: _extraInfo
             })
         );
-
-        // TODO: mint inscription
+        bytes32 ticker = bytes32(_context[0:64]);
+        nip20.NIP20TokenEvent_mintb(_targetAddress, ticker, _amount);
+        // TODO:
+        // assetHandler.deposit()
         emit DepositRecorded(_targetAddress, _amount, _chainId, _txInfo, _extraInfo);
         return abi.encodePacked(uint8(1), _targetAddress, _amount, _chainId, _txInfo, _extraInfo);
     }
@@ -99,7 +111,6 @@ contract FundsHandlerUpgradeable is IFundsHandler, OwnableUpgradeable {
             })
         );
 
-        // TODO: burn inscription?
         emit WithdrawalRecorded(_targetAddress, _amount, _chainId, _txInfo, _extraInfo);
         return abi.encodePacked(uint8(1), _targetAddress, _amount, _chainId, _txInfo, _extraInfo);
     }

@@ -65,4 +65,20 @@ interface IAssetHandler {
 
     // Get the list of all listed assets
     function getAllAssets() external view returns (bytes32[] memory);
+
+    function deposit(
+        AssetType _assetType,
+        address _contractAddress,
+        uint256 _chainId,
+        bytes32 _address,
+        uint256 _amount
+    ) external;
+
+    function withdraw(
+        AssetType _assetType,
+        address _contractAddress,
+        uint256 _chainId,
+        bytes32 _address,
+        uint256 _amount
+    ) external;
 }
