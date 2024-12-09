@@ -196,6 +196,7 @@ contract FundsTest is BaseTest {
 
     function testFuzz_DepositFuzz(address _user, uint256 _amount, bytes memory _txInfo) public {
         vm.startPrank(msgSender);
+        vm.assume(_user != address(0));
         vm.assume(_amount > 0);
         // setup deposit info
         uint64 taskId = taskSubmitter.submitTask(_generateTaskContext());

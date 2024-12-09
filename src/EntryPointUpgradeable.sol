@@ -57,6 +57,33 @@ contract EntryPointUpgradeable is IEntryPoint, Initializable, ReentrancyGuardUpg
     }
 
     /**
+     * @dev Verify operation signature.
+     * @param _opts The batch operation to be executed.
+     * @param _nonce The nonce of tssSigner.
+     * @param _signature The signature for verification.
+     */
+    function verifyOperation(
+        Operation[] calldata _opts,
+        uint256 _nonce,
+        bytes calldata _signature
+    ) external view returns (bool) {
+        return _verifyOperation(_opts, _nonce, _signature);
+    }
+
+    /**
+     * @dev Message hash helper function.
+     * @param _opts The batch operation to be executed.
+     * @param _nonce The nonce of tssSigner.
+     */
+    function operationHash(
+        Operation[] calldata _opts,
+        uint256 _nonce
+    ) external view returns (bytes32 hash, bytes32 messageHash) {
+        hash = keccak256(abi.encode(_nonce, block.chainid, _opts));
+        messageHash = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", hash));
+    }
+
+    /**
      * @dev Set new tssSigner address.
      * @param _newSigner The new tssSigner address.
      * @param _signature The signature for verification.
@@ -115,18 +142,17 @@ contract EntryPointUpgradeable is IEntryPoint, Initializable, ReentrancyGuardUpg
         Operation[] calldata _opts,
         bytes calldata _signature
     ) external onlyCurrentSubmitter nonReentrant {
-        require(_opts.length <= MAX_OPT_COUNT, ExceedMaxOptCount());
         require(_verifyOperation(_opts, tssNonce++, _signature), InvalidSigner(msg.sender));
         bool success;
         bytes memory result;
         Operation memory opt;
         for (uint8 i; i < _opts.length; ++i) {
             opt = _opts[i];
-            if (opt.managerAddr == address(0)) {
+            if (opt.handlerAddr == address(0)) {
                 // override existing task result
                 taskManager.updateTask(opt.taskId, opt.state, opt.optData);
             } else {
-                (success, result) = opt.managerAddr.call(opt.optData);
+                (success, result) = opt.handlerAddr.call(opt.optData);
                 if (!success) {
                     // fail
                     taskManager.updateTask(opt.taskId, State.Failed, "");
@@ -142,33 +168,6 @@ contract EntryPointUpgradeable is IEntryPoint, Initializable, ReentrancyGuardUpg
     }
 
     /**
-     * @dev Verify operation signature.
-     * @param _opts The batch operation to be executed.
-     * @param _nonce The nonce of tssSigner.
-     * @param _signature The signature for verification.
-     */
-    function verifyOperation(
-        Operation[] calldata _opts,
-        uint256 _nonce,
-        bytes calldata _signature
-    ) external view returns (bool) {
-        return _verifyOperation(_opts, _nonce, _signature);
-    }
-
-    /**
-     * @dev Message hash helper function.
-     * @param _opts The batch operation to be executed.
-     * @param _nonce The nonce of tssSigner.
-     */
-    function operationHash(
-        Operation[] calldata _opts,
-        uint256 _nonce
-    ) external pure returns (bytes32 hash, bytes32 messageHash) {
-        hash = keccak256(abi.encode(_nonce, _opts));
-        messageHash = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", hash));
-    }
-
-    /**
      * @dev Verify the validity of the operation.
      * @param _opts The batch operation to be executed.
      * @param _nonce The nonce of tssSigner.
@@ -180,6 +179,7 @@ contract EntryPointUpgradeable is IEntryPoint, Initializable, ReentrancyGuardUpg
         bytes calldata _signature
     ) internal view returns (bool) {
         require(_opts.length > 0, EmptyOperationsArray());
+        require(_opts.length <= MAX_OPT_COUNT, ExceedMaxOptCount());
         return _verifySignature(keccak256(abi.encode(_nonce, block.chainid, _opts)), _signature);
     }
 

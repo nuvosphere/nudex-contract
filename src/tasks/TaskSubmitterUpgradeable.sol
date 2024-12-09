@@ -7,6 +7,8 @@ import {INIP20} from "../interfaces/INIP20.sol";
 
 contract TaskSubmitterUpgradeable is AccessControlUpgradeable {
     bytes32 public constant FUNDS_ROLE = keccak256("FUNDS_ROLE");
+    bytes32 public constant ACCOUNT_ROLE = keccak256("ACCOUNT_ROLE");
+    bytes32 public constant DEX_ROLE = keccak256("DEX_ROLE");
 
     ITaskManager public immutable taskManager;
 
@@ -55,4 +57,10 @@ contract TaskSubmitterUpgradeable is AccessControlUpgradeable {
         emit INIP20.NIP20TokenEvent_burnb(_user, _ticker, _amount);
         return taskManager.submitTask(_user, abi.encodePacked(_user, _amount, _ticker));
     }
+
+    function submitAccountCreationTask() external onlyRole(ACCOUNT_ROLE) returns (uint64) {}
+
+    function submitConsolidateTask() external onlyRole(DEX_ROLE) returns (uint64) {}
+
+    function submitParticipantUpdateTask() external onlyRole(ACCOUNT_ROLE) returns (uint64) {}
 }

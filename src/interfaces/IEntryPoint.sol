@@ -4,7 +4,7 @@ pragma solidity ^0.8.26;
 import {State} from "../interfaces/ITaskManager.sol";
 
 struct Operation {
-    address managerAddr; // 20 bytes
+    address handlerAddr; // 20 bytes
     State state; // 1 byte
     uint64 taskId; // 8 bytes
     bytes optData;
