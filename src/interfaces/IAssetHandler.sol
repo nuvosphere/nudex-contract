@@ -1,32 +1,44 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
+enum AssetType {
+    BTC,
+    EVM,
+    Ordinal,
+    Inscription
+}
+
 interface IAssetHandler {
-    enum AssetType {
-        BTC,
-        EVM,
-        Ordinal,
-        Inscription
+    struct NudexAsset {
+        uint256 id;
+        string assetAlias; // Common name of the asset
+        string assetLogo;
+        AssetType assetType; // Type of the asset (BTC, EVM, Ordinal, Inscription)
+        uint8 decimals;
+        bool withdrawalEnabled;
+        bool depositEnabled;
+        bool isListed; // Whether the asset is listed
+        uint32 createdTime;
+        uint32 updatedTime;
+        uint256 withdrawFee;
+        uint256 minWithdrawAmount;
+        uint256 minDepositAmount;
+        bytes32[] withdrawalChains;
+        bytes32[] depositChains;
     }
 
-    struct Asset {
-        string name; // Common name of the asset
-        string nuDexName; // Name of the asset within nuDex
+    struct OnchainAsset {
+        uint256 id;
         AssetType assetType; // Type of the asset (BTC, EVM, Ordinal, Inscription)
         address contractAddress; // Address for ERC20, Inscription, or 0x0 for BTC/Ordinal/Native token
-        uint256 chainId; // Chain ID for EVM-based assets, or specific IDs for BTC/Ordinal
-        bool isListed; // Whether the asset is listed
+        string symbol;
+        bytes32 tokenAddr;
+        uint8 decimals;
+        uint256 balance;
     }
 
     // events
-    event AssetListed(
-        bytes32 indexed assetId,
-        string name,
-        string nuDexName,
-        AssetType assetType,
-        address contractAddress,
-        uint256 chainId
-    );
+    event AssetListed(bytes32 indexed ticker, NudexAsset newAsset);
     event AssetDelisted(bytes32 indexed assetId);
     event Deposit(bytes32 indexed assetId, bytes32 indexed addr, uint256 indexed amount);
     event Withdraw(bytes32 indexed assetId, bytes32 indexed addr, uint256 indexed amount);
@@ -34,39 +46,23 @@ interface IAssetHandler {
     // errors
     error InsufficientBalance(bytes32 assetId, bytes32 addr);
 
-    // Create a unique identifier for an asset based on its type, address, and chain ID
-    function getAssetIdentifier(
-        AssetType assetType,
-        address contractAddress,
-        uint256 chainId
-    ) external pure returns (bytes32);
-
-    // List a new asset on the specified chain
-    function listAsset(
-        string memory name,
-        string memory nuDexName,
-        AssetType assetType,
-        address contractAddress,
-        uint256 chainId
-    ) external;
-
-    // Delist an existing asset
-    function delistAsset(AssetType assetType, address contractAddress, uint256 chainId) external;
-
     // Check if an asset is listed
-    function isAssetListed(
-        AssetType assetType,
-        address contractAddress,
-        uint256 chainId
-    ) external view returns (bool);
+    function isAssetListed(bytes32 _ticker) external view returns (bool);
 
     // Get the details of an asset
-    function getAssetDetails(bytes32 assetId) external view returns (Asset memory);
+    function getAssetDetails(bytes32 _ticker) external view returns (NudexAsset memory);
 
     // Get the list of all listed assets
     function getAllAssets() external view returns (bytes32[] memory);
 
+    // List a new asset on the specified chain
+    function listAsset(bytes32 _ticker, NudexAsset calldata _newAsset) external;
+
+    // Delist an existing asset
+    function delistAsset(bytes32 _ticker) external;
+
     function deposit(
+        bytes32 _ticker,
         AssetType _assetType,
         address _contractAddress,
         uint256 _chainId,
@@ -75,6 +71,7 @@ interface IAssetHandler {
     ) external;
 
     function withdraw(
+        bytes32 _ticker,
         AssetType _assetType,
         address _contractAddress,
         uint256 _chainId,

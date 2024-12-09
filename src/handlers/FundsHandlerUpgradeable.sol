@@ -2,15 +2,15 @@
 pragma solidity ^0.8.26;
 
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import {IAssetHandler} from "../interfaces/IAssetHandler.sol";
+import {IAssetHandler, AssetType} from "../interfaces/IAssetHandler.sol";
 import {IFundsHandler} from "../interfaces/IFundsHandler.sol";
 import {INIP20} from "../interfaces/INIP20.sol";
 
 contract FundsHandlerUpgradeable is IFundsHandler, OwnableUpgradeable {
     IAssetHandler private immutable assetHandler;
 
-    mapping(address => DepositInfo[]) public deposits;
-    mapping(address => WithdrawalInfo[]) public withdrawals;
+    mapping(address userAddr => DepositInfo[]) public deposits;
+    mapping(address userAddr => WithdrawalInfo[]) public withdrawals;
 
     constructor(address _assetHandler) {
         assetHandler = IAssetHandler(_assetHandler);
@@ -57,6 +57,17 @@ contract FundsHandlerUpgradeable is IFundsHandler, OwnableUpgradeable {
         require(targetAddress != address(0), InvalidAddress());
         return withdrawals[targetAddress][index];
     }
+
+    // TODO: new deposit interface
+    function recordDeposit(
+        address _targetAddress,
+        AssetType _assetType,
+        address _tokenContract,
+        uint256 _amount,
+        uint256 _chainId,
+        bytes calldata _txInfo,
+        bytes calldata _extraInfo
+    ) external onlyOwner returns (bytes memory) {}
 
     /**
      * @dev Record deposit info.

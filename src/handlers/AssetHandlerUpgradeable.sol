@@ -2,12 +2,13 @@
 pragma solidity ^0.8.26;
 
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import {IAssetHandler} from "../interfaces/IAssetHandler.sol";
+import {IAssetHandler, AssetType} from "../interfaces/IAssetHandler.sol";
 
 contract AssetHandlerUpgradeable is IAssetHandler, OwnableUpgradeable {
     // Mapping from asset identifiers to their details
-    mapping(bytes32 id => Asset) public assets;
-    mapping(bytes32 id => mapping(bytes32 addr => uint256 bal)) public balances;
+    mapping(bytes32 ticker => NudexAsset) public nudexAssets;
+    mapping(bytes32 ticker => mapping(uint256 chainId => OnchainAsset)) public onchainAsset;
+    mapping(bytes32 ticker => mapping(bytes32 addr => uint256 bal)) public balances;
     // Array of asset identifiers
     bytes32[] public assetList;
 
@@ -16,28 +17,15 @@ contract AssetHandlerUpgradeable is IAssetHandler, OwnableUpgradeable {
         __Ownable_init(_owner);
     }
 
-    // Create a unique identifier for an asset based on its type, address, and chain ID
-    function getAssetIdentifier(
-        AssetType _assetType,
-        address _contractAddress,
-        uint256 _chainId
-    ) public pure returns (bytes32) {
-        return keccak256(abi.encodePacked(_assetType, _contractAddress, _chainId));
-    }
-
     // Check if an asset is listed
-    function isAssetListed(
-        AssetType _assetType,
-        address _contractAddress,
-        uint256 _chainId
-    ) external view returns (bool) {
-        return assets[getAssetIdentifier(_assetType, _contractAddress, _chainId)].isListed;
+    function isAssetListed(bytes32 _ticker) external view returns (bool) {
+        return nudexAssets[_ticker].isListed;
     }
 
     // Get the details of an asset
-    function getAssetDetails(bytes32 assetId) external view returns (Asset memory) {
-        require(assets[assetId].isListed, "Asset not listed");
-        return assets[assetId];
+    function getAssetDetails(bytes32 assetId) external view returns (NudexAsset memory) {
+        require(nudexAssets[assetId].isListed, "Asset not listed");
+        return nudexAssets[assetId];
     }
 
     // Get the list of all listed assets
@@ -46,67 +34,46 @@ contract AssetHandlerUpgradeable is IAssetHandler, OwnableUpgradeable {
     }
 
     // List a new asset on the specified chain
-    function listAsset(
-        string memory _name,
-        string memory _nuDexName,
-        AssetType _assetType,
-        address _contractAddress,
-        uint256 _chainId
-    ) external onlyOwner {
-        bytes32 assetId = getAssetIdentifier(_assetType, _contractAddress, _chainId);
-        require(!assets[assetId].isListed, "Asset already listed");
+    function listAsset(bytes32 _ticker, NudexAsset calldata _newAsset) external onlyOwner {
+        require(!nudexAssets[_ticker].isListed, "Asset already listed");
+        nudexAssets[_ticker] = _newAsset;
+        assetList.push(_ticker);
 
-        Asset memory newAsset = Asset({
-            name: _name,
-            nuDexName: _nuDexName,
-            assetType: _assetType,
-            contractAddress: _contractAddress,
-            chainId: _chainId,
-            isListed: true
-        });
-
-        assets[assetId] = newAsset;
-        assetList.push(assetId);
-
-        emit AssetListed(assetId, _name, _nuDexName, _assetType, _contractAddress, _chainId);
+        emit AssetListed(_ticker, _newAsset);
     }
 
     // Delist an existing asset
-    function delistAsset(
-        AssetType _assetType,
-        address _contractAddress,
-        uint256 _chainId
-    ) external onlyOwner {
-        bytes32 assetId = getAssetIdentifier(_assetType, _contractAddress, _chainId);
-        require(assets[assetId].isListed, "Asset not listed");
-
-        assets[assetId].isListed = false;
-
-        emit AssetDelisted(assetId);
+    function delistAsset(bytes32 _ticker) external onlyOwner {
+        require(nudexAssets[_ticker].isListed, "Asset not listed");
+        nudexAssets[_ticker].isListed = false;
+        emit AssetDelisted(_ticker);
     }
 
     function deposit(
+        bytes32 _ticker,
         AssetType _assetType,
         address _contractAddress,
         uint256 _chainId,
         bytes32 _address,
         uint256 _amount
     ) external onlyOwner {
-        bytes32 assetId = getAssetIdentifier(_assetType, _contractAddress, _chainId);
-        balances[assetId][_address] += _amount;
-        emit Deposit(assetId, _address, _amount);
+        onchainAsset[_ticker][_chainId].balance += _amount;
+        emit Deposit(_ticker, _address, _amount);
     }
 
     function withdraw(
+        bytes32 _ticker,
         AssetType _assetType,
         address _contractAddress,
         uint256 _chainId,
         bytes32 _address,
         uint256 _amount
     ) external onlyOwner {
-        bytes32 assetId = getAssetIdentifier(_assetType, _contractAddress, _chainId);
-        require(balances[assetId][_address] >= _amount, InsufficientBalance(assetId, _address));
-        balances[assetId][_address] -= _amount;
-        emit Deposit(assetId, _address, _amount);
+        require(
+            onchainAsset[_ticker][_chainId].balance >= _amount,
+            InsufficientBalance(_ticker, _address)
+        );
+        onchainAsset[_ticker][_chainId].balance -= _amount;
+        emit Deposit(_ticker, _address, _amount);
     }
 }
