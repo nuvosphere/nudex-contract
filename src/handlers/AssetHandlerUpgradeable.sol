@@ -2,16 +2,23 @@
 pragma solidity ^0.8.26;
 
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import {IAssetHandler, AssetType, NudexAsset, OnchainAsset} from "../interfaces/IAssetHandler.sol";
+import {IAssetHandler, AssetParam, AssetType, NudexAsset, TokenInfo} from "../interfaces/IAssetHandler.sol";
 
 contract AssetHandlerUpgradeable is IAssetHandler, OwnableUpgradeable {
     // Mapping from asset identifiers to their details
-    mapping(bytes32 ticker => NudexAsset) public nudexAssets;
-    mapping(bytes32 ticker => OnchainAsset[]) public onchainAssets;
-
-    // Array of asset identifiers
     bytes32[] public nudexAssetList;
-    mapping(bytes32 ticker => uint256 index) public nudexAssetListIndex;
+    mapping(bytes32 ticker => NudexAsset) public nudexAssets;
+    mapping(bytes32 ticker => TokenInfo[]) public linkedTokens;
+    mapping(uint32 tokenId => uint256 index) public linkedTokenIndexes;
+
+    // Array of listed asset tickers
+
+    uint32 public idCounter;
+
+    modifier requireListing(bytes32 _ticker) {
+        require(nudexAssets[_ticker].isListed, AssetNotListed(_ticker));
+        _;
+    }
 
     // _owner: EntryPoint contract
     function initialize(address _owner) public initializer {
@@ -24,8 +31,9 @@ contract AssetHandlerUpgradeable is IAssetHandler, OwnableUpgradeable {
     }
 
     // Get the details of an asset
-    function getAssetDetails(bytes32 _ticker) external view returns (NudexAsset memory) {
-        require(nudexAssets[_ticker].isListed, "Asset not listed");
+    function getAssetDetails(
+        bytes32 _ticker
+    ) external view requireListing(_ticker) returns (NudexAsset memory) {
         return nudexAssets[_ticker];
     }
 
@@ -34,61 +42,102 @@ contract AssetHandlerUpgradeable is IAssetHandler, OwnableUpgradeable {
         return nudexAssetList;
     }
 
-    // List a new asset on the specified chain
-    function listAsset(bytes32 _ticker, NudexAsset calldata _newAsset) external onlyOwner {
+    // List a new asset
+    function listNewAsset(bytes32 _ticker, AssetParam calldata _assetParam) external onlyOwner {
         require(!nudexAssets[_ticker].isListed, "Asset already listed");
-        nudexAssets[_ticker] = _newAsset;
         // update listed assets
-        nudexAssetListIndex[_ticker] = nudexAssetList.length;
-        nudexAssetList.push(_ticker);
+        nudexAssets[_ticker].id = idCounter++;
+        nudexAssets[_ticker].isListed = true;
+        nudexAssets[_ticker].createdTime = uint32(block.timestamp);
+        nudexAssets[_ticker].updatedTime = uint32(block.timestamp);
 
-        emit AssetListed(_ticker, _newAsset);
+        // info from param
+        nudexAssets[_ticker].assetType = _assetParam.assetType;
+        nudexAssets[_ticker].decimals = _assetParam.decimals;
+        nudexAssets[_ticker].depositEnabled = _assetParam.depositEnabled;
+        nudexAssets[_ticker].withdrawalEnabled = _assetParam.withdrawalEnabled;
+        nudexAssets[_ticker].withdrawFee = _assetParam.withdrawFee;
+        nudexAssets[_ticker].minDepositAmount = _assetParam.minDepositAmount;
+        nudexAssets[_ticker].minWithdrawAmount = _assetParam.minWithdrawAmount;
+        nudexAssets[_ticker].assetAlias = _assetParam.assetAlias;
+        nudexAssets[_ticker].assetLogo = _assetParam.assetLogo;
+
+        nudexAssetList.push(_ticker);
+        emit AssetListed(_ticker, _assetParam);
+    }
+
+    // Update listed asset
+    function updateAsset(
+        bytes32 _ticker,
+        AssetParam calldata _assetParam
+    ) external onlyOwner requireListing(_ticker) {
+        // update listed assets
+        nudexAssets[_ticker].updatedTime = uint32(block.timestamp);
+
+        // info from param
+        nudexAssets[_ticker].assetType = _assetParam.assetType;
+        nudexAssets[_ticker].decimals = _assetParam.decimals;
+        nudexAssets[_ticker].depositEnabled = _assetParam.depositEnabled;
+        nudexAssets[_ticker].withdrawalEnabled = _assetParam.withdrawalEnabled;
+        nudexAssets[_ticker].withdrawFee = _assetParam.withdrawFee;
+        nudexAssets[_ticker].minDepositAmount = _assetParam.minDepositAmount;
+        nudexAssets[_ticker].minWithdrawAmount = _assetParam.minWithdrawAmount;
+        nudexAssets[_ticker].assetAlias = _assetParam.assetAlias;
+        nudexAssets[_ticker].assetLogo = _assetParam.assetLogo;
+
+        emit AssetUpdated(_ticker, _assetParam);
     }
 
     // Delist an existing asset
-    function delistAsset(bytes32 _ticker) external onlyOwner {
-        require(nudexAssets[_ticker].isListed, "Asset not listed");
+    function delistAsset(bytes32 _ticker) external onlyOwner requireListing(_ticker) {
         nudexAssets[_ticker].isListed = false;
+        nudexAssets[_ticker].updatedTime = uint32(block.timestamp);
         emit AssetDelisted(_ticker);
     }
 
-    function linkAsset(
+    function linkToken(
         bytes32 _ticker,
-        OnchainAsset calldata _onchainAsset,
-        bool _depositable,
-        bool _withdrawable
-    ) external onlyOwner {
-        require(nudexAssets[_ticker].isListed, "Asset not listed");
-        if (_depositable) {
-            nudexAssets[_ticker].depositChainIds.push(_onchainAsset.chainId);
+        TokenInfo[] calldata _tokenInfos
+    ) external onlyOwner requireListing(_ticker) {
+        for (uint8 i; i < _tokenInfos.length; ++i) {
+            linkedTokens[_ticker].push(_tokenInfos[i]);
         }
-        if (_withdrawable) {
-            nudexAssets[_ticker].withdrawalChainIds.push(_onchainAsset.chainId);
+    }
+
+    function unlinkToken(
+        bytes32 _ticker,
+        uint32[] calldata _tokenIds
+    ) external onlyOwner requireListing(_ticker) {
+        TokenInfo[] storage tokenInfos = linkedTokens[_ticker];
+        for (uint8 i; i < _tokenIds.length; ++i) {
+            linkedTokenIndexes[tokenInfos[tokenInfos.length - 1].id] = linkedTokenIndexes[
+                _tokenIds[i]
+            ];
+            tokenInfos[linkedTokenIndexes[_tokenIds[i]]] = tokenInfos[tokenInfos.length - 1];
+            linkedTokenIndexes[_tokenIds[i]] = 0;
+            tokenInfos.pop();
         }
-        onchainAssets[_ticker].push(_onchainAsset);
     }
 
     function deposit(
         bytes32 _ticker,
-        uint256 _onchainAssetIndex,
+        uint256 _tokenInfoIndex,
         uint256 _amount
-    ) external onlyOwner {
-        require(nudexAssets[_ticker].isListed, "Asset not listed");
-        onchainAssets[_ticker][_onchainAssetIndex].balance += _amount;
-        emit Deposit(_ticker, _onchainAssetIndex, _amount);
+    ) external onlyOwner requireListing(_ticker) {
+        linkedTokens[_ticker][_tokenInfoIndex].balance += _amount;
+        emit Deposit(_ticker, _tokenInfoIndex, _amount);
     }
 
     function withdraw(
         bytes32 _ticker,
-        uint256 _onchainAssetIndex,
+        uint256 _tokenInfoIndex,
         uint256 _amount
-    ) external onlyOwner {
-        require(nudexAssets[_ticker].isListed, "Asset not listed");
+    ) external onlyOwner requireListing(_ticker) {
         require(
-            onchainAssets[_ticker][_onchainAssetIndex].balance >= _amount,
-            InsufficientBalance(_ticker, _onchainAssetIndex)
+            linkedTokens[_ticker][_tokenInfoIndex].balance >= _amount,
+            InsufficientBalance(_ticker, _tokenInfoIndex)
         );
-        onchainAssets[_ticker][_onchainAssetIndex].balance -= _amount;
-        emit Deposit(_ticker, _onchainAssetIndex, _amount);
+        linkedTokens[_ticker][_tokenInfoIndex].balance -= _amount;
+        emit Deposit(_ticker, _tokenInfoIndex, _amount);
     }
 }
