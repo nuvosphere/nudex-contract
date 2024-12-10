@@ -8,43 +8,44 @@ enum AssetType {
     Inscription
 }
 
+struct NudexAsset {
+    uint256 id;
+    string assetAlias; // Common name of the asset
+    string assetLogo;
+    AssetType assetType; // Type of the asset (BTC, EVM, Ordinal, Inscription)
+    uint8 decimals;
+    bool depositEnabled;
+    bool withdrawalEnabled;
+    bool isListed; // Whether the asset is listed
+    uint32 createdTime;
+    uint32 updatedTime;
+    uint256 withdrawFee;
+    uint256 minWithdrawAmount;
+    uint256 minDepositAmount;
+    uint256[] depositChainIds;
+    uint256[] withdrawalChainIds;
+}
+
+struct OnchainAsset {
+    uint256 id;
+    uint256 chainId; // Chain ID for EVM-based assets, or specific IDs for BTC/Ordinal
+    AssetType assetType; // Type of the asset (BTC, EVM, Ordinal, Inscription)
+    address contractAddress; // Address for ERC20, Inscription, or 0x0 for BTC/Ordinal/Native token
+    uint8 decimals;
+    string symbol;
+    bytes32 tokenAddr;
+    uint256 balance;
+}
+
 interface IAssetHandler {
-    struct NudexAsset {
-        uint256 id;
-        string assetAlias; // Common name of the asset
-        string assetLogo;
-        AssetType assetType; // Type of the asset (BTC, EVM, Ordinal, Inscription)
-        uint8 decimals;
-        bool withdrawalEnabled;
-        bool depositEnabled;
-        bool isListed; // Whether the asset is listed
-        uint32 createdTime;
-        uint32 updatedTime;
-        uint256 withdrawFee;
-        uint256 minWithdrawAmount;
-        uint256 minDepositAmount;
-        bytes32[] withdrawalChains;
-        bytes32[] depositChains;
-    }
-
-    struct OnchainAsset {
-        uint256 id;
-        AssetType assetType; // Type of the asset (BTC, EVM, Ordinal, Inscription)
-        address contractAddress; // Address for ERC20, Inscription, or 0x0 for BTC/Ordinal/Native token
-        string symbol;
-        bytes32 tokenAddr;
-        uint8 decimals;
-        uint256 balance;
-    }
-
     // events
     event AssetListed(bytes32 indexed ticker, NudexAsset newAsset);
     event AssetDelisted(bytes32 indexed assetId);
-    event Deposit(bytes32 indexed assetId, bytes32 indexed addr, uint256 indexed amount);
-    event Withdraw(bytes32 indexed assetId, bytes32 indexed addr, uint256 indexed amount);
+    event Deposit(bytes32 indexed assetId, uint256 indexed assetIndex, uint256 indexed amount);
+    event Withdraw(bytes32 indexed assetId, uint256 indexed assetIndex, uint256 indexed amount);
 
     // errors
-    error InsufficientBalance(bytes32 assetId, bytes32 addr);
+    error InsufficientBalance(bytes32 assetId, uint256 assetIndex);
 
     // Check if an asset is listed
     function isAssetListed(bytes32 _ticker) external view returns (bool);
@@ -61,21 +62,7 @@ interface IAssetHandler {
     // Delist an existing asset
     function delistAsset(bytes32 _ticker) external;
 
-    function deposit(
-        bytes32 _ticker,
-        AssetType _assetType,
-        address _contractAddress,
-        uint256 _chainId,
-        bytes32 _address,
-        uint256 _amount
-    ) external;
+    function deposit(bytes32 _ticker, uint256 _assetIndex, uint256 _amount) external;
 
-    function withdraw(
-        bytes32 _ticker,
-        AssetType _assetType,
-        address _contractAddress,
-        uint256 _chainId,
-        bytes32 _address,
-        uint256 _amount
-    ) external;
+    function withdraw(bytes32 _ticker, uint256 _assetIndex, uint256 _amount) external;
 }
