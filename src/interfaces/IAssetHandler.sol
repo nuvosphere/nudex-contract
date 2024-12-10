@@ -65,5 +65,5 @@ interface IAssetHandler {
     function getAssetDetails(bytes32 _ticker) external view returns (NudexAsset memory);
 
     // Get the list of all listed assets
-    function getAllAssets() external view returns (bytes32[] memory);
+    function getAllAssets() external view returns (NudexAsset[] memory);
 }

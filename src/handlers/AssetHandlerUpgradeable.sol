@@ -5,18 +5,15 @@ import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Own
 import {IAssetHandler, AssetParam, AssetType, NudexAsset, TokenInfo} from "../interfaces/IAssetHandler.sol";
 
 contract AssetHandlerUpgradeable is IAssetHandler, OwnableUpgradeable {
-    // Mapping from asset identifiers to their details
-    bytes32[] public nudexAssetList;
-    mapping(bytes32 ticker => NudexAsset) public nudexAssets;
+    NudexAsset[] public nudexAssets;
+    mapping(bytes32 ticker => uint256 assetIndex) public nudexAssetIndexes;
     mapping(bytes32 ticker => TokenInfo[]) public linkedTokens;
-    mapping(uint32 tokenId => uint256 index) public linkedTokenIndexes;
+    mapping(uint32 tokenId => uint256 tokenIndex) public linkedTokenIndexes;
 
-    // Array of listed asset tickers
-
-    uint32 public idCounter;
+    uint32 public assetIdCounter;
 
     modifier requireListing(bytes32 _ticker) {
-        require(nudexAssets[_ticker].isListed, AssetNotListed(_ticker));
+        require(nudexAssets[nudexAssetIndexes[_ticker]].isListed, AssetNotListed(_ticker));
         _;
     }
 
@@ -27,42 +24,43 @@ contract AssetHandlerUpgradeable is IAssetHandler, OwnableUpgradeable {
 
     // Check if an asset is listed
     function isAssetListed(bytes32 _ticker) external view returns (bool) {
-        return nudexAssets[_ticker].isListed;
+        return nudexAssets[nudexAssetIndexes[_ticker]].isListed;
     }
 
     // Get the details of an asset
     function getAssetDetails(
         bytes32 _ticker
     ) external view requireListing(_ticker) returns (NudexAsset memory) {
-        return nudexAssets[_ticker];
+        return nudexAssets[nudexAssetIndexes[_ticker]];
     }
 
     // Get the list of all listed assets
-    function getAllAssets() external view returns (bytes32[] memory) {
-        return nudexAssetList;
+    function getAllAssets() external view returns (NudexAsset[] memory) {
+        return nudexAssets;
     }
 
     // List a new asset
     function listNewAsset(bytes32 _ticker, AssetParam calldata _assetParam) external onlyOwner {
-        require(!nudexAssets[_ticker].isListed, "Asset already listed");
+        require(nudexAssetIndexes[_ticker] == 0, "Asset already listed");
+        NudexAsset memory newNudexAsset;
         // update listed assets
-        nudexAssets[_ticker].id = idCounter++;
-        nudexAssets[_ticker].isListed = true;
-        nudexAssets[_ticker].createdTime = uint32(block.timestamp);
-        nudexAssets[_ticker].updatedTime = uint32(block.timestamp);
+        newNudexAsset.id = assetIdCounter++;
+        newNudexAsset.isListed = true;
+        newNudexAsset.createdTime = uint32(block.timestamp);
+        newNudexAsset.updatedTime = uint32(block.timestamp);
 
         // info from param
-        nudexAssets[_ticker].assetType = _assetParam.assetType;
-        nudexAssets[_ticker].decimals = _assetParam.decimals;
-        nudexAssets[_ticker].depositEnabled = _assetParam.depositEnabled;
-        nudexAssets[_ticker].withdrawalEnabled = _assetParam.withdrawalEnabled;
-        nudexAssets[_ticker].withdrawFee = _assetParam.withdrawFee;
-        nudexAssets[_ticker].minDepositAmount = _assetParam.minDepositAmount;
-        nudexAssets[_ticker].minWithdrawAmount = _assetParam.minWithdrawAmount;
-        nudexAssets[_ticker].assetAlias = _assetParam.assetAlias;
-        nudexAssets[_ticker].assetLogo = _assetParam.assetLogo;
+        newNudexAsset.assetType = _assetParam.assetType;
+        newNudexAsset.decimals = _assetParam.decimals;
+        newNudexAsset.depositEnabled = _assetParam.depositEnabled;
+        newNudexAsset.withdrawalEnabled = _assetParam.withdrawalEnabled;
+        newNudexAsset.withdrawFee = _assetParam.withdrawFee;
+        newNudexAsset.minDepositAmount = _assetParam.minDepositAmount;
+        newNudexAsset.minWithdrawAmount = _assetParam.minWithdrawAmount;
+        newNudexAsset.assetAlias = _assetParam.assetAlias;
+        newNudexAsset.assetLogo = _assetParam.assetLogo;
 
-        nudexAssetList.push(_ticker);
+        nudexAssets.push(newNudexAsset);
         emit AssetListed(_ticker, _assetParam);
     }
 
@@ -71,27 +69,28 @@ contract AssetHandlerUpgradeable is IAssetHandler, OwnableUpgradeable {
         bytes32 _ticker,
         AssetParam calldata _assetParam
     ) external onlyOwner requireListing(_ticker) {
+        NudexAsset storage nudexAsset = nudexAssets[nudexAssetIndexes[_ticker]];
         // update listed assets
-        nudexAssets[_ticker].updatedTime = uint32(block.timestamp);
+        nudexAsset.updatedTime = uint32(block.timestamp);
 
         // info from param
-        nudexAssets[_ticker].assetType = _assetParam.assetType;
-        nudexAssets[_ticker].decimals = _assetParam.decimals;
-        nudexAssets[_ticker].depositEnabled = _assetParam.depositEnabled;
-        nudexAssets[_ticker].withdrawalEnabled = _assetParam.withdrawalEnabled;
-        nudexAssets[_ticker].withdrawFee = _assetParam.withdrawFee;
-        nudexAssets[_ticker].minDepositAmount = _assetParam.minDepositAmount;
-        nudexAssets[_ticker].minWithdrawAmount = _assetParam.minWithdrawAmount;
-        nudexAssets[_ticker].assetAlias = _assetParam.assetAlias;
-        nudexAssets[_ticker].assetLogo = _assetParam.assetLogo;
+        nudexAsset.assetType = _assetParam.assetType;
+        nudexAsset.decimals = _assetParam.decimals;
+        nudexAsset.depositEnabled = _assetParam.depositEnabled;
+        nudexAsset.withdrawalEnabled = _assetParam.withdrawalEnabled;
+        nudexAsset.withdrawFee = _assetParam.withdrawFee;
+        nudexAsset.minDepositAmount = _assetParam.minDepositAmount;
+        nudexAsset.minWithdrawAmount = _assetParam.minWithdrawAmount;
+        nudexAsset.assetAlias = _assetParam.assetAlias;
+        nudexAsset.assetLogo = _assetParam.assetLogo;
 
         emit AssetUpdated(_ticker, _assetParam);
     }
 
     // Delist an existing asset
     function delistAsset(bytes32 _ticker) external onlyOwner requireListing(_ticker) {
-        nudexAssets[_ticker].isListed = false;
-        nudexAssets[_ticker].updatedTime = uint32(block.timestamp);
+        nudexAssets[nudexAssetIndexes[_ticker]].isListed = false;
+        nudexAssets[nudexAssetIndexes[_ticker]].updatedTime = uint32(block.timestamp);
         emit AssetDelisted(_ticker);
     }
 
