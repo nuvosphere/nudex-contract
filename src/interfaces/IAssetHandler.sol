@@ -21,7 +21,6 @@ struct AssetParam {
 }
 
 struct NudexAsset {
-    uint32 id;
     AssetType assetType; // Type of the asset (BTC, EVM, Ordinal, Inscription)
     uint8 decimals;
     bool depositEnabled;
@@ -37,11 +36,10 @@ struct NudexAsset {
 }
 
 struct TokenInfo {
-    uint32 id;
+    uint256 chainId; // Chain ID for EVM-based assets, or specific IDs for BTC/Ordinal
     AssetType assetType; // Type of the asset (BTC, EVM, Ordinal, Inscription)
     uint8 decimals;
     address contractAddress; // Address for ERC20, Inscription, or 0x0 for BTC/Ordinal/Native token
-    uint256 chainId; // Chain ID for EVM-based assets, or specific IDs for BTC/Ordinal
     string symbol;
     uint256 balance; // The balance of deposited token
 }
@@ -65,5 +63,5 @@ interface IAssetHandler {
     function getAssetDetails(bytes32 _ticker) external view returns (NudexAsset memory);
 
     // Get the list of all listed assets
-    function getAllAssets() external view returns (NudexAsset[] memory);
+    function getAllAssets() external view returns (bytes32[] memory);
 }
