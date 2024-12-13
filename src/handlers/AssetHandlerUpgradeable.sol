@@ -6,12 +6,12 @@ import {IAssetHandler, AssetParam, AssetType, NudexAsset, TokenInfo} from "../in
 
 contract AssetHandlerUpgradeable is IAssetHandler, OwnableUpgradeable {
     // Mapping from asset identifiers to their details
-    bytes32[] public nudexAssetList;
+    bytes32[] public assetTickerList;
     mapping(bytes32 ticker => NudexAsset) public nudexAssets;
-    mapping(bytes32 ticker => uint256[]) public linkedTokenList;
+    mapping(bytes32 ticker => uint256[] chainIds) public linkedTokenList;
     mapping(bytes32 ticker => mapping(uint256 chainId => TokenInfo index)) public linkedTokens;
 
-    modifier requireListing(bytes32 _ticker) {
+    modifier checkListing(bytes32 _ticker) {
         require(nudexAssets[_ticker].isListed, AssetNotListed(_ticker));
         _;
     }
@@ -29,35 +29,37 @@ contract AssetHandlerUpgradeable is IAssetHandler, OwnableUpgradeable {
     // Get the details of an asset
     function getAssetDetails(
         bytes32 _ticker
-    ) external view requireListing(_ticker) returns (NudexAsset memory) {
+    ) external view checkListing(_ticker) returns (NudexAsset memory) {
         return nudexAssets[_ticker];
     }
 
     // Get the list of all listed assets
     function getAllAssets() external view returns (bytes32[] memory) {
-        return nudexAssetList;
+        return assetTickerList;
     }
 
     // List a new asset
     function listNewAsset(bytes32 _ticker, AssetParam calldata _assetParam) external onlyOwner {
-        require(!nudexAssets[_ticker].isListed, "Asset already listed");
+        NudexAsset storage tempNudexAsset = nudexAssets[_ticker];
+        require(!tempNudexAsset.isListed, "Asset already listed");
         // update listed assets
-        nudexAssets[_ticker].isListed = true;
-        nudexAssets[_ticker].createdTime = uint32(block.timestamp);
-        nudexAssets[_ticker].updatedTime = uint32(block.timestamp);
+        tempNudexAsset.listIndex = uint32(assetTickerList.length);
+        tempNudexAsset.isListed = true;
+        tempNudexAsset.createdTime = uint32(block.timestamp);
+        tempNudexAsset.updatedTime = uint32(block.timestamp);
 
         // info from param
-        nudexAssets[_ticker].assetType = _assetParam.assetType;
-        nudexAssets[_ticker].decimals = _assetParam.decimals;
-        nudexAssets[_ticker].depositEnabled = _assetParam.depositEnabled;
-        nudexAssets[_ticker].withdrawalEnabled = _assetParam.withdrawalEnabled;
-        nudexAssets[_ticker].withdrawFee = _assetParam.withdrawFee;
-        nudexAssets[_ticker].minDepositAmount = _assetParam.minDepositAmount;
-        nudexAssets[_ticker].minWithdrawAmount = _assetParam.minWithdrawAmount;
-        nudexAssets[_ticker].assetAlias = _assetParam.assetAlias;
-        nudexAssets[_ticker].assetLogo = _assetParam.assetLogo;
+        tempNudexAsset.assetType = _assetParam.assetType;
+        tempNudexAsset.decimals = _assetParam.decimals;
+        tempNudexAsset.depositEnabled = _assetParam.depositEnabled;
+        tempNudexAsset.withdrawalEnabled = _assetParam.withdrawalEnabled;
+        tempNudexAsset.withdrawFee = _assetParam.withdrawFee;
+        tempNudexAsset.minDepositAmount = _assetParam.minDepositAmount;
+        tempNudexAsset.minWithdrawAmount = _assetParam.minWithdrawAmount;
+        tempNudexAsset.assetAlias = _assetParam.assetAlias;
+        tempNudexAsset.assetLogo = _assetParam.assetLogo;
 
-        nudexAssetList.push(_ticker);
+        assetTickerList.push(_ticker);
         emit AssetListed(_ticker, _assetParam);
     }
 
@@ -65,35 +67,42 @@ contract AssetHandlerUpgradeable is IAssetHandler, OwnableUpgradeable {
     function updateAsset(
         bytes32 _ticker,
         AssetParam calldata _assetParam
-    ) external onlyOwner requireListing(_ticker) {
+    ) external onlyOwner checkListing(_ticker) {
+        NudexAsset storage tempNudexAsset = nudexAssets[_ticker];
         // update listed assets
-        nudexAssets[_ticker].updatedTime = uint32(block.timestamp);
+        tempNudexAsset.updatedTime = uint32(block.timestamp);
 
         // info from param
-        nudexAssets[_ticker].assetType = _assetParam.assetType;
-        nudexAssets[_ticker].decimals = _assetParam.decimals;
-        nudexAssets[_ticker].depositEnabled = _assetParam.depositEnabled;
-        nudexAssets[_ticker].withdrawalEnabled = _assetParam.withdrawalEnabled;
-        nudexAssets[_ticker].withdrawFee = _assetParam.withdrawFee;
-        nudexAssets[_ticker].minDepositAmount = _assetParam.minDepositAmount;
-        nudexAssets[_ticker].minWithdrawAmount = _assetParam.minWithdrawAmount;
-        nudexAssets[_ticker].assetAlias = _assetParam.assetAlias;
-        nudexAssets[_ticker].assetLogo = _assetParam.assetLogo;
+        tempNudexAsset.assetType = _assetParam.assetType;
+        tempNudexAsset.decimals = _assetParam.decimals;
+        tempNudexAsset.depositEnabled = _assetParam.depositEnabled;
+        tempNudexAsset.withdrawalEnabled = _assetParam.withdrawalEnabled;
+        tempNudexAsset.withdrawFee = _assetParam.withdrawFee;
+        tempNudexAsset.minDepositAmount = _assetParam.minDepositAmount;
+        tempNudexAsset.minWithdrawAmount = _assetParam.minWithdrawAmount;
+        tempNudexAsset.assetAlias = _assetParam.assetAlias;
+        tempNudexAsset.assetLogo = _assetParam.assetLogo;
 
         emit AssetUpdated(_ticker, _assetParam);
     }
 
     // Delist an existing asset
-    function delistAsset(bytes32 _ticker) external onlyOwner requireListing(_ticker) {
-        nudexAssets[_ticker].isListed = false;
-        nudexAssets[_ticker].updatedTime = uint32(block.timestamp);
+    function delistAsset(bytes32 _ticker) external onlyOwner checkListing(_ticker) {
+        NudexAsset storage tempNudexAsset = nudexAssets[_ticker];
+        uint32 listIndex = tempNudexAsset.listIndex;
+        resetlinkedToken(_ticker);
+        tempNudexAsset.isListed = false;
+        tempNudexAsset.updatedTime = uint32(block.timestamp);
+        assetTickerList[listIndex] = assetTickerList[assetTickerList.length - 1];
+        assetTickerList.pop();
+        nudexAssets[assetTickerList[listIndex]].listIndex = listIndex;
         emit AssetDelisted(_ticker);
     }
 
     function linkToken(
         bytes32 _ticker,
         TokenInfo[] calldata _tokenInfos
-    ) external onlyOwner requireListing(_ticker) {
+    ) external onlyOwner checkListing(_ticker) {
         for (uint8 i; i < _tokenInfos.length; ++i) {
             uint256 chainId = _tokenInfos[i].chainId;
             require(linkedTokens[_ticker][chainId].chainId == 0, "Linked Token");
@@ -102,15 +111,19 @@ contract AssetHandlerUpgradeable is IAssetHandler, OwnableUpgradeable {
         }
     }
 
-    function resetlinkedToken(bytes32 _ticker) external onlyOwner requireListing(_ticker) {
-        linkedTokenList[_ticker] = new uint256[](0);
+    function resetlinkedToken(bytes32 _ticker) public onlyOwner checkListing(_ticker) {
+        uint256[] memory chainIds = linkedTokenList[_ticker];
+        delete linkedTokenList[_ticker];
+        for (uint32 i; i < chainIds.length; ++i) {
+            linkedTokens[_ticker][i].isActive = false;
+        }
     }
 
     function tokenSwitch(
         bytes32 _ticker,
         uint256 _chainId,
         bool _isActive
-    ) external onlyOwner requireListing(_ticker) {
+    ) external onlyOwner checkListing(_ticker) {
         linkedTokens[_ticker][_chainId].isActive = _isActive;
     }
 
@@ -118,7 +131,7 @@ contract AssetHandlerUpgradeable is IAssetHandler, OwnableUpgradeable {
         bytes32 _ticker,
         uint256 _chainId,
         uint256 _amount
-    ) external onlyOwner requireListing(_ticker) {
+    ) external onlyOwner checkListing(_ticker) {
         require(linkedTokens[_ticker][_chainId].isActive, "Inactive token");
         linkedTokens[_ticker][_chainId].balance += _amount;
         emit Deposit(_ticker, _chainId, _amount);
@@ -128,7 +141,7 @@ contract AssetHandlerUpgradeable is IAssetHandler, OwnableUpgradeable {
         bytes32 _ticker,
         uint256 _chainId,
         uint256 _amount
-    ) external onlyOwner requireListing(_ticker) {
+    ) external onlyOwner checkListing(_ticker) {
         require(linkedTokens[_ticker][_chainId].isActive, "Inactive token");
         require(
             linkedTokens[_ticker][_chainId].balance >= _amount,

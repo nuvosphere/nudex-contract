@@ -2,7 +2,7 @@
 pragma solidity ^0.8.26;
 
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import {ITaskManager, State} from "../interfaces/ITaskManager.sol";
+import {ITaskManager, State, TaskOperation} from "../interfaces/ITaskManager.sol";
 
 contract TaskManagerUpgradeable is ITaskManager, OwnableUpgradeable {
     address public taskSubmitter;
@@ -12,7 +12,7 @@ contract TaskManagerUpgradeable is ITaskManager, OwnableUpgradeable {
     uint64[] public pendingTasks;
     uint64[] public preconfirmedTasks;
     bytes[] public preconfirmedTaskResults;
-    mapping(uint64 => Task) public tasks;
+    mapping(uint64 => TaskOperation) public tasks;
     mapping(bytes32 => uint64) public taskRecords;
 
     function initialize(address _taskSubmitter, address _owner) public initializer {
@@ -40,7 +40,7 @@ contract TaskManagerUpgradeable is ITaskManager, OwnableUpgradeable {
     /**
      * @dev Get the latest task.
      */
-    function getLatestTask() external view returns (Task memory) {
+    function getLatestTask() external view returns (TaskOperation memory) {
         require(nextTaskId > 0, EmptyTask());
         return tasks[nextTaskId - 1];
     }
@@ -48,8 +48,8 @@ contract TaskManagerUpgradeable is ITaskManager, OwnableUpgradeable {
     /**
      * @dev Get all uncompleted tasks.
      */
-    function getUncompletedTasks() external view returns (Task[] memory) {
-        Task[] memory tempTasks = new Task[](nextTaskId);
+    function getUncompletedTasks() external view returns (TaskOperation[] memory) {
+        TaskOperation[] memory tempTasks = new TaskOperation[](nextTaskId);
         uint256 count = 0;
         for (uint64 i = 0; i < nextTaskId; i++) {
             if (tasks[i].state != State.Completed) {
@@ -57,7 +57,7 @@ contract TaskManagerUpgradeable is ITaskManager, OwnableUpgradeable {
                 count++;
             }
         }
-        Task[] memory uncompletedTasks = new Task[](count);
+        TaskOperation[] memory uncompletedTasks = new TaskOperation[](count);
         for (uint256 i = 0; i < count; i++) {
             uncompletedTasks[i] = tempTasks[i];
         }
@@ -68,27 +68,32 @@ contract TaskManagerUpgradeable is ITaskManager, OwnableUpgradeable {
     /**
      * @dev Add new task.
      * @param _submitter The submitter of the task.
-     * @param _context The context of the task.
+     * @param _data The context of the task.
      */
-    function submitTask(address _submitter, bytes calldata _context) external returns (uint64) {
+    function submitTask(
+        address _submitter,
+        address _handler,
+        bytes calldata _data
+    ) external returns (uint64) {
         require(msg.sender == taskSubmitter, OnlyTaskSubmitter());
 
-        bytes32 hash = keccak256(_context);
+        bytes32 hash = keccak256(_data);
         uint64 taskId = taskRecords[hash];
         require(taskId == 0, AlreadyExistTask(taskId));
         taskId = nextTaskId++;
-        tasks[taskId] = Task({
+        tasks[taskId] = TaskOperation({
             id: taskId,
             state: State.Created,
             submitter: _submitter,
-            createdAt: block.timestamp,
-            updatedAt: 0,
-            context: _context,
+            handler: _handler,
+            createdAt: uint32(block.timestamp),
+            updatedAt: uint32(0),
+            optData: _data,
             result: ""
         });
         taskRecords[hash] = taskId;
 
-        emit TaskSubmitted(taskId, _context, _submitter);
+        emit TaskSubmitted(taskId, _submitter, _data);
         return taskId;
     }
 
@@ -99,7 +104,7 @@ contract TaskManagerUpgradeable is ITaskManager, OwnableUpgradeable {
      * @param _result (Optional) The final result of the task.
      */
     function updateTask(uint64 _taskId, State _state, bytes calldata _result) external onlyOwner {
-        Task storage task = tasks[_taskId];
+        TaskOperation storage task = tasks[_taskId];
         if (task.state == State.Created) {
             require(_taskId == nextCreatedTaskId++, InvalidTask(_taskId));
         }
@@ -110,7 +115,7 @@ contract TaskManagerUpgradeable is ITaskManager, OwnableUpgradeable {
             pendingTasks.push(_taskId);
         }
         task.state = _state;
-        task.updatedAt = block.timestamp;
+        task.updatedAt = uint32(block.timestamp);
         if (_result.length > 0) {
             task.result = _result;
         }

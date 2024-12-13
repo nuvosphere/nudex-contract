@@ -4,6 +4,7 @@ pragma solidity ^0.8.26;
 interface IFundsHandler {
     struct DepositInfo {
         address targetAddress;
+        bytes32 ticker;
         uint256 chainId;
         uint256 amount;
         bytes txInfo;
@@ -12,8 +13,9 @@ interface IFundsHandler {
 
     struct WithdrawalInfo {
         address targetAddress;
-        uint256 amount;
+        bytes32 ticker;
         uint256 chainId;
+        uint256 amount;
         bytes txInfo;
         bytes extraInfo;
     }

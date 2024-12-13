@@ -3,6 +3,7 @@ pragma solidity ^0.8.26;
 
 import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import {ITaskManager} from "../interfaces/ITaskManager.sol";
+import {IFundsHandler} from "../interfaces/IFundsHandler.sol";
 import {INIP20} from "../interfaces/INIP20.sol";
 
 contract TaskSubmitterUpgradeable is AccessControlUpgradeable {
@@ -11,13 +12,27 @@ contract TaskSubmitterUpgradeable is AccessControlUpgradeable {
     bytes32 public constant DEX_ROLE = keccak256("DEX_ROLE");
 
     ITaskManager public immutable taskManager;
+    address public immutable accountHandler;
+    address public immutable assetHandler;
+    address public immutable fundsHandler;
+    address public immutable participantHandler;
 
     uint256 public minDepositAmount;
     uint256 public minWithdrawAmount;
     mapping(bytes32 pauseType => bool isPaused) public pauseState;
 
-    constructor(address _taskManager) {
+    constructor(
+        address _taskManager,
+        address _accountHandler,
+        address _assetHandler,
+        address _fundsHandler,
+        address _participantHandler
+    ) {
         taskManager = ITaskManager(_taskManager);
+        accountHandler = _accountHandler;
+        assetHandler = _assetHandler;
+        fundsHandler = _fundsHandler;
+        participantHandler = _participantHandler;
     }
 
     function initialize(address _owner) public initializer {
@@ -38,10 +53,11 @@ contract TaskSubmitterUpgradeable is AccessControlUpgradeable {
     }
 
     // force submit task by Admin
-    function submitTask(
-        bytes calldata _context
+    function forceSubmitTask(
+        address _handler,
+        bytes calldata _data
     ) external onlyRole(DEFAULT_ADMIN_ROLE) returns (uint64) {
-        return taskManager.submitTask(msg.sender, _context);
+        return taskManager.submitTask(msg.sender, _handler, _data);
     }
 
     function submitDepositTask(
@@ -53,7 +69,17 @@ contract TaskSubmitterUpgradeable is AccessControlUpgradeable {
         require(!pauseState[_ticker] && !pauseState[bytes32(_chainId)], "Paused");
         require(_amount >= minDepositAmount, "Below Min Deposit Amount.");
         return
-            taskManager.submitTask(msg.sender, abi.encodePacked(_user, _amount, _ticker, _chainId));
+            taskManager.submitTask(
+                msg.sender,
+                fundsHandler,
+                abi.encodeWithSelector(
+                    IFundsHandler.recordDeposit.selector,
+                    _user,
+                    _ticker,
+                    _chainId,
+                    _amount
+                )
+            );
     }
 
     function submitWithdrawTask(
@@ -65,7 +91,12 @@ contract TaskSubmitterUpgradeable is AccessControlUpgradeable {
         require(!pauseState[_ticker] && !pauseState[bytes32(_chainId)], "Paused");
         require(_amount >= minWithdrawAmount, "Below Min Withdraw Amount.");
         emit INIP20.NIP20TokenEvent_burnb(_user, _ticker, _amount);
-        return taskManager.submitTask(_user, abi.encodePacked(_user, _amount, _ticker, _chainId));
+        return
+            taskManager.submitTask(
+                _user,
+                fundsHandler,
+                abi.encodePacked(_user, _amount, _ticker, _chainId)
+            );
     }
 
     function submitAccountCreationTask() external onlyRole(ACCOUNT_ROLE) returns (uint64) {}

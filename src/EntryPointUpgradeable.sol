@@ -4,10 +4,10 @@ pragma solidity ^0.8.26;
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 
-import {IParticipantHandler} from "./interfaces/IParticipantHandler.sol";
-import {ITaskManager, State} from "./interfaces/ITaskManager.sol";
-import {INuvoLock} from "./interfaces/INuvoLock.sol";
 import {IEntryPoint, Operation} from "./interfaces/IEntryPoint.sol";
+import {IParticipantHandler} from "./interfaces/IParticipantHandler.sol";
+import {INuvoLock} from "./interfaces/INuvoLock.sol";
+import {ITaskManager, State} from "./interfaces/ITaskManager.sol";
 
 /**
  * @dev Manage all onchain information.

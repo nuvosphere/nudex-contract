@@ -74,6 +74,7 @@ contract FundsHandlerUpgradeable is IFundsHandler, OwnableUpgradeable {
         deposits[_targetAddress].push(
             DepositInfo({
                 targetAddress: _targetAddress,
+                ticker: _ticker,
                 chainId: _chainId,
                 amount: _amount,
                 txInfo: _txInfo,
@@ -101,8 +102,9 @@ contract FundsHandlerUpgradeable is IFundsHandler, OwnableUpgradeable {
         withdrawals[_targetAddress].push(
             WithdrawalInfo({
                 targetAddress: _targetAddress,
-                amount: _amount,
+                ticker: _ticker,
                 chainId: _chainId,
+                amount: _amount,
                 txInfo: _txInfo,
                 extraInfo: _extraInfo
             })

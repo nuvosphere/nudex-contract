@@ -21,6 +21,7 @@ struct AssetParam {
 }
 
 struct NudexAsset {
+    uint32 listIndex;
     AssetType assetType; // Type of the asset (BTC, EVM, Ordinal, Inscription)
     uint8 decimals;
     bool depositEnabled;
@@ -33,11 +34,12 @@ struct NudexAsset {
     uint256 minWithdrawAmount;
     string assetAlias; // Common name of the asset
     string assetLogo;
+    // mapping(uint256 chainid => TokenInfo) linkedToken;
 }
 
 struct TokenInfo {
     uint256 chainId; // Chain ID for EVM-based assets, or specific IDs for BTC/Ordinal
-    bool isActive; // 1 active, 0/2 inactive
+    bool isActive;
     AssetType assetType; // Type of the asset (BTC, EVM, Ordinal, Inscription)
     uint8 decimals;
     address contractAddress; // Address for ERC20, Inscription, or 0x0 for BTC/Ordinal/Native token
