@@ -37,6 +37,7 @@ struct NudexAsset {
 
 struct TokenInfo {
     uint256 chainId; // Chain ID for EVM-based assets, or specific IDs for BTC/Ordinal
+    bool isActive; // 1 active, 0/2 inactive
     AssetType assetType; // Type of the asset (BTC, EVM, Ordinal, Inscription)
     uint8 decimals;
     address contractAddress; // Address for ERC20, Inscription, or 0x0 for BTC/Ordinal/Native token
@@ -64,4 +65,6 @@ interface IAssetHandler {
 
     // Get the list of all listed assets
     function getAllAssets() external view returns (bytes32[] memory);
+
+    function withdraw(bytes32 _ticker, uint256 _chainId, uint256 _amount) external;
 }

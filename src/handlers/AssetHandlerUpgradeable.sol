@@ -102,8 +102,16 @@ contract AssetHandlerUpgradeable is IAssetHandler, OwnableUpgradeable {
         }
     }
 
-    function unlinkToken(bytes32 _ticker) external onlyOwner requireListing(_ticker) {
+    function resetlinkedToken(bytes32 _ticker) external onlyOwner requireListing(_ticker) {
         linkedTokenList[_ticker] = new uint256[](0);
+    }
+
+    function tokenSwitch(
+        bytes32 _ticker,
+        uint256 _chainId,
+        bool _isActive
+    ) external onlyOwner requireListing(_ticker) {
+        linkedTokens[_ticker][_chainId].isActive = _isActive;
     }
 
     function consolidate(
@@ -111,6 +119,7 @@ contract AssetHandlerUpgradeable is IAssetHandler, OwnableUpgradeable {
         uint256 _chainId,
         uint256 _amount
     ) external onlyOwner requireListing(_ticker) {
+        require(linkedTokens[_ticker][_chainId].isActive, "Inactive token");
         linkedTokens[_ticker][_chainId].balance += _amount;
         emit Deposit(_ticker, _chainId, _amount);
     }
@@ -120,11 +129,12 @@ contract AssetHandlerUpgradeable is IAssetHandler, OwnableUpgradeable {
         uint256 _chainId,
         uint256 _amount
     ) external onlyOwner requireListing(_ticker) {
+        require(linkedTokens[_ticker][_chainId].isActive, "Inactive token");
         require(
             linkedTokens[_ticker][_chainId].balance >= _amount,
             InsufficientBalance(_ticker, _chainId)
         );
         linkedTokens[_ticker][_chainId].balance -= _amount;
-        emit Deposit(_ticker, _chainId, _amount);
+        emit Withdraw(_ticker, _chainId, _amount);
     }
 }

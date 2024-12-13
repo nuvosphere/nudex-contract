@@ -74,8 +74,9 @@ contract FundsHandlerUpgradeable is IFundsHandler, OwnableUpgradeable {
      */
     function recordDeposit(
         address _targetAddress,
-        uint256 _amount,
+        bytes32 _ticker,
         uint256 _chainId,
+        uint256 _amount,
         bytes calldata _txInfo,
         bytes calldata _extraInfo
     ) external onlyOwner returns (bytes memory) {
@@ -90,10 +91,7 @@ contract FundsHandlerUpgradeable is IFundsHandler, OwnableUpgradeable {
                 extraInfo: _extraInfo
             })
         );
-        // TODO:
-        // bytes32 ticker = bytes32(0x00);
-        // emit INIP20.NIP20TokenEvent_mintb(_targetAddress, ticker, _amount);
-        // assetHandler.deposit()
+        emit INIP20.NIP20TokenEvent_mintb(_targetAddress, _ticker, _amount);
         emit DepositRecorded(_targetAddress, _amount, _chainId, _txInfo, _extraInfo);
         return abi.encodePacked(uint8(1), _targetAddress, _amount, _chainId, _txInfo, _extraInfo);
     }
@@ -103,8 +101,9 @@ contract FundsHandlerUpgradeable is IFundsHandler, OwnableUpgradeable {
      */
     function recordWithdrawal(
         address _targetAddress,
-        uint256 _amount,
+        bytes32 _ticker,
         uint256 _chainId,
+        uint256 _amount,
         bytes calldata _txInfo,
         bytes calldata _extraInfo
     ) external onlyOwner returns (bytes memory) {
@@ -119,7 +118,7 @@ contract FundsHandlerUpgradeable is IFundsHandler, OwnableUpgradeable {
                 extraInfo: _extraInfo
             })
         );
-
+        assetHandler.withdraw(_ticker, _chainId, _amount);
         emit WithdrawalRecorded(_targetAddress, _amount, _chainId, _txInfo, _extraInfo);
         return abi.encodePacked(uint8(1), _targetAddress, _amount, _chainId, _txInfo, _extraInfo);
     }

@@ -38,19 +38,21 @@ interface IFundsHandler {
     error InvalidAddress();
 
     function recordDeposit(
-        address targetAddress,
-        uint256 amount,
-        uint256 chainId,
-        bytes memory txInfo,
-        bytes memory extraInfo
+        address _targetAddress,
+        bytes32 _ticker,
+        uint256 _chainId,
+        uint256 _amount,
+        bytes calldata _txInfo,
+        bytes calldata _extraInfo
     ) external returns (bytes memory);
 
     function recordWithdrawal(
-        address targetAddress,
-        uint256 amount,
-        uint256 chainId,
-        bytes memory txInfo,
-        bytes memory extraInfo
+        address _targetAddress,
+        bytes32 _ticker,
+        uint256 _chainId,
+        uint256 _amount,
+        bytes calldata _txInfo,
+        bytes calldata _extraInfo
     ) external returns (bytes memory);
 
     function getDeposits(address targetAddress) external view returns (DepositInfo[] memory);
