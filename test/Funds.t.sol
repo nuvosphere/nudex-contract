@@ -2,11 +2,15 @@ pragma solidity ^0.8.0;
 
 import "./BaseTest.sol";
 
+import {AssetHandlerUpgradeable, AssetParam, AssetType} from "../src/handlers/AssetHandlerUpgradeable.sol";
 import {FundsHandlerUpgradeable} from "../src/handlers/FundsHandlerUpgradeable.sol";
 import {IFundsHandler} from "../src/interfaces/IFundsHandler.sol";
 import {ITaskManager} from "../src/interfaces/ITaskManager.sol";
 
 contract FundsTest is BaseTest {
+    bytes32 public constant TICKER = "TOKEN_TICKER_18";
+    uint256 public constant CHAIN_ID = 0;
+
     address public user;
 
     FundsHandlerUpgradeable public fundsHandler;
@@ -17,8 +21,15 @@ contract FundsTest is BaseTest {
         super.setUp();
         user = makeAddr("user");
 
+        // setup assetHandler
+        address ahProxy = _deployProxy(address(new AssetHandlerUpgradeable()), daoContract);
+        AssetHandlerUpgradeable assetHandler = AssetHandlerUpgradeable(ahProxy);
+        assetHandler.initialize(thisAddr);
+        AssetParam memory assetParam = AssetParam(AssetType.EVM, 18, true, true, 0, 0, 0, "", "");
+        assetHandler.listNewAsset(TICKER, assetParam);
+        assetHandler.consolidate(TICKER, CHAIN_ID, 5 ether);
         // deploy fundsHandler
-        dmProxy = _deployProxy(address(new FundsHandlerUpgradeable(address(0))), daoContract);
+        dmProxy = _deployProxy(address(new FundsHandlerUpgradeable(ahProxy)), daoContract);
         fundsHandler = FundsHandlerUpgradeable(dmProxy);
         fundsHandler.initialize(vmProxy);
         assertEq(fundsHandler.owner(), vmProxy);
@@ -240,14 +251,15 @@ contract FundsTest is BaseTest {
         uint256 withdrawIndex = fundsHandler.getWithdrawals(user).length;
         assertEq(withdrawIndex, 0);
         uint256 withdrawAmount = 1 ether;
-        uint256 chainId = 0;
+        uint256 chainId = CHAIN_ID;
         bytes memory txInfo = "--- encoded tx info ---";
         bytes memory extraInfo = "--- extra info ---";
         bytes memory callData = abi.encodeWithSelector(
             IFundsHandler.recordWithdrawal.selector,
             user,
-            withdrawAmount,
+            TICKER,
             chainId,
+            withdrawAmount,
             txInfo,
             extraInfo
         );

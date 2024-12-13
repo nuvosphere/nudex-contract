@@ -58,17 +58,6 @@ contract FundsHandlerUpgradeable is IFundsHandler, OwnableUpgradeable {
         return withdrawals[targetAddress][index];
     }
 
-    // TODO: new deposit interface
-    function recordDeposit(
-        address _targetAddress,
-        AssetType _assetType,
-        address _tokenContract,
-        uint256 _amount,
-        uint256 _chainId,
-        bytes calldata _txInfo,
-        bytes calldata _extraInfo
-    ) external onlyOwner returns (bytes memory) {}
-
     /**
      * @dev Record deposit info.
      */
