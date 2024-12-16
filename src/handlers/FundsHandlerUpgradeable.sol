@@ -65,9 +65,7 @@ contract FundsHandlerUpgradeable is IFundsHandler, OwnableUpgradeable {
         address _targetAddress,
         bytes32 _ticker,
         uint256 _chainId,
-        uint256 _amount,
-        bytes calldata _txInfo,
-        bytes calldata _extraInfo
+        uint256 _amount
     ) external onlyOwner returns (bytes memory) {
         require(_amount > 0, InvalidAmount());
         require(_targetAddress != address(0), InvalidAddress());
@@ -76,14 +74,12 @@ contract FundsHandlerUpgradeable is IFundsHandler, OwnableUpgradeable {
                 targetAddress: _targetAddress,
                 ticker: _ticker,
                 chainId: _chainId,
-                amount: _amount,
-                txInfo: _txInfo,
-                extraInfo: _extraInfo
+                amount: _amount
             })
         );
         emit INIP20.NIP20TokenEvent_mintb(_targetAddress, _ticker, _amount);
-        emit DepositRecorded(_targetAddress, _amount, _chainId, _txInfo, _extraInfo);
-        return abi.encodePacked(uint8(1), _targetAddress, _amount, _chainId, _txInfo, _extraInfo);
+        emit DepositRecorded(_targetAddress, _amount, _chainId);
+        return abi.encodePacked(uint8(1), _targetAddress, _amount, _chainId);
     }
 
     /**
@@ -93,9 +89,7 @@ contract FundsHandlerUpgradeable is IFundsHandler, OwnableUpgradeable {
         address _targetAddress,
         bytes32 _ticker,
         uint256 _chainId,
-        uint256 _amount,
-        bytes calldata _txInfo,
-        bytes calldata _extraInfo
+        uint256 _amount
     ) external onlyOwner returns (bytes memory) {
         require(_amount > 0, InvalidAmount());
         require(_targetAddress != address(0), InvalidAddress());
@@ -104,13 +98,11 @@ contract FundsHandlerUpgradeable is IFundsHandler, OwnableUpgradeable {
                 targetAddress: _targetAddress,
                 ticker: _ticker,
                 chainId: _chainId,
-                amount: _amount,
-                txInfo: _txInfo,
-                extraInfo: _extraInfo
+                amount: _amount
             })
         );
         assetHandler.withdraw(_ticker, _chainId, _amount);
-        emit WithdrawalRecorded(_targetAddress, _amount, _chainId, _txInfo, _extraInfo);
-        return abi.encodePacked(uint8(1), _targetAddress, _amount, _chainId, _txInfo, _extraInfo);
+        emit WithdrawalRecorded(_targetAddress, _amount, _chainId);
+        return abi.encodePacked(uint8(1), _targetAddress, _amount, _chainId);
     }
 }

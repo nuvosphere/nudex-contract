@@ -2,8 +2,9 @@
 pragma solidity ^0.8.26;
 
 import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
-import {ITaskManager} from "../interfaces/ITaskManager.sol";
+import {IAccountHandler} from "../interfaces/IAccountHandler.sol";
 import {IFundsHandler} from "../interfaces/IFundsHandler.sol";
+import {ITaskManager} from "../interfaces/ITaskManager.sol";
 import {INIP20} from "../interfaces/INIP20.sol";
 
 contract TaskSubmitterUpgradeable is AccessControlUpgradeable {
@@ -93,13 +94,39 @@ contract TaskSubmitterUpgradeable is AccessControlUpgradeable {
         emit INIP20.NIP20TokenEvent_burnb(_user, _ticker, _amount);
         return
             taskManager.submitTask(
-                _user,
+                msg.sender,
                 fundsHandler,
-                abi.encodePacked(_user, _amount, _ticker, _chainId)
+                abi.encodeWithSelector(
+                    IFundsHandler.recordWithdrawal.selector,
+                    _user,
+                    _ticker,
+                    _chainId,
+                    _amount
+                )
             );
     }
 
-    function submitAccountCreationTask() external onlyRole(ACCOUNT_ROLE) returns (uint64) {}
+    function submitAccountCreationTask(
+        uint256 _account,
+        IAccountHandler.Chain _chain,
+        uint256 _index,
+        string calldata _address
+    ) external onlyRole(ACCOUNT_ROLE) returns (uint64) {
+        require(bytes(_address).length != 0, "InvalidAddress()");
+        require(_account > 10000, "InvalidAccountNumber(_account)");
+        return
+            taskManager.submitTask(
+                msg.sender,
+                accountHandler,
+                abi.encodeWithSelector(
+                    IAccountHandler.registerNewAddress.selector,
+                    _account,
+                    _chain,
+                    _index,
+                    _address
+                )
+            );
+    }
 
     function submitParticipantUpdateTask() external onlyRole(ACCOUNT_ROLE) returns (uint64) {}
 

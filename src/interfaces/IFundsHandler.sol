@@ -7,8 +7,6 @@ interface IFundsHandler {
         bytes32 ticker;
         uint256 chainId;
         uint256 amount;
-        bytes txInfo;
-        bytes extraInfo;
     }
 
     struct WithdrawalInfo {
@@ -16,23 +14,17 @@ interface IFundsHandler {
         bytes32 ticker;
         uint256 chainId;
         uint256 amount;
-        bytes txInfo;
-        bytes extraInfo;
     }
 
     event DepositRecorded(
         address indexed targetAddress,
         uint256 indexed amount,
-        uint256 indexed chainId,
-        bytes txInfo,
-        bytes extraInfo
+        uint256 indexed chainId
     );
     event WithdrawalRecorded(
         address indexed targetAddress,
         uint256 indexed amount,
-        uint256 indexed chainId,
-        bytes txInfo,
-        bytes extraInfo
+        uint256 indexed chainId
     );
 
     error InvalidAmount();
@@ -43,18 +35,14 @@ interface IFundsHandler {
         address _targetAddress,
         bytes32 _ticker,
         uint256 _chainId,
-        uint256 _amount,
-        bytes calldata _txInfo,
-        bytes calldata _extraInfo
+        uint256 _amount
     ) external returns (bytes memory);
 
     function recordWithdrawal(
         address _targetAddress,
         bytes32 _ticker,
         uint256 _chainId,
-        uint256 _amount,
-        bytes calldata _txInfo,
-        bytes calldata _extraInfo
+        uint256 _amount
     ) external returns (bytes memory);
 
     function getDeposits(address targetAddress) external view returns (DepositInfo[] memory);

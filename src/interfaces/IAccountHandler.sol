@@ -17,8 +17,6 @@ interface IAccountHandler {
         string newAddress
     );
 
-    error InvalidAddress();
-    error InvalidAccountNumber(uint);
     error InvalidInput();
     error RegisteredAccount(uint256, string);
 

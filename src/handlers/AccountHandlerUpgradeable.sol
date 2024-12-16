@@ -40,8 +40,6 @@ contract AccountHandlerUpgradeable is IAccountHandler, OwnableUpgradeable {
         uint256 _index,
         string calldata _address
     ) external onlyOwner returns (bytes memory) {
-        require(bytes(_address).length != 0, InvalidAddress());
-        require(_account > 10000, InvalidAccountNumber(_account));
         require(
             bytes(addressRecord[abi.encodePacked(_account, _chain, _index)]).length == 0,
             RegisteredAccount(_account, addressRecord[abi.encodePacked(_account, _chain, _index)])
