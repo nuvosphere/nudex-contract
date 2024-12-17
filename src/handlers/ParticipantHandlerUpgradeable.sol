@@ -1,93 +1,37 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import {IParticipantHandler} from "../interfaces/IParticipantHandler.sol";
 import {INuvoLock} from "../interfaces/INuvoLock.sol";
+import {ITaskManager} from "../interfaces/ITaskManager.sol";
 
-contract ParticipantHandlerUpgradeable is IParticipantHandler, OwnableUpgradeable {
-    INuvoLock public nuvoLock;
+contract ParticipantHandlerUpgradeable is IParticipantHandler, AccessControlUpgradeable {
+    bytes32 public constant SUBMITTER_ROLE = keccak256("SUBMITTER_ROLE");
+    ITaskManager public immutable taskManager;
+    INuvoLock public immutable nuvoLock;
 
     address[] public participants;
     mapping(address => bool) public isParticipant;
 
+    constructor(address _nuvoLock, address _taskManager) {
+        nuvoLock = INuvoLock(_nuvoLock);
+        taskManager = ITaskManager(_taskManager);
+    }
+
     // _owner: EntryPoint
     function initialize(
-        address _nuvoLock,
         address _owner,
+        address _submitter,
         address[] calldata _initialParticipants
     ) public initializer {
-        __Ownable_init(_owner);
-        nuvoLock = INuvoLock(_nuvoLock);
-
         require(_initialParticipants.length > 2, NotEnoughParticipant());
         participants = _initialParticipants;
         for (uint256 i; i < _initialParticipants.length; ++i) {
             isParticipant[_initialParticipants[i]] = true;
         }
-    }
-
-    /**
-     * @dev Add new participant.
-     * @param _newParticipant The new participant to be added.
-     */
-    function addParticipant(address _newParticipant) external onlyOwner returns (bytes memory) {
-        require(!isParticipant[_newParticipant], AlreadyParticipant(_newParticipant));
-        require(nuvoLock.lockedBalanceOf(_newParticipant) > 0, NotEligible(_newParticipant));
-
-        isParticipant[_newParticipant] = true;
-        participants.push(_newParticipant);
-
-        emit ParticipantAdded(_newParticipant);
-        return abi.encodePacked(uint8(1), _newParticipant);
-    }
-
-    /**
-     * @dev Remove participant.
-     * @param _participant The participant to be removed.
-     */
-    function removeParticipant(address _participant) external onlyOwner returns (bytes memory) {
-        require(participants.length > 3, NotEnoughParticipant());
-        require(isParticipant[_participant], NotParticipant(_participant));
-
-        isParticipant[_participant] = false;
-        for (uint8 i; i < participants.length; i++) {
-            if (participants[i] == _participant) {
-                participants[i] = participants[participants.length - 1];
-                participants.pop();
-                break;
-            }
-        }
-
-        emit ParticipantRemoved(_participant);
-        return abi.encodePacked(uint8(1), _participant);
-    }
-
-    /**
-     * @dev Reset the whole participants.
-     * @param _newParticipants The new participant list.
-     */
-    function resetParticipants(
-        address[] calldata _newParticipants
-    ) external onlyOwner returns (bytes memory) {
-        require(_newParticipants.length > 2, NotEnoughParticipant());
-        // remove old participants
-        for (uint8 i; i < participants.length; i++) {
-            isParticipant[participants[i]] = false;
-        }
-        // add new participants
-        for (uint8 i; i < _newParticipants.length; ++i) {
-            require(isParticipant[_newParticipants[i]], NotParticipant(_newParticipants[i]));
-            require(
-                nuvoLock.lockedBalanceOf(_newParticipants[i]) > 0,
-                NotEligible(_newParticipants[i])
-            );
-            isParticipant[_newParticipants[i]] = true;
-        }
-        participants = _newParticipants;
-
-        emit ParticipantsReset(_newParticipants);
-        return abi.encodePacked(uint8(1), _newParticipants);
+        _grantRole(DEFAULT_ADMIN_ROLE, _owner);
+        _grantRole(SUBMITTER_ROLE, _submitter);
     }
 
     /**
@@ -113,5 +57,100 @@ contract ParticipantHandlerUpgradeable is IParticipantHandler, OwnableUpgradeabl
             )
         ) % participants.length;
         randParticipant = participants[randomIndex];
+    }
+
+    function submitAddParticipantTask(
+        address _newParticipant
+    ) external onlyRole(SUBMITTER_ROLE) returns (uint64) {
+        require(!isParticipant[_newParticipant], AlreadyParticipant(_newParticipant));
+        require(nuvoLock.lockedBalanceOf(_newParticipant) > 0, NotEligible(_newParticipant));
+        return
+            taskManager.submitTask(
+                msg.sender,
+                abi.encodeWithSelector(this.addParticipant.selector, _newParticipant)
+            );
+    }
+
+    /**
+     * @dev Add new participant.
+     * @param _newParticipant The new participant to be added.
+     */
+    function addParticipant(
+        address _newParticipant
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) returns (bytes memory) {
+        isParticipant[_newParticipant] = true;
+        participants.push(_newParticipant);
+
+        emit ParticipantAdded(_newParticipant);
+        return abi.encodePacked(uint8(1), _newParticipant);
+    }
+
+    function submitRemoveParticipantTask(
+        address _participant
+    ) external onlyRole(SUBMITTER_ROLE) returns (uint64) {
+        require(participants.length > 3, NotEnoughParticipant());
+        require(isParticipant[_participant], NotParticipant(_participant));
+        return
+            taskManager.submitTask(
+                msg.sender,
+                abi.encodeWithSelector(this.removeParticipant.selector, _participant)
+            );
+    }
+
+    /**
+     * @dev Remove participant.
+     * @param _participant The participant to be removed.
+     */
+    function removeParticipant(
+        address _participant
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) returns (bytes memory) {
+        isParticipant[_participant] = false;
+        for (uint8 i; i < participants.length; i++) {
+            if (participants[i] == _participant) {
+                participants[i] = participants[participants.length - 1];
+                participants.pop();
+                break;
+            }
+        }
+
+        emit ParticipantRemoved(_participant);
+        return abi.encodePacked(uint8(1), _participant);
+    }
+
+    function submitResetParticipantsTask(
+        address[] calldata _newParticipants
+    ) external onlyRole(SUBMITTER_ROLE) returns (uint64) {
+        require(_newParticipants.length > 2, NotEnoughParticipant());
+        return
+            taskManager.submitTask(
+                msg.sender,
+                abi.encodeWithSelector(this.resetParticipants.selector, _newParticipants)
+            );
+    }
+
+    /**
+     * @dev Reset the whole participants.
+     * @param _newParticipants The new participant list.
+     */
+    function resetParticipants(
+        address[] calldata _newParticipants
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) returns (bytes memory) {
+        // remove old participants
+        for (uint8 i; i < participants.length; i++) {
+            isParticipant[participants[i]] = false;
+        }
+        // add new participants
+        for (uint8 i; i < _newParticipants.length; ++i) {
+            require(isParticipant[_newParticipants[i]], NotParticipant(_newParticipants[i]));
+            require(
+                nuvoLock.lockedBalanceOf(_newParticipants[i]) > 0,
+                NotEligible(_newParticipants[i])
+            );
+            isParticipant[_newParticipants[i]] = true;
+        }
+        participants = _newParticipants;
+
+        emit ParticipantsReset(_newParticipants);
+        return abi.encodePacked(uint8(1), _newParticipants);
     }
 }

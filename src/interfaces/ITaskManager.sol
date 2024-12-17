@@ -36,17 +36,15 @@ interface ITaskManager {
     error AlreadyExistTask(uint64 taskId);
     error InvalidAddress();
 
+    function getTask(uint64) external view returns (TaskOperation memory);
+
     function getLatestTask() external view returns (TaskOperation memory);
 
     function getUncompletedTasks() external view returns (TaskOperation[] memory);
 
     function getTaskState(uint64 _taskId) external view returns (State);
 
-    function submitTask(
-        address _submitter,
-        address _handler,
-        bytes calldata _context
-    ) external returns (uint64);
+    function submitTask(address _submitter, bytes calldata _context) external returns (uint64);
 
     function updateTask(uint64 _taskId, State _state, bytes calldata _result) external;
 }

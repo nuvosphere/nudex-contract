@@ -29,12 +29,11 @@ struct NudexAsset {
     bool isListed; // Whether the asset is listed
     uint32 createdTime;
     uint32 updatedTime;
-    uint256 withdrawFee;
+    uint256 withdrawFee; // FIXME: put this inside TokenInfo?
     uint256 minDepositAmount;
     uint256 minWithdrawAmount;
     string assetAlias; // Common name of the asset
     string assetLogo;
-    // mapping(uint256 chainid => TokenInfo) linkedToken;
 }
 
 struct TokenInfo {
@@ -45,6 +44,7 @@ struct TokenInfo {
     address contractAddress; // Address for ERC20, Inscription, or 0x0 for BTC/Ordinal/Native token
     string symbol;
     uint256 balance; // The balance of deposited token
+    uint256 btcCount; // BTC count
 }
 
 interface IAssetHandler {

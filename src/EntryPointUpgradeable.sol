@@ -7,7 +7,7 @@ import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/ut
 import {IEntryPoint, Operation} from "./interfaces/IEntryPoint.sol";
 import {IParticipantHandler} from "./interfaces/IParticipantHandler.sol";
 import {INuvoLock} from "./interfaces/INuvoLock.sol";
-import {ITaskManager, State} from "./interfaces/ITaskManager.sol";
+import {ITaskManager, State, TaskOperation} from "./interfaces/ITaskManager.sol";
 
 /**
  * @dev Manage all onchain information.
@@ -58,16 +58,16 @@ contract EntryPointUpgradeable is IEntryPoint, Initializable, ReentrancyGuardUpg
 
     /**
      * @dev Verify operation signature.
-     * @param _opts The batch operation to be executed.
+     * @param _taskIds The batch tasks to be executed.
      * @param _nonce The nonce of tssSigner.
      * @param _signature The signature for verification.
      */
     function verifyOperation(
-        Operation[] calldata _opts,
+        uint64[] calldata _taskIds,
         uint256 _nonce,
         bytes calldata _signature
     ) external view returns (bool) {
-        return _verifyOperation(_opts, _nonce, _signature);
+        return _verifyOperation(_taskIds, _nonce, _signature);
     }
 
     /**
@@ -135,32 +135,32 @@ contract EntryPointUpgradeable is IEntryPoint, Initializable, ReentrancyGuardUpg
 
     /**
      * @dev Entry point for all task handlers
-     * @param _opts The batch operation to be executed.
+     * @param _taskIds The batch tasks to be executed.
+     * @param _state The new state of the task.
      * @param _signature The signature for verification.
      */
     function verifyAndCall(
-        Operation[] calldata _opts,
+        uint64[] calldata _taskIds,
+        State _state,
         bytes calldata _signature
     ) external onlyCurrentSubmitter nonReentrant {
-        require(_verifyOperation(_opts, tssNonce++, _signature), InvalidSigner(msg.sender));
+        require(_verifyOperation(_taskIds, tssNonce++, _signature), InvalidSigner(msg.sender));
         bool success;
         bytes memory result;
-        Operation memory opt;
-        for (uint8 i; i < _opts.length; ++i) {
-            opt = _opts[i];
-            if (opt.handlerAddr == address(0)) {
+        TaskOperation memory opt;
+        for (uint8 i; i < _taskIds.length; ++i) {
+            opt = taskManager.getTask(_taskIds[i]);
+            if (opt.submitter == address(0)) {
                 // override existing task result
-                taskManager.updateTask(opt.taskId, opt.state, opt.optData);
+                taskManager.updateTask(opt.id, _state, opt.optData);
             } else {
-                (success, result) = opt.handlerAddr.call(opt.optData);
+                (success, result) = opt.handler.call(opt.optData);
                 if (!success) {
                     // fail
-                    taskManager.updateTask(opt.taskId, State.Failed, "");
-                    // for recording revert message
-                    emit OperationFailed(result);
+                    taskManager.updateTask(opt.id, State.Failed, result);
                 } else {
                     // success
-                    taskManager.updateTask(opt.taskId, opt.state, result);
+                    taskManager.updateTask(opt.id, _state, result);
                 }
             }
         }
@@ -169,18 +169,18 @@ contract EntryPointUpgradeable is IEntryPoint, Initializable, ReentrancyGuardUpg
 
     /**
      * @dev Verify the validity of the operation.
-     * @param _opts The batch operation to be executed.
+     * @param _taskIds The batch operation to be executed.
      * @param _nonce The nonce of tssSigner.
      * @param _signature The signature for verification.
      */
     function _verifyOperation(
-        Operation[] calldata _opts,
+        uint64[] calldata _taskIds,
         uint256 _nonce,
         bytes calldata _signature
     ) internal view returns (bool) {
-        require(_opts.length > 0, EmptyOperationsArray());
-        require(_opts.length <= MAX_OPT_COUNT, ExceedMaxOptCount());
-        return _verifySignature(keccak256(abi.encode(_nonce, block.chainid, _opts)), _signature);
+        require(_taskIds.length > 0, EmptyOperationsArray());
+        require(_taskIds.length <= MAX_OPT_COUNT, ExceedMaxOptCount());
+        return _verifySignature(keccak256(abi.encode(_nonce, block.chainid, _taskIds)), _signature);
     }
 
     /**

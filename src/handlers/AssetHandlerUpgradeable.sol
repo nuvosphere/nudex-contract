@@ -1,10 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import {IAssetHandler, AssetParam, AssetType, NudexAsset, TokenInfo} from "../interfaces/IAssetHandler.sol";
+import {ITaskManager} from "../interfaces/ITaskManager.sol";
 
-contract AssetHandlerUpgradeable is IAssetHandler, OwnableUpgradeable {
+contract AssetHandlerUpgradeable is IAssetHandler, AccessControlUpgradeable {
+    bytes32 public constant FUNDS_ROLE = keccak256("FUNDS_ROLE");
+    bytes32 public constant SUBMITTER_ROLE = keccak256("SUBMITTER_ROLE");
+    ITaskManager public immutable taskManager;
+
     // Mapping from asset identifiers to their details
     bytes32[] public assetTickerList;
     mapping(bytes32 ticker => NudexAsset) public nudexAssets;
@@ -16,9 +21,14 @@ contract AssetHandlerUpgradeable is IAssetHandler, OwnableUpgradeable {
         _;
     }
 
+    constructor(address _taskManager) {
+        taskManager = ITaskManager(_taskManager);
+    }
+
     // _owner: EntryPoint contract
-    function initialize(address _owner) public initializer {
-        __Ownable_init(_owner);
+    function initialize(address _owner, address _submitter) public initializer {
+        _grantRole(DEFAULT_ADMIN_ROLE, _owner);
+        _grantRole(SUBMITTER_ROLE, _submitter);
     }
 
     // Check if an asset is listed
@@ -38,10 +48,24 @@ contract AssetHandlerUpgradeable is IAssetHandler, OwnableUpgradeable {
         return assetTickerList;
     }
 
+    function submitListAssetTask(
+        bytes32 _ticker,
+        AssetParam calldata _assetParam
+    ) external onlyRole(SUBMITTER_ROLE) returns (uint64) {
+        require(!nudexAssets[_ticker].isListed, "Asset already listed");
+        return
+            taskManager.submitTask(
+                msg.sender,
+                abi.encodeWithSelector(this.listNewAsset.selector, _ticker, _assetParam)
+            );
+    }
+
     // List a new asset
-    function listNewAsset(bytes32 _ticker, AssetParam calldata _assetParam) external onlyOwner {
+    function listNewAsset(
+        bytes32 _ticker,
+        AssetParam calldata _assetParam
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         NudexAsset storage tempNudexAsset = nudexAssets[_ticker];
-        require(!tempNudexAsset.isListed, "Asset already listed");
         // update listed assets
         tempNudexAsset.listIndex = uint32(assetTickerList.length);
         tempNudexAsset.isListed = true;
@@ -63,11 +87,18 @@ contract AssetHandlerUpgradeable is IAssetHandler, OwnableUpgradeable {
         emit AssetListed(_ticker, _assetParam);
     }
 
+    function submitAssetTask(
+        bytes32 _ticker,
+        bytes calldata _callData
+    ) external onlyRole(SUBMITTER_ROLE) checkListing(_ticker) returns (uint64) {
+        return taskManager.submitTask(msg.sender, _callData);
+    }
+
     // Update listed asset
     function updateAsset(
         bytes32 _ticker,
         AssetParam calldata _assetParam
-    ) external onlyOwner checkListing(_ticker) {
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) checkListing(_ticker) {
         NudexAsset storage tempNudexAsset = nudexAssets[_ticker];
         // update listed assets
         tempNudexAsset.updatedTime = uint32(block.timestamp);
@@ -87,7 +118,9 @@ contract AssetHandlerUpgradeable is IAssetHandler, OwnableUpgradeable {
     }
 
     // Delist an existing asset
-    function delistAsset(bytes32 _ticker) external onlyOwner checkListing(_ticker) {
+    function delistAsset(
+        bytes32 _ticker
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) checkListing(_ticker) {
         NudexAsset storage tempNudexAsset = nudexAssets[_ticker];
         uint32 listIndex = tempNudexAsset.listIndex;
         resetlinkedToken(_ticker);
@@ -102,7 +135,7 @@ contract AssetHandlerUpgradeable is IAssetHandler, OwnableUpgradeable {
     function linkToken(
         bytes32 _ticker,
         TokenInfo[] calldata _tokenInfos
-    ) external onlyOwner checkListing(_ticker) {
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) checkListing(_ticker) {
         for (uint8 i; i < _tokenInfos.length; ++i) {
             uint256 chainId = _tokenInfos[i].chainId;
             require(linkedTokens[_ticker][chainId].chainId == 0, "Linked Token");
@@ -111,7 +144,9 @@ contract AssetHandlerUpgradeable is IAssetHandler, OwnableUpgradeable {
         }
     }
 
-    function resetlinkedToken(bytes32 _ticker) public onlyOwner checkListing(_ticker) {
+    function resetlinkedToken(
+        bytes32 _ticker
+    ) public onlyRole(DEFAULT_ADMIN_ROLE) checkListing(_ticker) {
         uint256[] memory chainIds = linkedTokenList[_ticker];
         delete linkedTokenList[_ticker];
         for (uint32 i; i < chainIds.length; ++i) {
@@ -123,7 +158,7 @@ contract AssetHandlerUpgradeable is IAssetHandler, OwnableUpgradeable {
         bytes32 _ticker,
         uint256 _chainId,
         bool _isActive
-    ) external onlyOwner checkListing(_ticker) {
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) checkListing(_ticker) {
         linkedTokens[_ticker][_chainId].isActive = _isActive;
     }
 
@@ -131,7 +166,7 @@ contract AssetHandlerUpgradeable is IAssetHandler, OwnableUpgradeable {
         bytes32 _ticker,
         uint256 _chainId,
         uint256 _amount
-    ) external onlyOwner checkListing(_ticker) {
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) checkListing(_ticker) {
         require(linkedTokens[_ticker][_chainId].isActive, "Inactive token");
         linkedTokens[_ticker][_chainId].balance += _amount;
         emit Deposit(_ticker, _chainId, _amount);
@@ -141,7 +176,7 @@ contract AssetHandlerUpgradeable is IAssetHandler, OwnableUpgradeable {
         bytes32 _ticker,
         uint256 _chainId,
         uint256 _amount
-    ) external onlyOwner checkListing(_ticker) {
+    ) external onlyRole(FUNDS_ROLE) checkListing(_ticker) {
         require(linkedTokens[_ticker][_chainId].isActive, "Inactive token");
         require(
             linkedTokens[_ticker][_chainId].balance >= _amount,

@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import {ITaskManager, State, TaskOperation} from "../interfaces/ITaskManager.sol";
 
-contract TaskManagerUpgradeable is ITaskManager, OwnableUpgradeable {
-    address public taskSubmitter;
+contract TaskManagerUpgradeable is ITaskManager, AccessControlUpgradeable {
+    bytes32 public constant HANDLER_ROLE = keccak256("HANDLER_ROLE");
+
     uint64 public nextTaskId;
     uint64 public nextCreatedTaskId;
     uint64 public pendingTaskIndex;
@@ -15,18 +16,15 @@ contract TaskManagerUpgradeable is ITaskManager, OwnableUpgradeable {
     mapping(uint64 => TaskOperation) public tasks;
     mapping(bytes32 => uint64) public taskRecords;
 
-    function initialize(address _taskSubmitter, address _owner) public initializer {
-        __Ownable_init(_owner);
-        taskSubmitter = _taskSubmitter;
+    function initialize(address _owner, address[] calldata _taskHandlers) public initializer {
+        _grantRole(DEFAULT_ADMIN_ROLE, _owner);
+        for (uint8 i; i < _taskHandlers.length; ++i) {
+            _grantRole(HANDLER_ROLE, _taskHandlers[i]);
+        }
     }
 
-    /**
-     * @dev Set new task submitter.
-     * @param _taskSubmitter The new task submitter contract address.
-     */
-    function setTaskSubmitter(address _taskSubmitter) external onlyOwner {
-        require(_taskSubmitter != address(0), InvalidAddress());
-        taskSubmitter = _taskSubmitter;
+    function getTask(uint64 _taskId) external view returns (TaskOperation memory) {
+        return tasks[_taskId];
     }
 
     /**
@@ -72,11 +70,8 @@ contract TaskManagerUpgradeable is ITaskManager, OwnableUpgradeable {
      */
     function submitTask(
         address _submitter,
-        address _handler,
         bytes calldata _data
-    ) external returns (uint64) {
-        require(msg.sender == taskSubmitter, OnlyTaskSubmitter());
-
+    ) external onlyRole(HANDLER_ROLE) returns (uint64) {
         bytes32 hash = keccak256(_data);
         uint64 taskId = taskRecords[hash];
         require(taskId == 0, AlreadyExistTask(taskId));
@@ -85,7 +80,7 @@ contract TaskManagerUpgradeable is ITaskManager, OwnableUpgradeable {
             id: taskId,
             state: State.Created,
             submitter: _submitter,
-            handler: _handler,
+            handler: msg.sender,
             createdAt: uint32(block.timestamp),
             updatedAt: uint32(0),
             optData: _data,
@@ -103,7 +98,11 @@ contract TaskManagerUpgradeable is ITaskManager, OwnableUpgradeable {
      * @param _state The new state of the tast.
      * @param _result (Optional) The final result of the task.
      */
-    function updateTask(uint64 _taskId, State _state, bytes calldata _result) external onlyOwner {
+    function updateTask(
+        uint64 _taskId,
+        State _state,
+        bytes calldata _result
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         TaskOperation storage task = tasks[_taskId];
         if (task.state == State.Created) {
             require(_taskId == nextCreatedTaskId++, InvalidTask(_taskId));
