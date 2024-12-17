@@ -32,38 +32,38 @@ contract FundsHandlerUpgradeable is IFundsHandler, AccessControlUpgradeable {
     /**
      * @dev Get all deposit records of user.
      */
-    function getDeposits(address targetAddress) external view returns (DepositInfo[] memory) {
-        require(targetAddress != address(0), InvalidAddress());
-        return deposits[targetAddress];
+    function getDeposits(address userAddress) external view returns (DepositInfo[] memory) {
+        require(userAddress != address(0), InvalidAddress());
+        return deposits[userAddress];
     }
 
     /**
      * @dev Get n-th deposit record of user.
      */
     function getDeposit(
-        address targetAddress,
+        address userAddress,
         uint256 index
     ) external view returns (DepositInfo memory) {
-        require(targetAddress != address(0), InvalidAddress());
-        return deposits[targetAddress][index];
+        require(userAddress != address(0), InvalidAddress());
+        return deposits[userAddress][index];
     }
 
     /**
      * @dev Get all withdraw records of user.
      */
-    function getWithdrawals(address targetAddress) external view returns (WithdrawalInfo[] memory) {
-        return withdrawals[targetAddress];
+    function getWithdrawals(address userAddress) external view returns (WithdrawalInfo[] memory) {
+        return withdrawals[userAddress];
     }
 
     /**
      * @dev Get n-th withdraw record of user.
      */
     function getWithdrawal(
-        address targetAddress,
+        address userAddress,
         uint256 index
     ) external view returns (WithdrawalInfo memory) {
-        require(targetAddress != address(0), InvalidAddress());
-        return withdrawals[targetAddress][index];
+        require(userAddress != address(0), InvalidAddress());
+        return withdrawals[userAddress][index];
     }
 
     function setMinAmount(
@@ -84,7 +84,7 @@ contract FundsHandlerUpgradeable is IFundsHandler, AccessControlUpgradeable {
     function submitDepositTask(
         address _userAddress,
         bytes32 _ticker,
-        uint256 _chainId,
+        bytes32 _chainId,
         uint256 _amount
     ) external onlyRole(SUBMITTER_ROLE) returns (uint64) {
         require(!pauseState[_ticker] && !pauseState[bytes32(_chainId)], "Paused");
@@ -109,12 +109,12 @@ contract FundsHandlerUpgradeable is IFundsHandler, AccessControlUpgradeable {
     function recordDeposit(
         address _userAddress,
         bytes32 _ticker,
-        uint256 _chainId,
+        bytes32 _chainId,
         uint256 _amount
     ) external onlyRole(DEFAULT_ADMIN_ROLE) returns (bytes memory) {
         deposits[_userAddress].push(
             DepositInfo({
-                targetAddress: _userAddress,
+                userAddress: _userAddress,
                 ticker: _ticker,
                 chainId: _chainId,
                 amount: _amount
@@ -128,7 +128,7 @@ contract FundsHandlerUpgradeable is IFundsHandler, AccessControlUpgradeable {
     function submitWithdrawTask(
         address _userAddress,
         bytes32 _ticker,
-        uint256 _chainId,
+        bytes32 _chainId,
         uint256 _amount
     ) external onlyRole(SUBMITTER_ROLE) returns (uint64) {
         require(!pauseState[_ticker] && !pauseState[bytes32(_chainId)], "Paused");
@@ -154,12 +154,12 @@ contract FundsHandlerUpgradeable is IFundsHandler, AccessControlUpgradeable {
     function recordWithdrawal(
         address _userAddress,
         bytes32 _ticker,
-        uint256 _chainId,
+        bytes32 _chainId,
         uint256 _amount
     ) external onlyRole(DEFAULT_ADMIN_ROLE) returns (bytes memory) {
         withdrawals[_userAddress].push(
             WithdrawalInfo({
-                targetAddress: _userAddress,
+                userAddress: _userAddress,
                 ticker: _ticker,
                 chainId: _chainId,
                 amount: _amount

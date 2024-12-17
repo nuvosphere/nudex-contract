@@ -9,8 +9,9 @@ contract AccountHandlerUpgradeable is IAccountHandler, AccessControlUpgradeable 
     bytes32 public constant SUBMITTER_ROLE = keccak256("SUBMITTER_ROLE");
     ITaskManager public immutable taskManager;
 
-    mapping(bytes => string) public addressRecord;
-    mapping(string depositAddress => mapping(Chain => uint256 account)) public userMapping;
+    mapping(bytes => bytes32) public addressRecord;
+    mapping(bytes32 depositAddress => mapping(AddressCategory => uint256 account))
+        public userMapping;
 
     constructor(address _taskManager) {
         taskManager = ITaskManager(_taskManager);
@@ -30,20 +31,24 @@ contract AccountHandlerUpgradeable is IAccountHandler, AccessControlUpgradeable 
      */
     function getAddressRecord(
         uint256 _account,
-        Chain _chain,
+        AddressCategory _chain,
         uint256 _index
-    ) external view returns (string memory) {
+    ) external view returns (bytes32) {
         return addressRecord[abi.encodePacked(_account, _chain, _index)];
     }
 
     function submitRegisterTask(
         uint256 _account,
-        Chain _chain,
+        AddressCategory _chain,
         uint256 _index,
-        string calldata _address
+        bytes32 _address
     ) external onlyRole(SUBMITTER_ROLE) returns (uint64) {
-        require(bytes(_address).length != 0, InvalidAddress());
+        require(_address != 0x00, InvalidAddress());
         require(_account > 10000, InvalidAccountNumber(_account));
+        require(
+            addressRecord[abi.encodePacked(_account, _chain, _index)] == 0x00,
+            RegisteredAccount(_account, addressRecord[abi.encodePacked(_account, _chain, _index)])
+        );
         return
             taskManager.submitTask(
                 msg.sender,
@@ -66,14 +71,10 @@ contract AccountHandlerUpgradeable is IAccountHandler, AccessControlUpgradeable 
      */
     function registerNewAddress(
         uint256 _account,
-        Chain _chain,
+        AddressCategory _chain,
         uint256 _index,
-        string calldata _address
-    ) external onlyRole(SUBMITTER_ROLE) returns (bytes memory) {
-        require(
-            bytes(addressRecord[abi.encodePacked(_account, _chain, _index)]).length == 0,
-            RegisteredAccount(_account, addressRecord[abi.encodePacked(_account, _chain, _index)])
-        );
+        bytes32 _address
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) returns (bytes memory) {
         addressRecord[abi.encodePacked(_account, _chain, _index)] = _address;
         userMapping[_address][_chain] = _account;
         emit AddressRegistered(_account, _chain, _index, _address);

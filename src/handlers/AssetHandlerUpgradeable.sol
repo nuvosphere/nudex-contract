@@ -13,8 +13,8 @@ contract AssetHandlerUpgradeable is IAssetHandler, AccessControlUpgradeable {
     // Mapping from asset identifiers to their details
     bytes32[] public assetTickerList;
     mapping(bytes32 ticker => NudexAsset) public nudexAssets;
-    mapping(bytes32 ticker => uint256[] chainIds) public linkedTokenList;
-    mapping(bytes32 ticker => mapping(uint256 chainId => TokenInfo index)) public linkedTokens;
+    mapping(bytes32 ticker => bytes32[] chainIds) public linkedTokenList;
+    mapping(bytes32 ticker => mapping(bytes32 chainId => TokenInfo index)) public linkedTokens;
 
     modifier checkListing(bytes32 _ticker) {
         require(nudexAssets[_ticker].isListed, AssetNotListed(_ticker));
@@ -77,7 +77,6 @@ contract AssetHandlerUpgradeable is IAssetHandler, AccessControlUpgradeable {
         tempNudexAsset.decimals = _assetParam.decimals;
         tempNudexAsset.depositEnabled = _assetParam.depositEnabled;
         tempNudexAsset.withdrawalEnabled = _assetParam.withdrawalEnabled;
-        tempNudexAsset.withdrawFee = _assetParam.withdrawFee;
         tempNudexAsset.minDepositAmount = _assetParam.minDepositAmount;
         tempNudexAsset.minWithdrawAmount = _assetParam.minWithdrawAmount;
         tempNudexAsset.assetAlias = _assetParam.assetAlias;
@@ -108,7 +107,6 @@ contract AssetHandlerUpgradeable is IAssetHandler, AccessControlUpgradeable {
         tempNudexAsset.decimals = _assetParam.decimals;
         tempNudexAsset.depositEnabled = _assetParam.depositEnabled;
         tempNudexAsset.withdrawalEnabled = _assetParam.withdrawalEnabled;
-        tempNudexAsset.withdrawFee = _assetParam.withdrawFee;
         tempNudexAsset.minDepositAmount = _assetParam.minDepositAmount;
         tempNudexAsset.minWithdrawAmount = _assetParam.minWithdrawAmount;
         tempNudexAsset.assetAlias = _assetParam.assetAlias;
@@ -137,7 +135,7 @@ contract AssetHandlerUpgradeable is IAssetHandler, AccessControlUpgradeable {
         TokenInfo[] calldata _tokenInfos
     ) external onlyRole(DEFAULT_ADMIN_ROLE) checkListing(_ticker) {
         for (uint8 i; i < _tokenInfos.length; ++i) {
-            uint256 chainId = _tokenInfos[i].chainId;
+            bytes32 chainId = _tokenInfos[i].chainId;
             require(linkedTokens[_ticker][chainId].chainId == 0, "Linked Token");
             linkedTokens[_ticker][chainId] = _tokenInfos[i];
             linkedTokenList[_ticker].push(chainId);
@@ -147,16 +145,16 @@ contract AssetHandlerUpgradeable is IAssetHandler, AccessControlUpgradeable {
     function resetlinkedToken(
         bytes32 _ticker
     ) public onlyRole(DEFAULT_ADMIN_ROLE) checkListing(_ticker) {
-        uint256[] memory chainIds = linkedTokenList[_ticker];
+        bytes32[] memory chainIds = linkedTokenList[_ticker];
         delete linkedTokenList[_ticker];
         for (uint32 i; i < chainIds.length; ++i) {
-            linkedTokens[_ticker][i].isActive = false;
+            linkedTokens[_ticker][chainIds[i]].isActive = false;
         }
     }
 
     function tokenSwitch(
         bytes32 _ticker,
-        uint256 _chainId,
+        bytes32 _chainId,
         bool _isActive
     ) external onlyRole(DEFAULT_ADMIN_ROLE) checkListing(_ticker) {
         linkedTokens[_ticker][_chainId].isActive = _isActive;
@@ -164,7 +162,7 @@ contract AssetHandlerUpgradeable is IAssetHandler, AccessControlUpgradeable {
 
     function consolidate(
         bytes32 _ticker,
-        uint256 _chainId,
+        bytes32 _chainId,
         uint256 _amount
     ) external onlyRole(DEFAULT_ADMIN_ROLE) checkListing(_ticker) {
         require(linkedTokens[_ticker][_chainId].isActive, "Inactive token");
@@ -174,7 +172,7 @@ contract AssetHandlerUpgradeable is IAssetHandler, AccessControlUpgradeable {
 
     function withdraw(
         bytes32 _ticker,
-        uint256 _chainId,
+        bytes32 _chainId,
         uint256 _amount
     ) external onlyRole(FUNDS_ROLE) checkListing(_ticker) {
         require(linkedTokens[_ticker][_chainId].isActive, "Inactive token");

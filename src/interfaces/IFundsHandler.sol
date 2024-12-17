@@ -3,28 +3,28 @@ pragma solidity ^0.8.26;
 
 interface IFundsHandler {
     struct DepositInfo {
-        address targetAddress;
+        address userAddress;
         bytes32 ticker;
-        uint256 chainId;
+        bytes32 chainId;
         uint256 amount;
     }
 
     struct WithdrawalInfo {
-        address targetAddress;
+        address userAddress;
         bytes32 ticker;
-        uint256 chainId;
+        bytes32 chainId;
         uint256 amount;
     }
 
     event DepositRecorded(
-        address indexed targetAddress,
+        address indexed userAddress,
         uint256 indexed amount,
-        uint256 indexed chainId
+        bytes32 indexed chainId
     );
     event WithdrawalRecorded(
-        address indexed targetAddress,
+        address indexed userAddress,
         uint256 indexed amount,
-        uint256 indexed chainId
+        bytes32 indexed chainId
     );
 
     error InvalidAmount();
@@ -32,19 +32,19 @@ interface IFundsHandler {
     error InvalidAddress();
 
     function recordDeposit(
-        address _targetAddress,
+        address _userAddress,
         bytes32 _ticker,
-        uint256 _chainId,
+        bytes32 _chainId,
         uint256 _amount
     ) external returns (bytes memory);
 
     function recordWithdrawal(
-        address _targetAddress,
+        address _userAddress,
         bytes32 _ticker,
-        uint256 _chainId,
+        bytes32 _chainId,
         uint256 _amount
     ) external returns (bytes memory);
 
-    function getDeposits(address targetAddress) external view returns (DepositInfo[] memory);
-    function getWithdrawals(address targetAddress) external view returns (WithdrawalInfo[] memory);
+    function getDeposits(address userAddress) external view returns (DepositInfo[] memory);
+    function getWithdrawals(address userAddress) external view returns (WithdrawalInfo[] memory);
 }

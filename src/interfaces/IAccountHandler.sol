@@ -2,38 +2,38 @@
 pragma solidity ^0.8.26;
 
 interface IAccountHandler {
-    enum Chain {
+    enum AddressCategory {
         BTC,
         EVM,
-        SOL, // Solana
+        SOL,
         SUI,
         EVM_TSS
     }
 
     event AddressRegistered(
         uint256 indexed account,
-        Chain indexed chain,
+        AddressCategory indexed chain,
         uint256 indexed index,
-        string newAddress
+        bytes32 newAddress
     );
 
     error InvalidAddress();
     error InvalidAccountNumber(uint);
     error InvalidInput();
-    error RegisteredAccount(uint256, string);
+    error RegisteredAccount(uint256, bytes32);
 
-    function addressRecord(bytes calldata _input) external view returns (string calldata);
-    function userMapping(string calldata _addr, Chain _chain) external view returns (uint256);
+    function addressRecord(bytes calldata _input) external view returns (bytes32);
+    function userMapping(bytes32 _addr, AddressCategory _chain) external view returns (uint256);
     function getAddressRecord(
         uint256 _account,
-        Chain _chain,
+        AddressCategory _chain,
         uint256 _index
-    ) external view returns (string memory);
+    ) external view returns (bytes32);
 
     function registerNewAddress(
         uint _account,
-        Chain _chain,
+        AddressCategory _chain,
         uint _index,
-        string calldata _address
+        bytes32 _address
     ) external returns (bytes memory);
 }
