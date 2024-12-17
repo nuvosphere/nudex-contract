@@ -31,7 +31,7 @@ struct NudexAsset {
     uint256 minDepositAmount;
     uint256 minWithdrawAmount;
     string assetAlias; // Common name of the asset
-    string assetLogo;
+    string assetLogo; // TODO: delete this?
 }
 
 struct TokenInfo {
@@ -40,7 +40,7 @@ struct TokenInfo {
     AssetType assetType; // Type of the asset (BTC, EVM, Ordinal, Inscription)
     uint8 decimals;
     address contractAddress; // Address for ERC20, Inscription, or 0x0 for BTC/Ordinal/Native token
-    string symbol;
+    string symbol; // TODO: delete this?
     uint256 withdrawFee;
     uint256 balance; // The balance of deposited token
     uint256 btcCount; // BTC count

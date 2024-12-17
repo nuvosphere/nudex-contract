@@ -12,8 +12,6 @@ contract FundsHandlerUpgradeable is IFundsHandler, AccessControlUpgradeable {
     ITaskManager public immutable taskManager;
     IAssetHandler private immutable assetHandler;
 
-    uint256 public minDepositAmount;
-    uint256 public minWithdrawAmount;
     mapping(bytes32 pauseType => bool isPaused) public pauseState;
     mapping(address userAddr => DepositInfo[]) public deposits;
     mapping(address userAddr => WithdrawalInfo[]) public withdrawals;
@@ -66,14 +64,7 @@ contract FundsHandlerUpgradeable is IFundsHandler, AccessControlUpgradeable {
         return withdrawals[userAddress][index];
     }
 
-    function setMinAmount(
-        uint256 _dAmount,
-        uint256 _wAmount
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        minDepositAmount = _dAmount;
-        minWithdrawAmount = _wAmount;
-    }
-
+    // TODO: role for adjusting Pause state
     function setPauseState(
         bytes32 _condition,
         bool _newState
@@ -88,7 +79,7 @@ contract FundsHandlerUpgradeable is IFundsHandler, AccessControlUpgradeable {
         uint256 _amount
     ) external onlyRole(SUBMITTER_ROLE) returns (uint64) {
         require(!pauseState[_ticker] && !pauseState[bytes32(_chainId)], "Paused");
-        require(_amount >= minDepositAmount, InvalidAmount());
+        require(_amount >= assetHandler.getAssetDetails(_ticker).minDepositAmount, InvalidAmount());
         require(_userAddress != address(0), InvalidAddress());
         return
             taskManager.submitTask(
@@ -132,7 +123,10 @@ contract FundsHandlerUpgradeable is IFundsHandler, AccessControlUpgradeable {
         uint256 _amount
     ) external onlyRole(SUBMITTER_ROLE) returns (uint64) {
         require(!pauseState[_ticker] && !pauseState[bytes32(_chainId)], "Paused");
-        require(_amount >= minWithdrawAmount, InvalidAmount());
+        require(
+            _amount >= assetHandler.getAssetDetails(_ticker).minWithdrawAmount,
+            InvalidAmount()
+        );
         require(_userAddress != address(0), InvalidAddress());
         emit INIP20.NIP20TokenEvent_burnb(_userAddress, _ticker, _amount);
         return
