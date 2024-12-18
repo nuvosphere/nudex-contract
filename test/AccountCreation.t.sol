@@ -4,13 +4,12 @@ import "./BaseTest.sol";
 
 import {AccountHandlerUpgradeable} from "../src/handlers/AccountHandlerUpgradeable.sol";
 import {IAccountHandler} from "../src/interfaces/IAccountHandler.sol";
-import {ITaskManager} from "../src/interfaces/ITaskManager.sol";
+import {ITaskManager, State} from "../src/interfaces/ITaskManager.sol";
 
 contract AccountCreationTest is BaseTest {
     uint256 constant DEFAULT_ACCOUNT = 10001;
 
-    uint64[] public taskIds;
-    bytes32 public depositAddress;
+    string public depositAddress;
 
     AccountHandlerUpgradeable public accountHandler;
     address public amProxy;
@@ -28,12 +27,11 @@ contract AccountCreationTest is BaseTest {
         accountHandler.initialize(vmProxy, msgSender);
         assertTrue(accountHandler.hasRole(DEFAULT_ADMIN_ROLE, vmProxy));
 
-        address[] memory handlers = new address[](1);
-        handlers[0] = amProxy;
+        // assign handlers
+        handlers.push(amProxy);
         taskManager.initialize(vmProxy, handlers);
 
         // initialize entryPoint link to all contracts
-        entryPoint = EntryPointUpgradeable(vmProxy);
         entryPoint.initialize(
             tssSigner, // tssSigner
             address(participantHandler), // participantHandler
@@ -45,13 +43,11 @@ contract AccountCreationTest is BaseTest {
     function test_Create() public {
         vm.startPrank(msgSender);
         // submit task
-        taskIds.push(
-            accountHandler.submitRegisterTask(
-                DEFAULT_ACCOUNT,
-                IAccountHandler.AddressCategory.BTC,
-                0,
-                depositAddress
-            )
+        taskIds[0] = accountHandler.submitRegisterTask(
+            DEFAULT_ACCOUNT,
+            IAccountHandler.AddressCategory.BTC,
+            0,
+            depositAddress
         );
         bytes memory signature = _generateOptSignature(taskIds, tssKey);
         entryPoint.verifyAndCall(taskIds, signature);
@@ -75,89 +71,69 @@ contract AccountCreationTest is BaseTest {
             accountHandler.userMapping(depositAddress, IAccountHandler.AddressCategory.BTC),
             DEFAULT_ACCOUNT
         );
+        assertEq(uint8(taskManager.getTaskState(taskIds[0])), uint8(State.Completed));
 
         // fail: already registered
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IAccountHandler.RegisteredAccount.selector,
+                DEFAULT_ACCOUNT,
+                depositAddress
+            )
+        );
         taskIds[0] = accountHandler.submitRegisterTask(
             DEFAULT_ACCOUNT,
             IAccountHandler.AddressCategory.BTC,
             0,
             depositAddress
         );
-        signature = _generateOptSignature(taskIds, tssKey);
-
-        vm.expectEmit(true, true, true, true);
-        emit IEntryPoint.OperationFailed(
-            abi.encodeWithSelector(
-                IAccountHandler.RegisteredAccount.selector,
-                DEFAULT_ACCOUNT,
-                accountHandler.addressRecord(
-                    abi.encodePacked(DEFAULT_ACCOUNT, IAccountHandler.AddressCategory.BTC, uint(0))
-                )
-            )
-        );
-        entryPoint.verifyAndCall(taskIds, signature);
         vm.stopPrank();
     }
 
-    function test_CreateRevert() public {
+    function test_TaskRevert() public {
         vm.startPrank(msgSender);
         // fail case: deposit address as address zero
-        taskIds.push(
-            accountHandler.submitRegisterTask(
-                DEFAULT_ACCOUNT,
-                IAccountHandler.AddressCategory.BTC,
-                0,
-                0x00
-            )
+        vm.expectRevert(IAccountHandler.InvalidAddress.selector);
+        accountHandler.submitRegisterTask(
+            DEFAULT_ACCOUNT,
+            IAccountHandler.AddressCategory.BTC,
+            0,
+            ""
         );
-        bytes memory signature = _generateOptSignature(taskIds, tssKey);
-        vm.expectEmit(true, true, true, true);
-        emit IEntryPoint.OperationFailed(
-            abi.encodeWithSelector((IAccountHandler.InvalidAddress.selector))
-        );
-        entryPoint.verifyAndCall(taskIds, signature);
 
         // fail case: account number less than 10000
-        taskIds[0] = accountHandler.submitRegisterTask(
-            uint256(9999),
+        uint256 invalidAccountNum = uint256(9999);
+        vm.expectRevert(
+            abi.encodeWithSelector(IAccountHandler.InvalidAccountNumber.selector, invalidAccountNum)
+        );
+        accountHandler.submitRegisterTask(
+            invalidAccountNum,
             IAccountHandler.AddressCategory.BTC,
             0,
             depositAddress
         );
-        signature = _generateOptSignature(taskIds, tssKey);
-        vm.expectEmit(true, true, true, true);
-        emit IEntryPoint.OperationFailed(
-            abi.encodeWithSelector(IAccountHandler.InvalidAccountNumber.selector, 9999)
-        );
-        entryPoint.verifyAndCall(taskIds, signature);
         vm.stopPrank();
     }
 
-    function testFuzz_CreateFuzz(
+    function testFuzz_SubmitTaskFuzz(
         uint256 _account,
         uint8 _chain,
         uint256 _index,
-        bytes32 _address
+        string calldata _address
     ) public {
         vm.assume(_account < 10000000);
         vm.assume(_chain < 3);
-        vm.assume(_address != 0x00);
+        vm.assume(bytes(_address).length > 0);
         IAccountHandler.AddressCategory chain = IAccountHandler.AddressCategory(_chain);
-        vm.startPrank(address(entryPoint));
+        vm.startPrank(msgSender);
         if (_account > 10000) {
-            accountHandler.registerNewAddress(_account, chain, _index, _address);
-            // check mappings|reverseMapping
-            assertEq(
-                accountHandler.addressRecord(abi.encodePacked(_account, chain, _index)),
-                _address
-            );
-            assertEq(accountHandler.userMapping(_address, chain), _account);
+            accountHandler.submitRegisterTask(_account, chain, _index, _address);
         } else {
             vm.expectRevert(
                 abi.encodeWithSelector(IAccountHandler.InvalidAccountNumber.selector, _account)
             );
-            accountHandler.registerNewAddress(_account, chain, _index, _address);
-            vm.stopPrank();
+            accountHandler.submitRegisterTask(_account, chain, _index, _address);
         }
+        vm.stopPrank();
     }
 }

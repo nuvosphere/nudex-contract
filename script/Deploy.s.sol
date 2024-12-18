@@ -19,6 +19,7 @@ contract Deploy is Script {
     address tssSigner;
     address[] initialParticipants;
 
+    address[] handlers;
     address vmProxy;
     address lockProxy;
     address pmProxy;
@@ -55,36 +56,39 @@ contract Deploy is Script {
         NuvoLockUpgradeable nuvoLock = NuvoLockUpgradeable(lockProxy);
         nuvoLock.initialize(nuvoToken, deployer, vmProxy, 1 weeks, 1 ether);
 
-        // deploy participantManager
-        pmProxy = deployProxy(address(new ParticipantHandlerUpgradeable()), daoContract);
-        ParticipantHandlerUpgradeable participantManager = ParticipantHandlerUpgradeable(pmProxy);
-        participantManager.initialize(address(0), vmProxy, initialParticipants);
-
         // deploy taskManager & taskSubmitter
         tmProxy = deployProxy(address(new TaskManagerUpgradeable()), daoContract);
-        tsProxy = deployProxy(address(new TaskSubmitterUpgradeable(tmProxy)), daoContract);
-
         TaskManagerUpgradeable taskManager = TaskManagerUpgradeable(tmProxy);
-        TaskSubmitterUpgradeable taskSubmitter = TaskSubmitterUpgradeable(tsProxy);
-        taskManager.initialize(tsProxy, vmProxy);
-        taskSubmitter.initialize(vmProxy);
+
+        // deploy participantManager
+        pmProxy = deployProxy(
+            address(new ParticipantHandlerUpgradeable(lockProxy, tmProxy)),
+            daoContract
+        );
+        ParticipantHandlerUpgradeable participantManager = ParticipantHandlerUpgradeable(pmProxy);
+        participantManager.initialize(vmProxy, deployer, initialParticipants);
+        handlers.push(pmProxy);
 
         // deploy assetHandler
-        ahProxy = deployProxy(address(new AssetHandlerUpgradeable()), daoContract);
+        ahProxy = deployProxy(address(new AssetHandlerUpgradeable(tmProxy)), daoContract);
         AssetHandlerUpgradeable assetHandler = AssetHandlerUpgradeable(ahProxy);
-        assetHandler.initialize(vmProxy);
+        assetHandler.initialize(vmProxy, deployer);
+        handlers.push(ahProxy);
 
         // deploy accountManager
-        amProxy = deployProxy(address(new AccountHandlerUpgradeable()), daoContract);
+        amProxy = deployProxy(address(new AccountHandlerUpgradeable(tmProxy)), daoContract);
         AccountHandlerUpgradeable accountManager = AccountHandlerUpgradeable(amProxy);
-        accountManager.initialize(vmProxy);
+        accountManager.initialize(vmProxy, deployer);
+        handlers.push(amProxy);
 
         // deploy depositManager
-        dmProxy = deployProxy(address(new FundsHandlerUpgradeable(ahProxy)), daoContract);
+        dmProxy = deployProxy(address(new FundsHandlerUpgradeable(ahProxy, tmProxy)), daoContract);
         FundsHandlerUpgradeable depositManager = FundsHandlerUpgradeable(dmProxy);
-        depositManager.initialize(vmProxy);
+        depositManager.initialize(vmProxy, deployer);
+        handlers.push(dmProxy);
 
         // initialize votingManager link to all contracts
+        taskManager.initialize(tsProxy, handlers);
         EntryPointUpgradeable votingManager = EntryPointUpgradeable(vmProxy);
         votingManager.initialize(
             tssSigner, // tssSigner

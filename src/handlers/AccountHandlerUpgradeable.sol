@@ -9,8 +9,8 @@ contract AccountHandlerUpgradeable is IAccountHandler, AccessControlUpgradeable 
     bytes32 public constant SUBMITTER_ROLE = keccak256("SUBMITTER_ROLE");
     ITaskManager public immutable taskManager;
 
-    mapping(bytes => bytes32) public addressRecord;
-    mapping(bytes32 depositAddress => mapping(AddressCategory => uint256 account))
+    mapping(bytes => string) public addressRecord;
+    mapping(string depositAddress => mapping(AddressCategory => uint256 account))
         public userMapping;
 
     constructor(address _taskManager) {
@@ -33,7 +33,7 @@ contract AccountHandlerUpgradeable is IAccountHandler, AccessControlUpgradeable 
         uint256 _account,
         AddressCategory _chain,
         uint256 _index
-    ) external view returns (bytes32) {
+    ) external view returns (string memory) {
         return addressRecord[abi.encodePacked(_account, _chain, _index)];
     }
 
@@ -41,12 +41,12 @@ contract AccountHandlerUpgradeable is IAccountHandler, AccessControlUpgradeable 
         uint256 _account,
         AddressCategory _chain,
         uint256 _index,
-        bytes32 _address
+        string calldata _address
     ) external onlyRole(SUBMITTER_ROLE) returns (uint64) {
-        require(_address != 0x00, InvalidAddress());
+        require(bytes(_address).length > 0, InvalidAddress());
         require(_account > 10000, InvalidAccountNumber(_account));
         require(
-            addressRecord[abi.encodePacked(_account, _chain, _index)] == 0x00,
+            bytes(addressRecord[abi.encodePacked(_account, _chain, _index)]).length == 0,
             RegisteredAccount(_account, addressRecord[abi.encodePacked(_account, _chain, _index)])
         );
         return
@@ -73,7 +73,7 @@ contract AccountHandlerUpgradeable is IAccountHandler, AccessControlUpgradeable 
         uint256 _account,
         AddressCategory _chain,
         uint256 _index,
-        bytes32 _address
+        string calldata _address
     ) external onlyRole(DEFAULT_ADMIN_ROLE) returns (bytes memory) {
         addressRecord[abi.encodePacked(_account, _chain, _index)] = _address;
         userMapping[_address][_chain] = _account;

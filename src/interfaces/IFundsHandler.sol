@@ -18,18 +18,21 @@ interface IFundsHandler {
 
     event DepositRecorded(
         address indexed userAddress,
-        uint256 indexed amount,
-        bytes32 indexed chainId
+        bytes32 indexed ticker,
+        bytes32 indexed chainId,
+        uint256 amount
     );
     event WithdrawalRecorded(
         address indexed userAddress,
-        uint256 indexed amount,
-        bytes32 indexed chainId
+        bytes32 indexed ticker,
+        bytes32 indexed chainId,
+        uint256 amount
     );
 
     error InvalidAmount();
     error InvalidInput();
     error InvalidAddress();
+    error Paused();
 
     function recordDeposit(
         address _userAddress,

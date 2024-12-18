@@ -4,7 +4,7 @@ pragma solidity ^0.8.26;
 import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import {IAssetHandler, AssetType} from "../interfaces/IAssetHandler.sol";
 import {IFundsHandler} from "../interfaces/IFundsHandler.sol";
-import {ITaskManager} from "../interfaces/ITaskManager.sol";
+import {ITaskManager, State} from "../interfaces/ITaskManager.sol";
 import {INIP20} from "../interfaces/INIP20.sol";
 
 contract FundsHandlerUpgradeable is IFundsHandler, AccessControlUpgradeable {
@@ -78,7 +78,7 @@ contract FundsHandlerUpgradeable is IFundsHandler, AccessControlUpgradeable {
         bytes32 _chainId,
         uint256 _amount
     ) external onlyRole(SUBMITTER_ROLE) returns (uint64) {
-        require(!pauseState[_ticker] && !pauseState[bytes32(_chainId)], "Paused");
+        require(!pauseState[_ticker] && !pauseState[bytes32(_chainId)], Paused());
         require(_amount >= assetHandler.getAssetDetails(_ticker).minDepositAmount, InvalidAmount());
         require(_userAddress != address(0), InvalidAddress());
         return
@@ -112,8 +112,9 @@ contract FundsHandlerUpgradeable is IFundsHandler, AccessControlUpgradeable {
             })
         );
         emit INIP20.NIP20TokenEvent_mintb(_userAddress, _ticker, _amount);
-        emit DepositRecorded(_userAddress, _amount, _chainId);
-        return abi.encodePacked(uint8(1), _userAddress, _amount, _chainId);
+        emit DepositRecorded(_userAddress, _ticker, _chainId, _amount);
+        return
+            abi.encodePacked(uint8(1), State.Completed, _userAddress, _ticker, _chainId, _amount);
     }
 
     function submitWithdrawTask(
@@ -122,7 +123,7 @@ contract FundsHandlerUpgradeable is IFundsHandler, AccessControlUpgradeable {
         bytes32 _chainId,
         uint256 _amount
     ) external onlyRole(SUBMITTER_ROLE) returns (uint64) {
-        require(!pauseState[_ticker] && !pauseState[bytes32(_chainId)], "Paused");
+        require(!pauseState[_ticker] && !pauseState[bytes32(_chainId)], Paused());
         require(
             _amount >= assetHandler.getAssetDetails(_ticker).minWithdrawAmount,
             InvalidAmount()
@@ -160,7 +161,8 @@ contract FundsHandlerUpgradeable is IFundsHandler, AccessControlUpgradeable {
             })
         );
         assetHandler.withdraw(_ticker, _chainId, _amount);
-        emit WithdrawalRecorded(_userAddress, _amount, _chainId);
-        return abi.encodePacked(uint8(1), _userAddress, _amount, _chainId);
+        emit WithdrawalRecorded(_userAddress, _ticker, _chainId, _amount);
+        return
+            abi.encodePacked(uint8(1), State.Completed, _userAddress, _ticker, _chainId, _amount);
     }
 }

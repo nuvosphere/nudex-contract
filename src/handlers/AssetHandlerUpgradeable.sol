@@ -163,10 +163,12 @@ contract AssetHandlerUpgradeable is IAssetHandler, AccessControlUpgradeable {
     function consolidate(
         bytes32 _ticker,
         bytes32 _chainId,
-        uint256 _amount
+        uint256 _amount,
+        uint256 _btcAmount
     ) external onlyRole(DEFAULT_ADMIN_ROLE) checkListing(_ticker) {
         require(linkedTokens[_ticker][_chainId].isActive, "Inactive token");
         linkedTokens[_ticker][_chainId].balance += _amount;
+        // TODO: case when it is btc
         emit Deposit(_ticker, _chainId, _amount);
     }
 

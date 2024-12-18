@@ -32,14 +32,14 @@ contract BaseTest is Test {
     EntryPointUpgradeable public entryPoint;
 
     address public vmProxy;
-
     address public daoContract;
     address public thisAddr;
     address public msgSender;
     address public tssSigner;
     uint256 public tssKey;
 
-    bytes public tempBytes = "Context";
+    uint64[] public taskIds;
+    address[] public handlers;
 
     function setUp() public virtual {
         msgSender = makeAddr("msgSender");
@@ -53,6 +53,7 @@ contract BaseTest is Test {
 
         // deploy entryPoint proxy
         vmProxy = _deployProxy(address(new EntryPointUpgradeable()), daoContract);
+        entryPoint = EntryPointUpgradeable(vmProxy);
 
         // deploy NuvoLockUpgradeable
         address nuvoLockProxy = _deployProxy(address(new NuvoLockUpgradeable()), daoContract);
@@ -80,7 +81,7 @@ contract BaseTest is Test {
         participants[0] = msgSender;
         participants[1] = msgSender;
         participants[2] = msgSender;
-        participantHandler.initialize(address(nuvoLock), vmProxy, participants);
+        participantHandler.initialize(vmProxy, msgSender, participants);
         assertTrue(participantHandler.hasRole(DEFAULT_ADMIN_ROLE, vmProxy));
 
         // setups
@@ -88,6 +89,9 @@ contract BaseTest is Test {
         nuvoToken.approve(nuvoLockProxy, MIN_LOCK_AMOUNT);
         nuvoLock.lock(MIN_LOCK_AMOUNT, MIN_LOCK_PERIOD);
         vm.stopPrank();
+
+        // misc
+        taskIds.push(0);
     }
 
     function _deployProxy(address _logic, address _admin) internal returns (address) {
@@ -113,10 +117,5 @@ contract BaseTest is Test {
         bytes32 digest = keccak256(_encodedData).toEthSignedMessageHash();
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(_privateKey, digest);
         return abi.encodePacked(r, s, v);
-    }
-
-    function _generateTaskContext() internal returns (bytes memory) {
-        tempBytes = abi.encodePacked(keccak256(tempBytes));
-        return tempBytes;
     }
 }

@@ -20,6 +20,7 @@ contract DeployTest is Script {
     address daoContract;
     address tssSigner;
     address[] initialParticipants;
+    address[] handlers;
 
     function setUp() public {
         // TODO: temporary dao contract
@@ -50,38 +51,40 @@ contract DeployTest is Script {
         nuvoLock.initialize(address(nuvoToken), deployer, address(votingManager), 300, 10);
         console.log("|NuvoLock|", address(nuvoLock));
 
-        // deploy participantManager
-        ParticipantHandlerUpgradeable participantManager = new ParticipantHandlerUpgradeable();
-        participantManager.initialize(
-            address(nuvoLock),
-            address(votingManager),
-            initialParticipants
-        );
-        console.log("|ParticipantHandler|", address(participantManager));
-
         // deploy taskManager
         TaskManagerUpgradeable taskManager = new TaskManagerUpgradeable();
-        TaskSubmitterUpgradeable taskSubmitter = new TaskSubmitterUpgradeable(address(taskManager));
-        console.log("|TaskSubmitterUpgradeable|", address(taskSubmitter));
-        taskManager.initialize(address(taskSubmitter), address(votingManager));
         console.log("|TaskManager|", address(taskManager));
 
+        // deploy participantManager
+        ParticipantHandlerUpgradeable participantManager = new ParticipantHandlerUpgradeable(
+            address(nuvoLock),
+            address(taskManager)
+        );
+        participantManager.initialize(address(votingManager), deployer, initialParticipants);
+        console.log("|ParticipantHandler|", address(participantManager));
+
         // deploy accountManager
-        AccountHandlerUpgradeable accountManager = new AccountHandlerUpgradeable();
-        accountManager.initialize(address(votingManager));
+        AccountHandlerUpgradeable accountManager = new AccountHandlerUpgradeable(
+            address(taskManager)
+        );
+        accountManager.initialize(address(votingManager), deployer);
         console.log("|AccountHandler|", address(accountManager));
 
         // deploy accountManager
-        AssetHandlerUpgradeable assetHandler = new AssetHandlerUpgradeable();
-        assetHandler.initialize(address(votingManager));
+        AssetHandlerUpgradeable assetHandler = new AssetHandlerUpgradeable(address(taskManager));
+        assetHandler.initialize(address(votingManager), deployer);
         console.log("|AssetHandler|", address(assetHandler));
 
         // deploy depositManager
-        FundsHandlerUpgradeable depositManager = new FundsHandlerUpgradeable(address(assetHandler));
-        depositManager.initialize(address(votingManager));
+        FundsHandlerUpgradeable depositManager = new FundsHandlerUpgradeable(
+            address(assetHandler),
+            address(taskManager)
+        );
+        depositManager.initialize(address(votingManager), deployer);
         console.log("|FundsHandler|", address(depositManager));
 
         // initialize votingManager link to all contracts
+        taskManager.initialize(address(votingManager), handlers);
         votingManager.initialize(
             tssSigner, // tssSigner
             address(participantManager), // participantManager

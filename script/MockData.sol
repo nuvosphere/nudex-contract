@@ -17,16 +17,16 @@ contract MockData is Script {
         vm.startBroadcast(deployerPrivateKey);
 
         // deploy accountManager
-        AccountHandlerUpgradeable accountManager = new AccountHandlerUpgradeable();
+        AccountHandlerUpgradeable accountManager = new AccountHandlerUpgradeable(address(0));
         NuvoProxy proxy = new NuvoProxy(address(accountManager), vm.envAddress("PARTICIPANT_2"));
         accountManager = AccountHandlerUpgradeable(address(proxy));
-        accountManager.initialize(address(deployer));
+        accountManager.initialize(address(deployer), deployer);
         console.log("|AccountHandler|", address(accountManager));
 
         for (uint8 i; i < 10; ++i) {
             accountManager.registerNewAddress(
                 10001,
-                IAccountHandler.Chain.EVM,
+                IAccountHandler.AddressCategory.EVM,
                 i,
                 Strings.toHexString(makeAddr(Strings.toString(i)))
             );
@@ -34,38 +34,38 @@ contract MockData is Script {
 
         accountManager.registerNewAddress(
             10002,
-            IAccountHandler.Chain.BTC,
+            IAccountHandler.AddressCategory.BTC,
             0,
             "124wd5urvxo4H3naXR6QACP1MGVpLeikeR"
         );
         accountManager.registerNewAddress(
             10002,
-            IAccountHandler.Chain.BTC,
+            IAccountHandler.AddressCategory.BTC,
             1,
             "1HkJEUpgptueutWRFB1bjHGKA5wtKBoToW"
         );
         accountManager.registerNewAddress(
             10002,
-            IAccountHandler.Chain.BTC,
+            IAccountHandler.AddressCategory.BTC,
             2,
             "1PS21zbYxJZUzsHg91MfxUDbqkn7BEw2C5"
         );
 
         accountManager.registerNewAddress(
             10003,
-            IAccountHandler.Chain.SOL,
+            IAccountHandler.AddressCategory.SOL,
             0,
             "w9A6215VdjCgX9BVwK1ZXE7sKBuNGh7bdmeGBEs7625"
         );
         accountManager.registerNewAddress(
             10003,
-            IAccountHandler.Chain.SOL,
+            IAccountHandler.AddressCategory.SOL,
             1,
             "4WMARsRWo8x7oJRwTQ9LhbDuiAnzz5TF3WzpTCgACrfe"
         );
         accountManager.registerNewAddress(
             10003,
-            IAccountHandler.Chain.SOL,
+            IAccountHandler.AddressCategory.SOL,
             2,
             "8ymc6niJiF4imco29UU3z7mK11sCt9NdL3LjG3VkEYAC"
         );
