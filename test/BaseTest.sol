@@ -8,7 +8,6 @@ import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transpa
 import {NuvoLockUpgradeable} from "../src/NuvoLockUpgradeable.sol";
 import {ParticipantHandlerUpgradeable} from "../src/handlers/ParticipantHandlerUpgradeable.sol";
 import {TaskManagerUpgradeable} from "../src/tasks/TaskManagerUpgradeable.sol";
-import {TaskSubmitterUpgradeable} from "../src/tasks/TaskSubmitterUpgradeable.sol";
 import {EntryPointUpgradeable} from "../src/EntryPointUpgradeable.sol";
 
 import {IEntryPoint} from "../src/interfaces/IEntryPoint.sol";
@@ -21,6 +20,7 @@ import {MockNuvoToken} from "../src/mocks/MockNuvoToken.sol";
 contract BaseTest is Test {
     using MessageHashUtils for bytes32;
 
+    bytes32 public constant DEFAULT_ADMIN_ROLE = 0x00;
     uint256 public constant MIN_LOCK_AMOUNT = 1 ether;
     uint32 public constant MIN_LOCK_PERIOD = 1 weeks;
 
@@ -29,7 +29,6 @@ contract BaseTest is Test {
     NuvoLockUpgradeable public nuvoLock;
     ParticipantHandlerUpgradeable public participantHandler;
     TaskManagerUpgradeable public taskManager;
-    TaskSubmitterUpgradeable public taskSubmitter;
     EntryPointUpgradeable public entryPoint;
 
     address public vmProxy;
@@ -67,24 +66,13 @@ contract BaseTest is Test {
         );
         assertEq(nuvoLock.owner(), vmProxy);
 
-        // deploy taskManager and taskSubmitter
+        // deploy taskManager
         address tmProxy = _deployProxy(address(new TaskManagerUpgradeable()), daoContract);
-        address tsProxy = _deployProxy(
-            address(new TaskSubmitterUpgradeable(address(tmProxy))),
-            daoContract
-        );
-        taskSubmitter = TaskSubmitterUpgradeable(tsProxy);
-        taskSubmitter.initialize(vmProxy);
-        // add msgSender to whitelist
-        vm.prank(vmProxy);
-        taskSubmitter.grantRole(bytes32(0x00), msgSender);
         taskManager = TaskManagerUpgradeable(tmProxy);
-        taskManager.initialize(address(taskSubmitter), vmProxy);
-        assertEq(taskManager.owner(), vmProxy);
 
         // deploy ParticipantHandlerUpgradeable
         address participantHandlerProxy = _deployProxy(
-            address(new ParticipantHandlerUpgradeable()),
+            address(new ParticipantHandlerUpgradeable(nuvoLockProxy, tmProxy)),
             daoContract
         );
         participantHandler = ParticipantHandlerUpgradeable(participantHandlerProxy);
@@ -93,7 +81,7 @@ contract BaseTest is Test {
         participants[1] = msgSender;
         participants[2] = msgSender;
         participantHandler.initialize(address(nuvoLock), vmProxy, participants);
-        assertEq(participantHandler.owner(), vmProxy);
+        assertTrue(participantHandler.hasRole(DEFAULT_ADMIN_ROLE, vmProxy));
 
         // setups
         vm.startPrank(msgSender);
@@ -108,10 +96,10 @@ contract BaseTest is Test {
 
     // generate signature for operations
     function _generateOptSignature(
-        Operation[] memory _opt,
+        uint64[] memory _taskId,
         uint256 _privateKey
     ) internal view returns (bytes memory) {
-        bytes memory encodedData = abi.encode(entryPoint.tssNonce(), block.chainid, _opt);
+        bytes memory encodedData = abi.encode(_taskId, entryPoint.tssNonce(), block.chainid);
         bytes32 digest = keccak256(encodedData).toEthSignedMessageHash();
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(_privateKey, digest);
         return abi.encodePacked(r, s, v);
