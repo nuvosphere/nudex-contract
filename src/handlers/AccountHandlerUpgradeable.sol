@@ -3,7 +3,7 @@ pragma solidity ^0.8.26;
 
 import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import {IAccountHandler} from "../interfaces/IAccountHandler.sol";
-import {ITaskManager} from "../interfaces/ITaskManager.sol";
+import {ITaskManager, State} from "../interfaces/ITaskManager.sol";
 
 contract AccountHandlerUpgradeable is IAccountHandler, AccessControlUpgradeable {
     bytes32 public constant SUBMITTER_ROLE = keccak256("SUBMITTER_ROLE");
@@ -78,6 +78,6 @@ contract AccountHandlerUpgradeable is IAccountHandler, AccessControlUpgradeable 
         addressRecord[abi.encodePacked(_account, _chain, _index)] = _address;
         userMapping[_address][_chain] = _account;
         emit AddressRegistered(_account, _chain, _index, _address);
-        return abi.encodePacked(uint8(1), _account, _chain, _index, _address);
+        return abi.encodePacked(uint8(1), State.Completed, _account, _chain, _index, _address);
     }
 }

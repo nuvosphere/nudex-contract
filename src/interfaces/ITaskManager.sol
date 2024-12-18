@@ -15,7 +15,6 @@ struct TaskOperation {
     address handler;
     uint32 createdAt;
     uint32 updatedAt;
-    bytes optData;
     bytes result;
 }
 
