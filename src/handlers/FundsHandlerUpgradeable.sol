@@ -8,6 +8,7 @@ import {ITaskManager} from "../interfaces/ITaskManager.sol";
 import {INIP20} from "../interfaces/INIP20.sol";
 
 contract FundsHandlerUpgradeable is IFundsHandler, AccessControlUpgradeable {
+    bytes32 public constant ENTRYPOINT_ROLE = keccak256("ENTRYPOINT_ROLE");
     bytes32 public constant SUBMITTER_ROLE = keccak256("SUBMITTER_ROLE");
     ITaskManager public immutable taskManager;
     IAssetHandler private immutable assetHandler;
@@ -22,8 +23,13 @@ contract FundsHandlerUpgradeable is IFundsHandler, AccessControlUpgradeable {
     }
 
     // _owner: EntryPoint contract
-    function initialize(address _owner, address _submitter) public initializer {
+    function initialize(
+        address _owner,
+        address _entryPoint,
+        address _submitter
+    ) public initializer {
         _grantRole(DEFAULT_ADMIN_ROLE, _owner);
+        _grantRole(ENTRYPOINT_ROLE, _entryPoint);
         _grantRole(SUBMITTER_ROLE, _submitter);
     }
 
@@ -65,10 +71,7 @@ contract FundsHandlerUpgradeable is IFundsHandler, AccessControlUpgradeable {
     }
 
     // TODO: role for adjusting Pause state
-    function setPauseState(
-        bytes32 _condition,
-        bool _newState
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function setPauseState(bytes32 _condition, bool _newState) external onlyRole(ENTRYPOINT_ROLE) {
         pauseState[_condition] = _newState;
     }
 
@@ -102,7 +105,7 @@ contract FundsHandlerUpgradeable is IFundsHandler, AccessControlUpgradeable {
         bytes32 _ticker,
         bytes32 _chainId,
         uint256 _amount
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) returns (bytes memory) {
+    ) external onlyRole(ENTRYPOINT_ROLE) returns (bytes memory) {
         deposits[_userAddress].push(
             DepositInfo({
                 userAddress: _userAddress,
@@ -124,11 +127,24 @@ contract FundsHandlerUpgradeable is IFundsHandler, AccessControlUpgradeable {
         uint256 _btcAmount
     ) external onlyRole(SUBMITTER_ROLE) returns (uint64) {
         require(!pauseState[_ticker] && !pauseState[bytes32(_chainId)], Paused());
-        require(
-            _amount >= assetHandler.getAssetDetails(_ticker).minWithdrawAmount,
-            InvalidAmount()
-        );
         require(_userAddress != address(0), InvalidAddress());
+        bytes memory callData;
+        if (_btcAmount == 0) {
+            require(
+                _amount >= assetHandler.getAssetDetails(_ticker).minWithdrawAmount,
+                InvalidAmount()
+            );
+            callData = abi.encodeWithSelector(
+                this.recordWithdrawal.selector,
+                _userAddress,
+                _ticker,
+                _chainId,
+                _amount,
+                _btcAmount
+            );
+        } else {
+            callData = abi.encodePacked(this.recordWithdrawal.selector);
+        }
         emit INIP20.NIP20TokenEvent_burnb(_userAddress, _ticker, _amount);
         return
             taskManager.submitTask(
@@ -153,7 +169,7 @@ contract FundsHandlerUpgradeable is IFundsHandler, AccessControlUpgradeable {
         bytes32 _chainId,
         uint256 _amount,
         uint256 _btcAmount
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) returns (bytes memory) {
+    ) external onlyRole(ENTRYPOINT_ROLE) returns (bytes memory) {
         withdrawals[_userAddress].push(
             WithdrawalInfo({
                 userAddress: _userAddress,

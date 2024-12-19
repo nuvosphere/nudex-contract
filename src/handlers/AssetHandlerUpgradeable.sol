@@ -6,6 +6,7 @@ import {IAssetHandler, AssetParam, AssetType, NudexAsset, TokenInfo} from "../in
 import {ITaskManager} from "../interfaces/ITaskManager.sol";
 
 contract AssetHandlerUpgradeable is IAssetHandler, AccessControlUpgradeable {
+    bytes32 public constant ENTRYPOINT_ROLE = keccak256("ENTRYPOINT_ROLE");
     bytes32 public constant FUNDS_ROLE = keccak256("FUNDS_ROLE");
     bytes32 public constant SUBMITTER_ROLE = keccak256("SUBMITTER_ROLE");
     ITaskManager public immutable taskManager;
@@ -26,8 +27,13 @@ contract AssetHandlerUpgradeable is IAssetHandler, AccessControlUpgradeable {
     }
 
     // _owner: EntryPoint contract
-    function initialize(address _owner, address _submitter) public initializer {
+    function initialize(
+        address _owner,
+        address _entryPoint,
+        address _submitter
+    ) public initializer {
         _grantRole(DEFAULT_ADMIN_ROLE, _owner);
+        _grantRole(ENTRYPOINT_ROLE, _entryPoint);
         _grantRole(SUBMITTER_ROLE, _submitter);
     }
 
@@ -64,7 +70,7 @@ contract AssetHandlerUpgradeable is IAssetHandler, AccessControlUpgradeable {
     function listNewAsset(
         bytes32 _ticker,
         AssetParam calldata _assetParam
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    ) external onlyRole(ENTRYPOINT_ROLE) {
         NudexAsset storage tempNudexAsset = nudexAssets[_ticker];
         // update listed assets
         tempNudexAsset.listIndex = uint32(assetTickerList.length);
@@ -97,7 +103,7 @@ contract AssetHandlerUpgradeable is IAssetHandler, AccessControlUpgradeable {
     function updateAsset(
         bytes32 _ticker,
         AssetParam calldata _assetParam
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) checkListing(_ticker) {
+    ) external onlyRole(ENTRYPOINT_ROLE) checkListing(_ticker) {
         NudexAsset storage tempNudexAsset = nudexAssets[_ticker];
         // update listed assets
         tempNudexAsset.updatedTime = uint32(block.timestamp);
@@ -116,9 +122,7 @@ contract AssetHandlerUpgradeable is IAssetHandler, AccessControlUpgradeable {
     }
 
     // Delist an existing asset
-    function delistAsset(
-        bytes32 _ticker
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) checkListing(_ticker) {
+    function delistAsset(bytes32 _ticker) external onlyRole(ENTRYPOINT_ROLE) checkListing(_ticker) {
         NudexAsset storage tempNudexAsset = nudexAssets[_ticker];
         uint32 listIndex = tempNudexAsset.listIndex;
         resetlinkedToken(_ticker);
@@ -133,7 +137,7 @@ contract AssetHandlerUpgradeable is IAssetHandler, AccessControlUpgradeable {
     function linkToken(
         bytes32 _ticker,
         TokenInfo[] calldata _tokenInfos
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) checkListing(_ticker) {
+    ) external onlyRole(ENTRYPOINT_ROLE) checkListing(_ticker) {
         for (uint8 i; i < _tokenInfos.length; ++i) {
             bytes32 chainId = _tokenInfos[i].chainId;
             require(linkedTokens[_ticker][chainId].chainId == 0, "Linked Token");
@@ -144,7 +148,7 @@ contract AssetHandlerUpgradeable is IAssetHandler, AccessControlUpgradeable {
 
     function resetlinkedToken(
         bytes32 _ticker
-    ) public onlyRole(DEFAULT_ADMIN_ROLE) checkListing(_ticker) {
+    ) public onlyRole(ENTRYPOINT_ROLE) checkListing(_ticker) {
         bytes32[] memory chainIds = linkedTokenList[_ticker];
         delete linkedTokenList[_ticker];
         for (uint32 i; i < chainIds.length; ++i) {
@@ -156,7 +160,7 @@ contract AssetHandlerUpgradeable is IAssetHandler, AccessControlUpgradeable {
         bytes32 _ticker,
         bytes32 _chainId,
         bool _isActive
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) checkListing(_ticker) {
+    ) external onlyRole(ENTRYPOINT_ROLE) checkListing(_ticker) {
         linkedTokens[_ticker][_chainId].isActive = _isActive;
     }
 
@@ -170,26 +174,35 @@ contract AssetHandlerUpgradeable is IAssetHandler, AccessControlUpgradeable {
         bytes32 _ticker,
         bytes32 _chainId,
         uint256 _amount,
-        uint256 _btcAmount
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) checkListing(_ticker) {
+        uint256 _btcCount
+    ) external onlyRole(ENTRYPOINT_ROLE) checkListing(_ticker) {
         require(linkedTokens[_ticker][_chainId].isActive, "Inactive token");
         linkedTokens[_ticker][_chainId].balance += _amount;
-        // TODO: case when it is btc
-        emit Consolidate(_ticker, _chainId, _amount, _btcAmount);
+        if (_btcCount > 0) {
+            linkedTokens[_ticker][_chainId].btcCount += _btcCount;
+        }
+        emit Consolidate(_ticker, _chainId, _amount, _btcCount);
     }
 
     function withdraw(
         bytes32 _ticker,
         bytes32 _chainId,
         uint256 _amount,
-        uint256 _btcAmount
+        uint256 _btcCount
     ) external onlyRole(FUNDS_ROLE) checkListing(_ticker) {
         require(linkedTokens[_ticker][_chainId].isActive, "Inactive token");
         require(
             linkedTokens[_ticker][_chainId].balance >= _amount,
             InsufficientBalance(_ticker, _chainId)
         );
+        if (_btcCount > 0) {
+            require(
+                linkedTokens[_ticker][_chainId].btcCount >= _btcCount,
+                InsufficientBtcCount(_ticker, _chainId)
+            );
+            linkedTokens[_ticker][_chainId].btcCount -= _btcCount;
+        }
         linkedTokens[_ticker][_chainId].balance -= _amount;
-        emit Withdraw(_ticker, _chainId, _amount, _btcAmount);
+        emit Withdraw(_ticker, _chainId, _amount, _btcCount);
     }
 }

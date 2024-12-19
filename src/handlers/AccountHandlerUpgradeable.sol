@@ -6,6 +6,7 @@ import {IAccountHandler} from "../interfaces/IAccountHandler.sol";
 import {ITaskManager} from "../interfaces/ITaskManager.sol";
 
 contract AccountHandlerUpgradeable is IAccountHandler, AccessControlUpgradeable {
+    bytes32 public constant ENTRYPOINT_ROLE = keccak256("ENTRYPOINT_ROLE");
     bytes32 public constant SUBMITTER_ROLE = keccak256("SUBMITTER_ROLE");
     ITaskManager public immutable taskManager;
 
@@ -18,8 +19,13 @@ contract AccountHandlerUpgradeable is IAccountHandler, AccessControlUpgradeable 
     }
 
     // _owner: EntryPoint contract
-    function initialize(address _owner, address _submitter) public initializer {
+    function initialize(
+        address _owner,
+        address _entryPoint,
+        address _submitter
+    ) public initializer {
         _grantRole(DEFAULT_ADMIN_ROLE, _owner);
+        _grantRole(ENTRYPOINT_ROLE, _entryPoint);
         _grantRole(SUBMITTER_ROLE, _submitter);
     }
 
@@ -74,7 +80,7 @@ contract AccountHandlerUpgradeable is IAccountHandler, AccessControlUpgradeable 
         AddressCategory _chain,
         uint256 _index,
         string calldata _address
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) returns (bytes memory) {
+    ) external onlyRole(ENTRYPOINT_ROLE) returns (bytes memory) {
         addressRecord[abi.encodePacked(_account, _chain, _index)] = _address;
         userMapping[_address][_chain] = _account;
         emit AddressRegistered(_account, _chain, _index, _address);

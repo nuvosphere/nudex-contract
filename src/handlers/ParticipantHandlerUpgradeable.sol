@@ -7,6 +7,7 @@ import {INuvoLock} from "../interfaces/INuvoLock.sol";
 import {ITaskManager} from "../interfaces/ITaskManager.sol";
 
 contract ParticipantHandlerUpgradeable is IParticipantHandler, AccessControlUpgradeable {
+    bytes32 public constant ENTRYPOINT_ROLE = keccak256("ENTRYPOINT_ROLE");
     bytes32 public constant SUBMITTER_ROLE = keccak256("SUBMITTER_ROLE");
     ITaskManager public immutable taskManager;
     INuvoLock public immutable nuvoLock;
@@ -22,6 +23,7 @@ contract ParticipantHandlerUpgradeable is IParticipantHandler, AccessControlUpgr
     // _owner: EntryPoint
     function initialize(
         address _owner,
+        address _entryPoint,
         address _submitter,
         address[] calldata _initialParticipants
     ) public initializer {
@@ -31,6 +33,7 @@ contract ParticipantHandlerUpgradeable is IParticipantHandler, AccessControlUpgr
             isParticipant[_initialParticipants[i]] = true;
         }
         _grantRole(DEFAULT_ADMIN_ROLE, _owner);
+        _grantRole(ENTRYPOINT_ROLE, _entryPoint);
         _grantRole(SUBMITTER_ROLE, _submitter);
     }
 
@@ -77,7 +80,7 @@ contract ParticipantHandlerUpgradeable is IParticipantHandler, AccessControlUpgr
      */
     function addParticipant(
         address _newParticipant
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) returns (bytes memory) {
+    ) external onlyRole(ENTRYPOINT_ROLE) returns (bytes memory) {
         isParticipant[_newParticipant] = true;
         participants.push(_newParticipant);
 
@@ -103,7 +106,7 @@ contract ParticipantHandlerUpgradeable is IParticipantHandler, AccessControlUpgr
      */
     function removeParticipant(
         address _participant
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) returns (bytes memory) {
+    ) external onlyRole(ENTRYPOINT_ROLE) returns (bytes memory) {
         isParticipant[_participant] = false;
         for (uint8 i; i < participants.length; i++) {
             if (participants[i] == _participant) {
@@ -134,7 +137,7 @@ contract ParticipantHandlerUpgradeable is IParticipantHandler, AccessControlUpgr
      */
     function resetParticipants(
         address[] calldata _newParticipants
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) returns (bytes memory) {
+    ) external onlyRole(ENTRYPOINT_ROLE) returns (bytes memory) {
         // remove old participants
         for (uint8 i; i < participants.length; i++) {
             isParticipant[participants[i]] = false;

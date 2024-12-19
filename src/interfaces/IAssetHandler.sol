@@ -66,6 +66,7 @@ interface IAssetHandler {
 
     // errors
     error InsufficientBalance(bytes32 ticker, bytes32 chainId);
+    error InsufficientBtcCount(bytes32 ticker, bytes32 chainId);
     error AssetNotListed(bytes32 ticker);
 
     // Check if an asset is listed

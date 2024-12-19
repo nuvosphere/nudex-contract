@@ -5,6 +5,7 @@ import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/acce
 import {ITaskManager, State, TaskOperation} from "../interfaces/ITaskManager.sol";
 
 contract TaskManagerUpgradeable is ITaskManager, AccessControlUpgradeable {
+    bytes32 public constant ENTRYPOINT_ROLE = keccak256("ENTRYPOINT_ROLE");
     bytes32 public constant HANDLER_ROLE = keccak256("HANDLER_ROLE");
 
     uint64 public nextTaskId;
@@ -16,8 +17,13 @@ contract TaskManagerUpgradeable is ITaskManager, AccessControlUpgradeable {
     mapping(uint64 => TaskOperation) public tasks;
     mapping(bytes32 => uint64) public taskRecords;
 
-    function initialize(address _owner, address[] calldata _taskHandlers) public initializer {
+    function initialize(
+        address _owner,
+        address _entryPoint,
+        address[] calldata _taskHandlers
+    ) public initializer {
         _grantRole(DEFAULT_ADMIN_ROLE, _owner);
+        _grantRole(ENTRYPOINT_ROLE, _entryPoint);
         for (uint8 i; i < _taskHandlers.length; ++i) {
             _grantRole(HANDLER_ROLE, _taskHandlers[i]);
         }
@@ -101,7 +107,7 @@ contract TaskManagerUpgradeable is ITaskManager, AccessControlUpgradeable {
         uint64 _taskId,
         State _state,
         bytes calldata _result
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    ) external onlyRole(ENTRYPOINT_ROLE) {
         TaskOperation storage task = tasks[_taskId];
         if (task.state == State.Created) {
             require(_taskId == nextCreatedTaskId++, InvalidTask(_taskId));

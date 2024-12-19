@@ -172,11 +172,14 @@ contract EntryPointUpgradeable is IEntryPoint, Initializable, ReentrancyGuardUpg
             InvalidSigner(msg.sender)
         );
         // pending the task and update the actual input
+        bytes memory selector;
         for (uint8 i; i < _taskIds.length; ++i) {
+            selector = taskManager.getTask(_taskIds[i]).result;
+            require(selector.length == 4, NotEligibleForPending(_taskIds[i]));
             taskManager.updateTask(
                 _taskIds[i],
                 State.Pending,
-                bytes.concat(taskManager.getTask(_taskIds[i]).result, _calldata[i])
+                bytes.concat(selector, _calldata[i])
             );
         }
     }
