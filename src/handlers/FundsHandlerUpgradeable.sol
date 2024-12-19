@@ -146,18 +146,7 @@ contract FundsHandlerUpgradeable is IFundsHandler, AccessControlUpgradeable {
             callData = abi.encodePacked(this.recordWithdrawal.selector);
         }
         emit INIP20.NIP20TokenEvent_burnb(_userAddress, _ticker, _amount);
-        return
-            taskManager.submitTask(
-                msg.sender,
-                abi.encodeWithSelector(
-                    this.recordWithdrawal.selector,
-                    _userAddress,
-                    _ticker,
-                    _chainId,
-                    _amount,
-                    _btcAmount
-                )
-            );
+        return taskManager.submitTask(msg.sender, callData);
     }
 
     /**
