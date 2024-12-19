@@ -160,6 +160,12 @@ contract AssetHandlerUpgradeable is IAssetHandler, AccessControlUpgradeable {
         linkedTokens[_ticker][_chainId].isActive = _isActive;
     }
 
+    function submitConsolidateTask(
+        bytes32 _ticker
+    ) external onlyRole(SUBMITTER_ROLE) checkListing(_ticker) returns (uint64) {
+        return taskManager.submitTask(msg.sender, abi.encodePacked(this.consolidate.selector));
+    }
+
     function consolidate(
         bytes32 _ticker,
         bytes32 _chainId,
@@ -169,13 +175,14 @@ contract AssetHandlerUpgradeable is IAssetHandler, AccessControlUpgradeable {
         require(linkedTokens[_ticker][_chainId].isActive, "Inactive token");
         linkedTokens[_ticker][_chainId].balance += _amount;
         // TODO: case when it is btc
-        emit Deposit(_ticker, _chainId, _amount);
+        emit Consolidate(_ticker, _chainId, _amount, _btcAmount);
     }
 
     function withdraw(
         bytes32 _ticker,
         bytes32 _chainId,
-        uint256 _amount
+        uint256 _amount,
+        uint256 _btcAmount
     ) external onlyRole(FUNDS_ROLE) checkListing(_ticker) {
         require(linkedTokens[_ticker][_chainId].isActive, "Inactive token");
         require(
@@ -183,6 +190,6 @@ contract AssetHandlerUpgradeable is IAssetHandler, AccessControlUpgradeable {
             InsufficientBalance(_ticker, _chainId)
         );
         linkedTokens[_ticker][_chainId].balance -= _amount;
-        emit Withdraw(_ticker, _chainId, _amount);
+        emit Withdraw(_ticker, _chainId, _amount, _btcAmount);
     }
 }

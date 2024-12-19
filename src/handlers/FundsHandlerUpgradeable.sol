@@ -4,7 +4,7 @@ pragma solidity ^0.8.26;
 import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import {IAssetHandler, AssetType} from "../interfaces/IAssetHandler.sol";
 import {IFundsHandler} from "../interfaces/IFundsHandler.sol";
-import {ITaskManager, State} from "../interfaces/ITaskManager.sol";
+import {ITaskManager} from "../interfaces/ITaskManager.sol";
 import {INIP20} from "../interfaces/INIP20.sol";
 
 contract FundsHandlerUpgradeable is IFundsHandler, AccessControlUpgradeable {
@@ -113,15 +113,15 @@ contract FundsHandlerUpgradeable is IFundsHandler, AccessControlUpgradeable {
         );
         emit INIP20.NIP20TokenEvent_mintb(_userAddress, _ticker, _amount);
         emit DepositRecorded(_userAddress, _ticker, _chainId, _amount);
-        return
-            abi.encodePacked(uint8(1), State.Completed, _userAddress, _ticker, _chainId, _amount);
+        return abi.encodePacked(uint8(1), _userAddress, _ticker, _chainId, _amount);
     }
 
     function submitWithdrawTask(
         address _userAddress,
         bytes32 _ticker,
         bytes32 _chainId,
-        uint256 _amount
+        uint256 _amount,
+        uint256 _btcAmount
     ) external onlyRole(SUBMITTER_ROLE) returns (uint64) {
         require(!pauseState[_ticker] && !pauseState[bytes32(_chainId)], Paused());
         require(
@@ -138,7 +138,8 @@ contract FundsHandlerUpgradeable is IFundsHandler, AccessControlUpgradeable {
                     _userAddress,
                     _ticker,
                     _chainId,
-                    _amount
+                    _amount,
+                    _btcAmount
                 )
             );
     }
@@ -150,7 +151,8 @@ contract FundsHandlerUpgradeable is IFundsHandler, AccessControlUpgradeable {
         address _userAddress,
         bytes32 _ticker,
         bytes32 _chainId,
-        uint256 _amount
+        uint256 _amount,
+        uint256 _btcAmount
     ) external onlyRole(DEFAULT_ADMIN_ROLE) returns (bytes memory) {
         withdrawals[_userAddress].push(
             WithdrawalInfo({
@@ -160,9 +162,8 @@ contract FundsHandlerUpgradeable is IFundsHandler, AccessControlUpgradeable {
                 amount: _amount
             })
         );
-        assetHandler.withdraw(_ticker, _chainId, _amount);
-        emit WithdrawalRecorded(_userAddress, _ticker, _chainId, _amount);
-        return
-            abi.encodePacked(uint8(1), State.Completed, _userAddress, _ticker, _chainId, _amount);
+        assetHandler.withdraw(_ticker, _chainId, _amount, _btcAmount);
+        emit WithdrawalRecorded(_userAddress, _ticker, _chainId, _amount, _btcAmount);
+        return abi.encodePacked(uint8(1), _userAddress, _ticker, _chainId, _amount, _btcAmount);
     }
 }

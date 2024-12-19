@@ -28,6 +28,7 @@ contract EntryPointUpgradeable is IEntryPoint, Initializable, ReentrancyGuardUpg
     modifier onlyCurrentSubmitter() {
         require(msg.sender == nextSubmitter, IncorrectSubmitter(msg.sender, nextSubmitter));
         _;
+        _rotateSubmitter();
     }
 
     /**
@@ -102,7 +103,6 @@ contract EntryPointUpgradeable is IEntryPoint, Initializable, ReentrancyGuardUpg
         );
 
         tssSigner = _newSigner;
-        _rotateSubmitter();
     }
 
     /**
@@ -123,7 +123,7 @@ contract EntryPointUpgradeable is IEntryPoint, Initializable, ReentrancyGuardUpg
         );
         require(
             _verifySignature(
-                keccak256(abi.encodePacked(tssNonce++, block.chainid, _uncompletedTaskCount)),
+                keccak256(abi.encodePacked(_uncompletedTaskCount, tssNonce++, block.chainid)),
                 _signature
             ),
             InvalidSigner(msg.sender)
@@ -148,21 +148,37 @@ contract EntryPointUpgradeable is IEntryPoint, Initializable, ReentrancyGuardUpg
         TaskOperation memory opt;
         for (uint8 i; i < _taskIds.length; ++i) {
             opt = taskManager.getTask(_taskIds[i]);
-            if (opt.submitter == address(0)) {
-                // override existing task result
-                taskManager.updateTask(opt.id, State(uint8(opt.result[0])), opt.result);
+            (success, result) = opt.handler.call(opt.result);
+            if (!success) {
+                // fail
+                taskManager.updateTask(opt.id, State.Failed, result);
             } else {
-                (success, result) = opt.handler.call(opt.result);
-                if (!success) {
-                    // fail
-                    taskManager.updateTask(opt.id, State.Failed, result);
-                } else {
-                    // success
-                    taskManager.updateTask(opt.id, State(uint8(result[1])), result);
-                }
+                // success
+                taskManager.updateTask(opt.id, State.Completed, result);
             }
         }
-        _rotateSubmitter();
+    }
+
+    function pendingTask(
+        uint64[] calldata _taskIds,
+        bytes[] calldata _calldata,
+        bytes calldata _signature
+    ) external onlyCurrentSubmitter nonReentrant {
+        require(
+            _verifySignature(
+                keccak256(abi.encode(_taskIds, _calldata, tssNonce++, block.chainid)),
+                _signature
+            ),
+            InvalidSigner(msg.sender)
+        );
+        // pending the task and update the actual input
+        for (uint8 i; i < _taskIds.length; ++i) {
+            taskManager.updateTask(
+                _taskIds[i],
+                State.Pending,
+                bytes.concat(taskManager.getTask(_taskIds[i]).result, _calldata[i])
+            );
+        }
     }
 
     /**

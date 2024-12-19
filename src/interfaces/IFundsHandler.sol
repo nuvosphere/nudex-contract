@@ -26,7 +26,8 @@ interface IFundsHandler {
         address indexed userAddress,
         bytes32 indexed ticker,
         bytes32 indexed chainId,
-        uint256 amount
+        uint256 amount,
+        uint256 btcAmount
     );
 
     error InvalidAmount();
@@ -45,7 +46,8 @@ interface IFundsHandler {
         address _userAddress,
         bytes32 _ticker,
         bytes32 _chainId,
-        uint256 _amount
+        uint256 _amount,
+        uint256 _btcAmount
     ) external returns (bytes memory);
 
     function getDeposits(address userAddress) external view returns (DepositInfo[] memory);

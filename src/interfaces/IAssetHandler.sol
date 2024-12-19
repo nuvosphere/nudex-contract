@@ -51,8 +51,18 @@ interface IAssetHandler {
     event AssetListed(bytes32 indexed ticker, AssetParam assetParam);
     event AssetUpdated(bytes32 indexed ticker, AssetParam assetParam);
     event AssetDelisted(bytes32 indexed assetId);
-    event Deposit(bytes32 indexed assetId, bytes32 indexed chainId, uint256 indexed amount);
-    event Withdraw(bytes32 indexed assetId, bytes32 indexed chainId, uint256 indexed amount);
+    event Consolidate(
+        bytes32 indexed assetId,
+        bytes32 indexed chainId,
+        uint256 indexed amount,
+        uint256 btcAmount
+    );
+    event Withdraw(
+        bytes32 indexed assetId,
+        bytes32 indexed chainId,
+        uint256 indexed amount,
+        uint256 btcAmount
+    );
 
     // errors
     error InsufficientBalance(bytes32 ticker, bytes32 chainId);
@@ -67,5 +77,10 @@ interface IAssetHandler {
     // Get the list of all listed assets
     function getAllAssets() external view returns (bytes32[] memory);
 
-    function withdraw(bytes32 _ticker, bytes32 _chainId, uint256 _amount) external;
+    function withdraw(
+        bytes32 _ticker,
+        bytes32 _chainId,
+        uint256 _amount,
+        uint256 _btcAmount
+    ) external;
 }
