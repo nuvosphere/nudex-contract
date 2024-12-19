@@ -47,12 +47,6 @@
 //         participantHandler.initialize(address(nuvoLock), vmProxy, participants);
 //         assertEq(participantHandler.getParticipants().length, 3);
 
-//         entryPoint.initialize(
-//             tssSigner, // tssSigner
-//             participantHandlerProxy, // participantHandler
-//             address(taskManager), // taskManager
-//             address(nuvoLock) // nuvoLock
-//         );
 //         assert(
 //             entryPoint.nextSubmitter() == msgSender ||
 //                 entryPoint.nextSubmitter() == participant1 ||

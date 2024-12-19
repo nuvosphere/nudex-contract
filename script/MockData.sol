@@ -20,7 +20,7 @@ contract MockData is Script {
         AccountHandlerUpgradeable accountManager = new AccountHandlerUpgradeable(address(0));
         NuvoProxy proxy = new NuvoProxy(address(accountManager), vm.envAddress("PARTICIPANT_2"));
         accountManager = AccountHandlerUpgradeable(address(proxy));
-        accountManager.initialize(address(deployer), deployer);
+        accountManager.initialize(deployer, deployer, deployer);
         console.log("|AccountHandler|", address(accountManager));
 
         for (uint8 i; i < 10; ++i) {

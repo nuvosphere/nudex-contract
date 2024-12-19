@@ -24,20 +24,12 @@ contract AccountCreationTest is BaseTest {
             daoContract
         );
         accountHandler = AccountHandlerUpgradeable(amProxy);
-        accountHandler.initialize(vmProxy, msgSender);
-        assertTrue(accountHandler.hasRole(DEFAULT_ADMIN_ROLE, vmProxy));
+        accountHandler.initialize(daoContract, vmProxy, msgSender);
+        assertTrue(accountHandler.hasRole(ENTRYPOINT_ROLE, vmProxy));
 
         // assign handlers
         handlers.push(amProxy);
-        taskManager.initialize(vmProxy, handlers);
-
-        // initialize entryPoint link to all contracts
-        entryPoint.initialize(
-            tssSigner, // tssSigner
-            address(participantHandler), // participantHandler
-            address(taskManager), // taskManager
-            address(nuvoLock) // nuvoLock
-        );
+        taskManager.initialize(daoContract, vmProxy, handlers);
     }
 
     function test_Create() public {

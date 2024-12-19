@@ -60,19 +60,24 @@ contract DeployTest is Script {
             address(nuvoLock),
             address(taskManager)
         );
-        participantManager.initialize(address(votingManager), deployer, initialParticipants);
+        participantManager.initialize(
+            daoContract,
+            address(votingManager),
+            deployer,
+            initialParticipants
+        );
         console.log("|ParticipantHandler|", address(participantManager));
 
         // deploy accountManager
         AccountHandlerUpgradeable accountManager = new AccountHandlerUpgradeable(
             address(taskManager)
         );
-        accountManager.initialize(address(votingManager), deployer);
+        accountManager.initialize(daoContract, address(votingManager), deployer);
         console.log("|AccountHandler|", address(accountManager));
 
         // deploy accountManager
         AssetHandlerUpgradeable assetHandler = new AssetHandlerUpgradeable(address(taskManager));
-        assetHandler.initialize(address(votingManager), deployer);
+        assetHandler.initialize(daoContract, address(votingManager), deployer);
         console.log("|AssetHandler|", address(assetHandler));
 
         // deploy depositManager
@@ -80,11 +85,11 @@ contract DeployTest is Script {
             address(assetHandler),
             address(taskManager)
         );
-        depositManager.initialize(address(votingManager), deployer);
+        depositManager.initialize(daoContract, address(votingManager), deployer);
         console.log("|FundsHandler|", address(depositManager));
 
         // initialize votingManager link to all contracts
-        taskManager.initialize(address(votingManager), handlers);
+        taskManager.initialize(daoContract, address(votingManager), handlers);
         votingManager.initialize(
             tssSigner, // tssSigner
             address(participantManager), // participantManager

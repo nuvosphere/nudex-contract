@@ -21,6 +21,7 @@ contract BaseTest is Test {
     using MessageHashUtils for bytes32;
 
     bytes32 public constant DEFAULT_ADMIN_ROLE = 0x00;
+    bytes32 public constant ENTRYPOINT_ROLE = keccak256("ENTRYPOINT_ROLE");
     uint256 public constant MIN_LOCK_AMOUNT = 1 ether;
     uint32 public constant MIN_LOCK_PERIOD = 1 weeks;
 
@@ -81,14 +82,22 @@ contract BaseTest is Test {
         participants[0] = msgSender;
         participants[1] = msgSender;
         participants[2] = msgSender;
-        participantHandler.initialize(vmProxy, msgSender, participants);
-        assertTrue(participantHandler.hasRole(DEFAULT_ADMIN_ROLE, vmProxy));
+        participantHandler.initialize(daoContract, vmProxy, msgSender, participants);
+        assertTrue(participantHandler.hasRole(ENTRYPOINT_ROLE, vmProxy));
 
         // setups
         vm.startPrank(msgSender);
         nuvoToken.approve(nuvoLockProxy, MIN_LOCK_AMOUNT);
         nuvoLock.lock(MIN_LOCK_AMOUNT, MIN_LOCK_PERIOD);
         vm.stopPrank();
+
+        // initialize entryPoint link to all contracts
+        entryPoint.initialize(
+            tssSigner, // tssSigner
+            address(participantHandler), // participantHandler
+            address(taskManager), // taskManager
+            address(nuvoLock) // nuvoLock
+        );
 
         // misc
         taskIds.push(0);

@@ -30,9 +30,9 @@ contract FundsTest is BaseTest {
             daoContract
         );
         AssetHandlerUpgradeable assetHandler = AssetHandlerUpgradeable(ahProxy);
-        assetHandler.initialize(thisAddr, msgSender);
+        assetHandler.initialize(thisAddr, thisAddr, msgSender);
         AssetParam memory assetParam = AssetParam(
-            AssetType.EVM,
+            AssetType.BTC,
             18,
             true,
             true,
@@ -61,21 +61,13 @@ contract FundsTest is BaseTest {
             daoContract
         );
         fundsHandler = FundsHandlerUpgradeable(dmProxy);
-        fundsHandler.initialize(vmProxy, msgSender);
-        assertTrue(fundsHandler.hasRole(DEFAULT_ADMIN_ROLE, vmProxy));
+        fundsHandler.initialize(daoContract, vmProxy, msgSender);
+        assertTrue(fundsHandler.hasRole(ENTRYPOINT_ROLE, vmProxy));
 
         // assign handlers
         assetHandler.grantRole(FUNDS_ROLE, dmProxy);
         handlers.push(dmProxy);
-        taskManager.initialize(vmProxy, handlers);
-
-        // initialize entryPoint link to all contracts
-        entryPoint.initialize(
-            tssSigner, // tssSigner
-            address(participantHandler), // participantHandler
-            address(taskManager), // taskManager
-            address(nuvoLock) // nuvoLock
-        );
+        taskManager.initialize(daoContract, vmProxy, handlers);
     }
 
     function test_Deposit() public {
@@ -172,7 +164,7 @@ contract FundsTest is BaseTest {
         entryPoint.verifyAndCall(taskIds, signature);
         IFundsHandler.DepositInfo memory depositInfo;
         for (uint8 i; i < batchSize; ++i) {
-            // assertEq(uint8(taskManager.getTaskState(taskIds[i])), uint8(State.Completed));
+            assertEq(uint8(taskManager.getTaskState(taskIds[i])), uint8(State.Completed));
             depositInfo = fundsHandler.getDeposit(users[i], 0);
             assertEq(
                 abi.encodePacked(users[i], amounts[i]),
@@ -185,7 +177,7 @@ contract FundsTest is BaseTest {
     function testFuzz_DepositFuzz(address _user, uint256 _amount) public {
         vm.startPrank(msgSender);
         vm.assume(_user != address(0));
-        vm.assume(_amount > 0);
+        vm.assume(_amount > MIN_DEPOSIT_AMOUNT);
         // setup deposit info
         bytes32 chainId = CHAIN_ID;
         uint256 depositIndex = fundsHandler.getDeposits(user).length;
@@ -216,11 +208,11 @@ contract FundsTest is BaseTest {
         assertEq(withdrawIndex, 0);
         bytes32 chainId = CHAIN_ID;
         uint256 withdrawAmount = 1 ether;
-        taskIds[0] = fundsHandler.submitWithdrawTask(user, TICKER, chainId, withdrawAmount);
+        taskIds[0] = fundsHandler.submitWithdrawTask(user, TICKER, chainId, withdrawAmount, 0);
         bytes memory signature = _generateOptSignature(taskIds, tssKey);
         // check event and result
         vm.expectEmit(true, true, true, true);
-        emit IFundsHandler.WithdrawalRecorded(user, TICKER, chainId, withdrawAmount);
+        emit IFundsHandler.WithdrawalRecorded(user, TICKER, chainId, withdrawAmount, 0);
         entryPoint.verifyAndCall(taskIds, signature);
         IFundsHandler.WithdrawalInfo memory withdrawInfo = fundsHandler.getWithdrawal(
             user,
@@ -240,12 +232,12 @@ contract FundsTest is BaseTest {
         uint256 withdrawAmount = 0; // invalid amount
         // fail case: invalid amount
         vm.expectRevert(IFundsHandler.InvalidAmount.selector);
-        taskIds[0] = fundsHandler.submitWithdrawTask(user, TICKER, chainId, withdrawAmount);
+        taskIds[0] = fundsHandler.submitWithdrawTask(user, TICKER, chainId, withdrawAmount, 0);
         // fail case: invalid user address
         withdrawAmount = 1 ether;
         user = address(0);
         vm.expectRevert(IFundsHandler.InvalidAddress.selector);
-        taskIds[0] = fundsHandler.submitWithdrawTask(user, TICKER, chainId, withdrawAmount);
+        taskIds[0] = fundsHandler.submitWithdrawTask(user, TICKER, chainId, withdrawAmount, 0);
         vm.stopPrank();
 
         user = msgSender;
@@ -253,7 +245,7 @@ contract FundsTest is BaseTest {
         fundsHandler.setPauseState(TICKER, true);
         vm.expectRevert(IFundsHandler.Paused.selector);
         vm.prank(msgSender);
-        taskIds[0] = fundsHandler.submitWithdrawTask(user, TICKER, chainId, withdrawAmount);
+        taskIds[0] = fundsHandler.submitWithdrawTask(user, TICKER, chainId, withdrawAmount, 0);
     }
 
     function test_WithdrawBatch() public {
@@ -264,10 +256,18 @@ contract FundsTest is BaseTest {
         uint64[] memory taskIds = new uint64[](batchSize);
         address[] memory users = new address[](batchSize);
         uint256[] memory amounts = new uint256[](batchSize);
+        uint256[] memory btcAmounts = new uint256[](batchSize);
         for (uint16 i; i < batchSize; ++i) {
             users[i] = makeAddr(string(abi.encodePacked("user", i)));
             amounts[i] = 1 ether;
-            taskIds[i] = fundsHandler.submitWithdrawTask(users[i], TICKER, CHAIN_ID, amounts[i]);
+            btcAmounts[i] = 0.1 ether;
+            taskIds[i] = fundsHandler.submitWithdrawTask(
+                users[i],
+                TICKER,
+                CHAIN_ID,
+                amounts[i],
+                btcAmounts[i]
+            );
         }
         bytes memory signature = _generateOptSignature(taskIds, tssKey);
         for (uint16 i; i < batchSize; ++i) {

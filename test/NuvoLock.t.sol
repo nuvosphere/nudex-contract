@@ -27,14 +27,6 @@
 //         assertEq(nuvoLock.owner(), vmProxy);
 //         vm.prank(rewardSource);
 //         nuvoToken.approve(nuvoLockProxy, 100 ether);
-
-//         // initialize entryPoint link to all contracts
-//         entryPoint.initialize(
-//             tssSigner, // tssSigner
-//             address(participantHandler), // participantHandler
-//             address(taskManager), // taskManager
-//             address(nuvoLock) // nuvoLock
-//         );
 //     }
 
 //     function test_Lock() public {
