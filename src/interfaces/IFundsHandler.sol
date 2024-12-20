@@ -3,17 +3,17 @@ pragma solidity ^0.8.26;
 
 interface IFundsHandler {
     struct DepositInfo {
-        string depositAddress;
         bytes32 ticker;
         bytes32 chainId;
         uint256 amount;
+        string depositAddress;
     }
 
     struct WithdrawalInfo {
-        string depositAddress;
         bytes32 ticker;
         bytes32 chainId;
         uint256 amount;
+        string depositAddress;
     }
 
     event NewPauseState(bytes32 condition, bool newState);
@@ -27,8 +27,7 @@ interface IFundsHandler {
         string indexed depositAddress,
         bytes32 indexed ticker,
         bytes32 indexed chainId,
-        uint256 amount,
-        uint256 btcAmount
+        uint256 amount
     );
 
     error InvalidAmount();
@@ -49,7 +48,6 @@ interface IFundsHandler {
         bytes32 _ticker,
         bytes32 _chainId,
         uint256 _amount,
-        uint256 _btcAmount,
         string calldata _depositAddress
     ) external returns (bytes memory);
 

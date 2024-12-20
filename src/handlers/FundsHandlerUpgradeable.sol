@@ -115,10 +115,10 @@ contract FundsHandlerUpgradeable is IFundsHandler, AccessControlUpgradeable {
     ) external onlyRole(ENTRYPOINT_ROLE) returns (bytes memory) {
         deposits[_depositAddress].push(
             DepositInfo({
-                depositAddress: _depositAddress,
                 ticker: _ticker,
                 chainId: _chainId,
-                amount: _amount
+                amount: _amount,
+                depositAddress: _depositAddress
             })
         );
         emit INIP20.NIP20TokenEvent_mintb(_userAddress, _ticker, _amount);
@@ -131,30 +131,27 @@ contract FundsHandlerUpgradeable is IFundsHandler, AccessControlUpgradeable {
         bytes32 _ticker,
         bytes32 _chainId,
         uint256 _amount,
-        uint256 _btcAmount,
         string calldata _depositAddress
     ) external onlyRole(SUBMITTER_ROLE) returns (uint64) {
         require(!pauseState[_ticker] && !pauseState[bytes32(_chainId)], Paused());
         require(bytes(_depositAddress).length > 0, InvalidAddress());
-        bytes memory callData;
-        if (_btcAmount == 0) {
-            require(
-                _amount >= assetHandler.getAssetDetails(_ticker).minWithdrawAmount,
-                InvalidAmount()
-            );
-            callData = abi.encodeWithSelector(
-                this.recordWithdrawal.selector,
-                _depositAddress,
-                _ticker,
-                _chainId,
-                _amount,
-                _btcAmount
-            );
-        } else {
-            callData = abi.encodePacked(this.recordWithdrawal.selector);
-        }
+        require(
+            _amount >= assetHandler.getAssetDetails(_ticker).minWithdrawAmount,
+            InvalidAmount()
+        );
         emit INIP20.NIP20TokenEvent_burnb(_userAddress, _ticker, _amount);
-        return taskManager.submitTask(msg.sender, callData);
+        return
+            taskManager.submitTask(
+                msg.sender,
+                abi.encodeWithSelector(
+                    this.recordWithdrawal.selector,
+                    _userAddress,
+                    _ticker,
+                    _chainId,
+                    _amount,
+                    _depositAddress
+                )
+            );
     }
 
     /**
@@ -165,19 +162,18 @@ contract FundsHandlerUpgradeable is IFundsHandler, AccessControlUpgradeable {
         bytes32 _ticker,
         bytes32 _chainId,
         uint256 _amount,
-        uint256 _btcAmount,
         string calldata _depositAddress
     ) external onlyRole(ENTRYPOINT_ROLE) returns (bytes memory) {
         withdrawals[_depositAddress].push(
             WithdrawalInfo({
-                depositAddress: _depositAddress,
                 ticker: _ticker,
                 chainId: _chainId,
-                amount: _amount
+                amount: _amount,
+                depositAddress: _depositAddress
             })
         );
-        assetHandler.withdraw(_ticker, _chainId, _amount, _btcAmount);
-        emit WithdrawalRecorded(_depositAddress, _ticker, _chainId, _amount, _btcAmount);
-        return abi.encodePacked(uint8(1), _depositAddress, _ticker, _chainId, _amount, _btcAmount);
+        assetHandler.withdraw(_ticker, _chainId, _amount);
+        emit WithdrawalRecorded(_depositAddress, _ticker, _chainId, _amount);
+        return abi.encodePacked(uint8(1), _depositAddress, _ticker, _chainId, _amount);
     }
 }

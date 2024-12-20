@@ -174,35 +174,23 @@ contract AssetHandlerUpgradeable is IAssetHandler, AccessControlUpgradeable {
     function consolidate(
         bytes32 _ticker,
         bytes32 _chainId,
-        uint256 _amount,
-        uint256 _btcCount
+        uint256 _amount
     ) external onlyRole(ENTRYPOINT_ROLE) checkListing(_ticker) {
         linkedTokens[_ticker][_chainId].balance += _amount;
-        if (_btcCount > 0) {
-            linkedTokens[_ticker][_chainId].btcCount += _btcCount;
-        }
-        emit Consolidate(_ticker, _chainId, _amount, _btcCount);
+        emit Consolidate(_ticker, _chainId, _amount);
     }
 
     function withdraw(
         bytes32 _ticker,
         bytes32 _chainId,
-        uint256 _amount,
-        uint256 _btcCount
+        uint256 _amount
     ) external onlyRole(FUNDS_ROLE) checkListing(_ticker) {
         require(linkedTokens[_ticker][_chainId].isActive, "Inactive token");
         require(
             linkedTokens[_ticker][_chainId].balance >= _amount,
             InsufficientBalance(_ticker, _chainId)
         );
-        if (_btcCount > 0) {
-            require(
-                linkedTokens[_ticker][_chainId].btcCount >= _btcCount,
-                InsufficientBtcCount(_ticker, _chainId)
-            );
-            linkedTokens[_ticker][_chainId].btcCount -= _btcCount;
-        }
         linkedTokens[_ticker][_chainId].balance -= _amount;
-        emit Withdraw(_ticker, _chainId, _amount, _btcCount);
+        emit Withdraw(_ticker, _chainId, _amount);
     }
 }
