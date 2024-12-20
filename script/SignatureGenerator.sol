@@ -7,7 +7,6 @@ import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/Messa
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
 import {EntryPointUpgradeable} from "../src/EntryPointUpgradeable.sol";
-import {Operation} from "../src/interfaces/IEntryPoint.sol";
 
 contract SignatureGenerator is Script {
     using MessageHashUtils for bytes32;
@@ -20,15 +19,15 @@ contract SignatureGenerator is Script {
     }
 
     // forge script --rpc-url localhost script/SignatureGenerator.sol --sig "run((address,uint8, uint64, bytes)[],uint256)"
-    function run(Operation[] calldata opts, uint256 _privKey) public view returns (bytes memory) {
-        bytes memory encodedData = abi.encode(votingManager.tssNonce(), opts);
+    function run(uint64[] calldata _taskIds, uint256 _privKey) public view returns (bytes memory) {
+        bytes memory encodedData = abi.encode(_taskIds, votingManager.tssNonce(), block.chainid);
         bytes32 digest = keccak256(encodedData).toEthSignedMessageHash();
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(_privKey, digest);
         console.logBytes(abi.encodePacked(r, s, v));
         return abi.encodePacked(r, s, v);
     }
 
-    function run2(bytes32 _digest, uint256 _privKey) public view {
+    function run2(bytes32 _digest, uint256 _privKey) public pure {
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(_privKey, _digest);
         console.logBytes(abi.encodePacked(r, s, v));
     }

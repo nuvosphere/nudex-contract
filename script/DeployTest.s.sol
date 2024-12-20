@@ -10,8 +10,7 @@ import {AccountHandlerUpgradeable} from "../src/handlers/AccountHandlerUpgradeab
 import {AssetHandlerUpgradeable} from "../src/handlers/AssetHandlerUpgradeable.sol";
 import {FundsHandlerUpgradeable} from "../src/handlers/FundsHandlerUpgradeable.sol";
 import {NuvoLockUpgradeable} from "../src/NuvoLockUpgradeable.sol";
-import {TaskManagerUpgradeable} from "../src/tasks/TaskManagerUpgradeable.sol";
-import {TaskSubmitterUpgradeable} from "../src/tasks/TaskSubmitterUpgradeable.sol";
+import {TaskManagerUpgradeable} from "../src/TaskManagerUpgradeable.sol";
 import {ParticipantHandlerUpgradeable} from "../src/handlers/ParticipantHandlerUpgradeable.sol";
 import {EntryPointUpgradeable} from "../src/EntryPointUpgradeable.sol";
 
