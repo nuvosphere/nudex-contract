@@ -2,7 +2,7 @@
 pragma solidity ^0.8.26;
 
 import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
-import {ITaskManager, State, TaskOperation} from "./interfaces/ITaskManager.sol";
+import {ITaskManager, State, Task} from "./interfaces/ITaskManager.sol";
 
 contract TaskManagerUpgradeable is ITaskManager, AccessControlUpgradeable {
     bytes32 public constant ENTRYPOINT_ROLE = keccak256("ENTRYPOINT_ROLE");
@@ -10,7 +10,7 @@ contract TaskManagerUpgradeable is ITaskManager, AccessControlUpgradeable {
 
     uint64 public nextTaskId;
     uint64 public nextCreatedTaskId;
-    mapping(uint64 => TaskOperation) public tasks;
+    mapping(uint64 => Task) public tasks;
     mapping(bytes32 => uint64) public taskRecords;
 
     function initialize(
@@ -25,7 +25,7 @@ contract TaskManagerUpgradeable is ITaskManager, AccessControlUpgradeable {
         }
     }
 
-    function getTask(uint64 _taskId) external view returns (TaskOperation memory) {
+    function getTask(uint64 _taskId) external view returns (Task memory) {
         return tasks[_taskId];
     }
 
@@ -40,7 +40,7 @@ contract TaskManagerUpgradeable is ITaskManager, AccessControlUpgradeable {
     /**
      * @dev Get the latest task.
      */
-    function getLatestTask() external view returns (TaskOperation memory) {
+    function getLatestTask() external view returns (Task memory) {
         require(nextTaskId > 0, EmptyTask());
         return tasks[nextTaskId - 1];
     }
@@ -48,8 +48,8 @@ contract TaskManagerUpgradeable is ITaskManager, AccessControlUpgradeable {
     /**
      * @dev Get all uncompleted tasks.
      */
-    function getUncompletedTasks() external view returns (TaskOperation[] memory) {
-        TaskOperation[] memory tempTasks = new TaskOperation[](nextTaskId);
+    function getUncompletedTasks() external view returns (Task[] memory) {
+        Task[] memory tempTasks = new Task[](nextTaskId);
         uint256 count = 0;
         for (uint64 i = 0; i < nextTaskId; i++) {
             if (tasks[i].state != State.Completed) {
@@ -57,7 +57,7 @@ contract TaskManagerUpgradeable is ITaskManager, AccessControlUpgradeable {
                 count++;
             }
         }
-        TaskOperation[] memory uncompletedTasks = new TaskOperation[](count);
+        Task[] memory uncompletedTasks = new Task[](count);
         for (uint256 i = 0; i < count; i++) {
             uncompletedTasks[i] = tempTasks[i];
         }
@@ -78,7 +78,7 @@ contract TaskManagerUpgradeable is ITaskManager, AccessControlUpgradeable {
         uint64 taskId = taskRecords[hash];
         require(taskId == 0, AlreadyExistTask(taskId));
         taskId = nextTaskId++;
-        tasks[taskId] = TaskOperation({
+        tasks[taskId] = Task({
             id: taskId,
             state: State.Created,
             submitter: _submitter,
@@ -104,7 +104,7 @@ contract TaskManagerUpgradeable is ITaskManager, AccessControlUpgradeable {
         State _state,
         bytes calldata _result
     ) external onlyRole(ENTRYPOINT_ROLE) {
-        TaskOperation storage task = tasks[_taskId];
+        Task storage task = tasks[_taskId];
         if (task.state == State.Created) {
             require(_taskId == nextCreatedTaskId++, InvalidTask(_taskId));
         }

@@ -166,9 +166,15 @@ contract AssetHandlerUpgradeable is IAssetHandler, AccessControlUpgradeable {
     }
 
     function submitConsolidateTask(
-        bytes32 _ticker
+        bytes32 _ticker,
+        bytes32 _chainId,
+        uint256 _amount
     ) external onlyRole(SUBMITTER_ROLE) checkListing(_ticker) returns (uint64) {
-        return taskManager.submitTask(msg.sender, abi.encodePacked(this.consolidate.selector));
+        return
+            taskManager.submitTask(
+                msg.sender,
+                abi.encodeWithSelector(this.consolidate.selector, _ticker, _chainId, _amount)
+            );
     }
 
     function consolidate(

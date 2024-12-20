@@ -7,7 +7,7 @@ import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/ut
 import {IEntryPoint} from "./interfaces/IEntryPoint.sol";
 import {IParticipantHandler} from "./interfaces/IParticipantHandler.sol";
 import {INuvoLock} from "./interfaces/INuvoLock.sol";
-import {ITaskManager, State, TaskOperation} from "./interfaces/ITaskManager.sol";
+import {ITaskManager, State, Task, TaskOperation} from "./interfaces/ITaskManager.sol";
 
 /**
  * @dev Manage all onchain information.
@@ -59,28 +59,28 @@ contract EntryPointUpgradeable is IEntryPoint, Initializable, ReentrancyGuardUpg
 
     /**
      * @dev Verify operation signature.
-     * @param _taskIds The batch tasks to be executed.
+     * @param _operations The batch tasks to be executed.
      * @param _nonce The nonce of tssSigner.
      * @param _signature The signature for verification.
      */
     function verifyOperation(
-        uint64[] calldata _taskIds,
+        TaskOperation[] calldata _operations,
         uint256 _nonce,
         bytes calldata _signature
     ) external view returns (bool) {
-        return _verifyOperation(_taskIds, _nonce, _signature);
+        return _verifyOperation(_operations, _nonce, _signature);
     }
 
     /**
      * @dev Message hash helper function.
-     * @param _taskIds The ids of batch task to be executed.
+     * @param _operations The ids of batch task to be executed.
      * @param _nonce The nonce of tssSigner.
      */
     function operationHash(
-        uint64[] calldata _taskIds,
+        TaskOperation[] calldata _operations,
         uint256 _nonce
     ) external view returns (bytes32 hash, bytes32 messageHash) {
-        hash = keccak256(abi.encode(_taskIds, _nonce, block.chainid));
+        hash = keccak256(abi.encode(_operations, _nonce, block.chainid));
         messageHash = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", hash));
     }
 
@@ -135,69 +135,55 @@ contract EntryPointUpgradeable is IEntryPoint, Initializable, ReentrancyGuardUpg
 
     /**
      * @dev Entry point for all task handlers
-     * @param _taskIds The batch tasks to be executed.
+     * @param _operations The batch tasks to be executed.
      * @param _signature The signature for verification.
      */
     function verifyAndCall(
-        uint64[] calldata _taskIds,
+        TaskOperation[] calldata _operations,
         bytes calldata _signature
     ) external onlyCurrentSubmitter nonReentrant {
-        require(_verifyOperation(_taskIds, tssNonce++, _signature), InvalidSigner(msg.sender));
+        require(_verifyOperation(_operations, tssNonce++, _signature), InvalidSigner(msg.sender));
         bool success;
         bytes memory result;
-        TaskOperation memory opt;
-        for (uint8 i; i < _taskIds.length; ++i) {
-            opt = taskManager.getTask(_taskIds[i]);
-            (success, result) = opt.handler.call(opt.result);
-            if (!success) {
-                // fail
-                taskManager.updateTask(opt.id, State.Failed, result);
-            } else {
-                // success
-                taskManager.updateTask(opt.id, State.Completed, result);
+        Task memory task;
+        for (uint8 i; i < _operations.length; ++i) {
+            task = taskManager.getTask(_operations[i].taskId);
+            if (_operations[i].state == State.Completed) {
+                (success, result) = task.handler.call(task.result);
+                if (success) {
+                    // success
+                    taskManager.updateTask(task.id, State.Completed, result);
+                } else {
+                    // fail
+                    taskManager.updateTask(task.id, State.Failed, result);
+                }
+            } else if (_operations[i].state == State.Pending) {
+                taskManager.updateTask(_operations[i].taskId, State.Pending, task.result);
+            } else if (_operations[i].state == State.Failed) {
+                taskManager.updateTask(
+                    _operations[i].taskId,
+                    State.Failed,
+                    abi.encodePacked(uint8(0))
+                );
             }
-        }
-    }
-
-    function pendingTask(
-        uint64[] calldata _taskIds,
-        bytes[] calldata _calldata,
-        bytes calldata _signature
-    ) external onlyCurrentSubmitter nonReentrant {
-        require(
-            _verifySignature(
-                keccak256(abi.encode(_taskIds, _calldata, tssNonce++, block.chainid)),
-                _signature
-            ),
-            InvalidSigner(msg.sender)
-        );
-        // pending the task and update the actual input
-        bytes memory selector;
-        for (uint8 i; i < _taskIds.length; ++i) {
-            selector = taskManager.getTask(_taskIds[i]).result;
-            require(selector.length == 4, NotEligibleForPending(_taskIds[i]));
-            taskManager.updateTask(
-                _taskIds[i],
-                State.Pending,
-                bytes.concat(selector, _calldata[i])
-            );
         }
     }
 
     /**
      * @dev Verify the validity of the operation.
-     * @param _taskIds The ids of batch operation to be executed.
+     * @param _operations The ids of batch operation to be executed.
      * @param _nonce The nonce of tssSigner.
      * @param _signature The signature for verification.
      */
     function _verifyOperation(
-        uint64[] calldata _taskIds,
+        TaskOperation[] calldata _operations,
         uint256 _nonce,
         bytes calldata _signature
     ) internal view returns (bool) {
-        require(_taskIds.length > 0, EmptyOperationsArray());
-        require(_taskIds.length <= MAX_OPT_COUNT, ExceedMaxOptCount());
-        return _verifySignature(keccak256(abi.encode(_taskIds, _nonce, block.chainid)), _signature);
+        require(_operations.length > 0, EmptyOperationsArray());
+        require(_operations.length <= MAX_OPT_COUNT, ExceedMaxOptCount());
+        return
+            _verifySignature(keccak256(abi.encode(_operations, _nonce, block.chainid)), _signature);
     }
 
     /**

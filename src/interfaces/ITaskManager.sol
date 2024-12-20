@@ -9,6 +9,11 @@ enum State {
 }
 
 struct TaskOperation {
+    uint64 taskId;
+    State state;
+}
+
+struct Task {
     uint64 id;
     State state;
     address submitter;
@@ -35,11 +40,11 @@ interface ITaskManager {
     error AlreadyExistTask(uint64 taskId);
     error InvalidAddress();
 
-    function getTask(uint64) external view returns (TaskOperation memory);
+    function getTask(uint64) external view returns (Task memory);
 
-    function getLatestTask() external view returns (TaskOperation memory);
+    function getLatestTask() external view returns (Task memory);
 
-    function getUncompletedTasks() external view returns (TaskOperation[] memory);
+    function getUncompletedTasks() external view returns (Task[] memory);
 
     function getTaskState(uint64 _taskId) external view returns (State);
 
