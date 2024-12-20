@@ -3,6 +3,8 @@ pragma solidity ^0.8.26;
 
 enum AssetType {
     BTC,
+    TRON,
+    SOL,
     EVM,
     Ordinal,
     Inscription
@@ -16,7 +18,6 @@ struct AssetParam {
     uint256 minDepositAmount;
     uint256 minWithdrawAmount;
     string assetAlias; // Common name of the asset
-    string assetLogo;
 }
 
 struct NudexAsset {
@@ -31,7 +32,6 @@ struct NudexAsset {
     uint256 minDepositAmount;
     uint256 minWithdrawAmount;
     string assetAlias; // Common name of the asset
-    string assetLogo; // TODO: delete this?
 }
 
 struct TokenInfo {
@@ -39,8 +39,8 @@ struct TokenInfo {
     bool isActive;
     AssetType assetType; // Type of the asset (BTC, EVM, Ordinal, Inscription)
     uint8 decimals;
-    address contractAddress; // Address for ERC20, Inscription, or 0x0 for BTC/Ordinal/Native token
-    string symbol; // TODO: delete this?
+    string contractAddress; // Address for ERC20, Inscription, or 0x0 for BTC/Ordinal/Native token
+    string symbol;
     uint256 withdrawFee;
     uint256 balance; // The balance of deposited token
     uint256 btcCount; // BTC count
@@ -51,6 +51,9 @@ interface IAssetHandler {
     event AssetListed(bytes32 indexed ticker, AssetParam assetParam);
     event AssetUpdated(bytes32 indexed ticker, AssetParam assetParam);
     event AssetDelisted(bytes32 indexed assetId);
+    event LinkToken(bytes32 indexed ticker, TokenInfo[] tokens);
+    event ResetlinkedToken(bytes32 indexed ticker);
+    event TokenSwitch(bytes32 ticker, bytes32 chainId, bool isActive);
     event Consolidate(
         bytes32 indexed assetId,
         bytes32 indexed chainId,

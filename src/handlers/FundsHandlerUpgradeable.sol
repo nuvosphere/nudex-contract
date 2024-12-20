@@ -14,8 +14,8 @@ contract FundsHandlerUpgradeable is IFundsHandler, AccessControlUpgradeable {
     IAssetHandler private immutable assetHandler;
 
     mapping(bytes32 pauseType => bool isPaused) public pauseState;
-    mapping(address userAddr => DepositInfo[]) public deposits;
-    mapping(address userAddr => WithdrawalInfo[]) public withdrawals;
+    mapping(string userAddr => DepositInfo[]) public deposits;
+    mapping(string userAddr => WithdrawalInfo[]) public withdrawals;
 
     constructor(address _assetHandler, address _taskManager) {
         assetHandler = IAssetHandler(_assetHandler);
@@ -36,60 +36,66 @@ contract FundsHandlerUpgradeable is IFundsHandler, AccessControlUpgradeable {
     /**
      * @dev Get all deposit records of user.
      */
-    function getDeposits(address userAddress) external view returns (DepositInfo[] memory) {
-        require(userAddress != address(0), InvalidAddress());
-        return deposits[userAddress];
+    function getDeposits(
+        string calldata _depositAddress
+    ) external view returns (DepositInfo[] memory) {
+        require(bytes(_depositAddress).length > 0, InvalidAddress());
+        return deposits[_depositAddress];
     }
 
     /**
      * @dev Get n-th deposit record of user.
      */
     function getDeposit(
-        address userAddress,
-        uint256 index
+        string calldata _depositAddress,
+        uint256 _index
     ) external view returns (DepositInfo memory) {
-        require(userAddress != address(0), InvalidAddress());
-        return deposits[userAddress][index];
+        require(bytes(_depositAddress).length > 0, InvalidAddress());
+        return deposits[_depositAddress][_index];
     }
 
     /**
      * @dev Get all withdraw records of user.
      */
-    function getWithdrawals(address userAddress) external view returns (WithdrawalInfo[] memory) {
-        return withdrawals[userAddress];
+    function getWithdrawals(
+        string calldata _depositAddress
+    ) external view returns (WithdrawalInfo[] memory) {
+        return withdrawals[_depositAddress];
     }
 
     /**
      * @dev Get n-th withdraw record of user.
      */
     function getWithdrawal(
-        address userAddress,
-        uint256 index
+        string calldata _depositAddress,
+        uint256 _index
     ) external view returns (WithdrawalInfo memory) {
-        require(userAddress != address(0), InvalidAddress());
-        return withdrawals[userAddress][index];
+        require(bytes(_depositAddress).length > 0, InvalidAddress());
+        return withdrawals[_depositAddress][_index];
     }
 
     // TODO: role for adjusting Pause state
     function setPauseState(bytes32 _condition, bool _newState) external onlyRole(ENTRYPOINT_ROLE) {
         pauseState[_condition] = _newState;
+        emit NewPauseState(_condition, _newState);
     }
 
     function submitDepositTask(
         address _userAddress,
         bytes32 _ticker,
         bytes32 _chainId,
-        uint256 _amount
+        uint256 _amount,
+        string calldata _depositAddress
     ) external onlyRole(SUBMITTER_ROLE) returns (uint64) {
         require(!pauseState[_ticker] && !pauseState[bytes32(_chainId)], Paused());
         require(_amount >= assetHandler.getAssetDetails(_ticker).minDepositAmount, InvalidAmount());
-        require(_userAddress != address(0), InvalidAddress());
+        require(bytes(_depositAddress).length > 0, InvalidAddress());
         return
             taskManager.submitTask(
                 msg.sender,
                 abi.encodeWithSelector(
                     this.recordDeposit.selector,
-                    _userAddress,
+                    _depositAddress,
                     _ticker,
                     _chainId,
                     _amount
@@ -104,19 +110,20 @@ contract FundsHandlerUpgradeable is IFundsHandler, AccessControlUpgradeable {
         address _userAddress,
         bytes32 _ticker,
         bytes32 _chainId,
-        uint256 _amount
+        uint256 _amount,
+        string calldata _depositAddress
     ) external onlyRole(ENTRYPOINT_ROLE) returns (bytes memory) {
-        deposits[_userAddress].push(
+        deposits[_depositAddress].push(
             DepositInfo({
-                userAddress: _userAddress,
+                depositAddress: _depositAddress,
                 ticker: _ticker,
                 chainId: _chainId,
                 amount: _amount
             })
         );
         emit INIP20.NIP20TokenEvent_mintb(_userAddress, _ticker, _amount);
-        emit DepositRecorded(_userAddress, _ticker, _chainId, _amount);
-        return abi.encodePacked(uint8(1), _userAddress, _ticker, _chainId, _amount);
+        emit DepositRecorded(_depositAddress, _ticker, _chainId, _amount);
+        return abi.encodePacked(uint8(1), _depositAddress, _ticker, _chainId, _amount);
     }
 
     function submitWithdrawTask(
@@ -124,10 +131,11 @@ contract FundsHandlerUpgradeable is IFundsHandler, AccessControlUpgradeable {
         bytes32 _ticker,
         bytes32 _chainId,
         uint256 _amount,
-        uint256 _btcAmount
+        uint256 _btcAmount,
+        string calldata _depositAddress
     ) external onlyRole(SUBMITTER_ROLE) returns (uint64) {
         require(!pauseState[_ticker] && !pauseState[bytes32(_chainId)], Paused());
-        require(_userAddress != address(0), InvalidAddress());
+        require(bytes(_depositAddress).length > 0, InvalidAddress());
         bytes memory callData;
         if (_btcAmount == 0) {
             require(
@@ -136,7 +144,7 @@ contract FundsHandlerUpgradeable is IFundsHandler, AccessControlUpgradeable {
             );
             callData = abi.encodeWithSelector(
                 this.recordWithdrawal.selector,
-                _userAddress,
+                _depositAddress,
                 _ticker,
                 _chainId,
                 _amount,
@@ -157,18 +165,19 @@ contract FundsHandlerUpgradeable is IFundsHandler, AccessControlUpgradeable {
         bytes32 _ticker,
         bytes32 _chainId,
         uint256 _amount,
-        uint256 _btcAmount
+        uint256 _btcAmount,
+        string calldata _depositAddress
     ) external onlyRole(ENTRYPOINT_ROLE) returns (bytes memory) {
-        withdrawals[_userAddress].push(
+        withdrawals[_depositAddress].push(
             WithdrawalInfo({
-                userAddress: _userAddress,
+                depositAddress: _depositAddress,
                 ticker: _ticker,
                 chainId: _chainId,
                 amount: _amount
             })
         );
         assetHandler.withdraw(_ticker, _chainId, _amount, _btcAmount);
-        emit WithdrawalRecorded(_userAddress, _ticker, _chainId, _amount, _btcAmount);
-        return abi.encodePacked(uint8(1), _userAddress, _ticker, _chainId, _amount, _btcAmount);
+        emit WithdrawalRecorded(_depositAddress, _ticker, _chainId, _amount, _btcAmount);
+        return abi.encodePacked(uint8(1), _depositAddress, _ticker, _chainId, _amount, _btcAmount);
     }
 }

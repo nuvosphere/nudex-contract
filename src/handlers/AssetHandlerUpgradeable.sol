@@ -86,7 +86,6 @@ contract AssetHandlerUpgradeable is IAssetHandler, AccessControlUpgradeable {
         tempNudexAsset.minDepositAmount = _assetParam.minDepositAmount;
         tempNudexAsset.minWithdrawAmount = _assetParam.minWithdrawAmount;
         tempNudexAsset.assetAlias = _assetParam.assetAlias;
-        tempNudexAsset.assetLogo = _assetParam.assetLogo;
 
         assetTickerList.push(_ticker);
         emit AssetListed(_ticker, _assetParam);
@@ -116,7 +115,6 @@ contract AssetHandlerUpgradeable is IAssetHandler, AccessControlUpgradeable {
         tempNudexAsset.minDepositAmount = _assetParam.minDepositAmount;
         tempNudexAsset.minWithdrawAmount = _assetParam.minWithdrawAmount;
         tempNudexAsset.assetAlias = _assetParam.assetAlias;
-        tempNudexAsset.assetLogo = _assetParam.assetLogo;
 
         emit AssetUpdated(_ticker, _assetParam);
     }
@@ -144,6 +142,7 @@ contract AssetHandlerUpgradeable is IAssetHandler, AccessControlUpgradeable {
             linkedTokens[_ticker][chainId] = _tokenInfos[i];
             linkedTokenList[_ticker].push(chainId);
         }
+        emit LinkToken(_ticker, _tokenInfos);
     }
 
     function resetlinkedToken(
@@ -154,6 +153,7 @@ contract AssetHandlerUpgradeable is IAssetHandler, AccessControlUpgradeable {
         for (uint32 i; i < chainIds.length; ++i) {
             linkedTokens[_ticker][chainIds[i]].isActive = false;
         }
+        emit ResetlinkedToken(_ticker);
     }
 
     function tokenSwitch(
@@ -162,6 +162,7 @@ contract AssetHandlerUpgradeable is IAssetHandler, AccessControlUpgradeable {
         bool _isActive
     ) external onlyRole(ENTRYPOINT_ROLE) checkListing(_ticker) {
         linkedTokens[_ticker][_chainId].isActive = _isActive;
+        emit TokenSwitch(_ticker, _chainId, _isActive);
     }
 
     function submitConsolidateTask(
@@ -176,7 +177,6 @@ contract AssetHandlerUpgradeable is IAssetHandler, AccessControlUpgradeable {
         uint256 _amount,
         uint256 _btcCount
     ) external onlyRole(ENTRYPOINT_ROLE) checkListing(_ticker) {
-        require(linkedTokens[_ticker][_chainId].isActive, "Inactive token");
         linkedTokens[_ticker][_chainId].balance += _amount;
         if (_btcCount > 0) {
             linkedTokens[_ticker][_chainId].btcCount += _btcCount;

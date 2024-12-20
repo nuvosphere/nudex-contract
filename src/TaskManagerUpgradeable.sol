@@ -2,7 +2,7 @@
 pragma solidity ^0.8.26;
 
 import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
-import {ITaskManager, State, TaskOperation} from "../interfaces/ITaskManager.sol";
+import {ITaskManager, State, TaskOperation} from "./interfaces/ITaskManager.sol";
 
 contract TaskManagerUpgradeable is ITaskManager, AccessControlUpgradeable {
     bytes32 public constant ENTRYPOINT_ROLE = keccak256("ENTRYPOINT_ROLE");
@@ -10,10 +10,6 @@ contract TaskManagerUpgradeable is ITaskManager, AccessControlUpgradeable {
 
     uint64 public nextTaskId;
     uint64 public nextCreatedTaskId;
-    uint64 public pendingTaskIndex;
-    uint64[] public pendingTasks;
-    uint64[] public preconfirmedTasks;
-    bytes[] public preconfirmedTaskResults;
     mapping(uint64 => TaskOperation) public tasks;
     mapping(bytes32 => uint64) public taskRecords;
 
@@ -111,12 +107,6 @@ contract TaskManagerUpgradeable is ITaskManager, AccessControlUpgradeable {
         TaskOperation storage task = tasks[_taskId];
         if (task.state == State.Created) {
             require(_taskId == nextCreatedTaskId++, InvalidTask(_taskId));
-        }
-        if (task.state == State.Pending) {
-            require(_taskId == pendingTasks[pendingTaskIndex++], InvalidPendingTask(_taskId));
-        }
-        if (_state == State.Pending) {
-            pendingTasks.push(_taskId);
         }
         task.state = _state;
         task.updatedAt = uint32(block.timestamp);
