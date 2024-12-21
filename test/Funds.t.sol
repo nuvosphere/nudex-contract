@@ -2,10 +2,10 @@ pragma solidity ^0.8.0;
 
 import "./BaseTest.sol";
 
-import {AssetHandlerUpgradeable, AssetParam, AssetType, TokenInfo} from "../src/handlers/AssetHandlerUpgradeable.sol";
+import {AssetHandlerUpgradeable, AssetParam, TokenInfo} from "../src/handlers/AssetHandlerUpgradeable.sol";
 import {FundsHandlerUpgradeable} from "../src/handlers/FundsHandlerUpgradeable.sol";
 import {IFundsHandler} from "../src/interfaces/IFundsHandler.sol";
-import {ITaskManager} from "../src/interfaces/ITaskManager.sol";
+import {ITaskManager, State} from "../src/interfaces/ITaskManager.sol";
 
 contract FundsTest is BaseTest {
     bytes32 public constant TICKER = "TOKEN_TICKER_18";
@@ -14,7 +14,7 @@ contract FundsTest is BaseTest {
     uint256 public constant MIN_DEPOSIT_AMOUNT = 50;
     uint256 public constant MIN_WITHDRAW_AMOUNT = 50;
 
-    address public user;
+    string public depositAddress;
 
     FundsHandlerUpgradeable public fundsHandler;
 
@@ -22,7 +22,7 @@ contract FundsTest is BaseTest {
 
     function setUp() public override {
         super.setUp();
-        user = makeAddr("user");
+        depositAddress = "0xDepositAddress";
 
         // setup assetHandler
         address ahProxy = _deployProxy(
@@ -32,13 +32,11 @@ contract FundsTest is BaseTest {
         AssetHandlerUpgradeable assetHandler = AssetHandlerUpgradeable(ahProxy);
         assetHandler.initialize(thisAddr, thisAddr, msgSender);
         AssetParam memory assetParam = AssetParam(
-            AssetType.BTC,
             18,
             true,
             true,
             MIN_DEPOSIT_AMOUNT,
             MIN_WITHDRAW_AMOUNT,
-            "",
             ""
         );
         assetHandler.listNewAsset(TICKER, assetParam);
@@ -46,12 +44,10 @@ contract FundsTest is BaseTest {
         testTokenInfo[0] = TokenInfo(
             CHAIN_ID,
             true,
-            AssetType.BTC,
             uint8(18),
-            address(0),
+            "0xContractAddress",
             "SYMBOL",
             0,
-            100 ether,
             100 ether
         );
         assetHandler.linkToken(TICKER, testTokenInfo);
@@ -73,22 +69,31 @@ contract FundsTest is BaseTest {
     function test_Deposit() public {
         vm.startPrank(msgSender);
         // setup deposit info
-        uint256 depositIndex = fundsHandler.getDeposits(user).length;
+        uint256 depositIndex = fundsHandler.getDeposits(depositAddress).length;
         assertEq(depositIndex, 0);
         bytes32 chainId = CHAIN_ID;
         uint256 depositAmount = 1 ether;
-        taskIds[0] = fundsHandler.submitDepositTask(user, TICKER, chainId, depositAmount);
-        bytes memory signature = _generateOptSignature(taskIds, tssKey);
+        taskOpts[0].taskId = fundsHandler.submitDepositTask(
+            msgSender,
+            depositAddress,
+            TICKER,
+            chainId,
+            depositAmount
+        );
+        bytes memory signature = _generateOptSignature(taskOpts, tssKey);
         // check event and result
         vm.expectEmit(true, true, true, true);
-        emit IFundsHandler.DepositRecorded(user, TICKER, chainId, depositAmount);
-        entryPoint.verifyAndCall(taskIds, signature);
+        emit IFundsHandler.DepositRecorded(depositAddress, TICKER, chainId, depositAmount);
+        entryPoint.verifyAndCall(taskOpts, signature);
 
-        IFundsHandler.DepositInfo memory depositInfo = fundsHandler.getDeposit(user, depositIndex);
+        IFundsHandler.DepositInfo memory depositInfo = fundsHandler.getDeposit(
+            depositAddress,
+            depositIndex
+        );
         assertEq(
-            abi.encodePacked(user, TICKER, chainId, depositAmount),
+            abi.encodePacked(depositAddress, TICKER, chainId, depositAmount),
             abi.encodePacked(
-                depositInfo.userAddress,
+                depositInfo.depositAddress,
                 depositInfo.ticker,
                 depositInfo.chainId,
                 depositInfo.amount
@@ -97,22 +102,28 @@ contract FundsTest is BaseTest {
 
         // second deposit
         // setup deposit info
-        depositIndex = fundsHandler.getDeposits(user).length;
+        depositIndex = fundsHandler.getDeposits(depositAddress).length;
         assertEq(depositIndex, 1); // should have increased by 1
         chainId = bytes32(uint256(1));
         depositAmount = 5 ether;
-        taskIds[0] = fundsHandler.submitDepositTask(user, TICKER, chainId, depositAmount);
-        signature = _generateOptSignature(taskIds, tssKey);
+        taskOpts[0].taskId = fundsHandler.submitDepositTask(
+            msgSender,
+            depositAddress,
+            TICKER,
+            chainId,
+            depositAmount
+        );
+        signature = _generateOptSignature(taskOpts, tssKey);
 
         // check event and result
         vm.expectEmit(true, true, true, true);
-        emit IFundsHandler.DepositRecorded(user, TICKER, chainId, depositAmount);
-        entryPoint.verifyAndCall(taskIds, signature);
-        depositInfo = fundsHandler.getDeposit(user, depositIndex);
+        emit IFundsHandler.DepositRecorded(depositAddress, TICKER, chainId, depositAmount);
+        entryPoint.verifyAndCall(taskOpts, signature);
+        depositInfo = fundsHandler.getDeposit(depositAddress, depositIndex);
         assertEq(
-            abi.encodePacked(user, TICKER, chainId, depositAmount),
+            abi.encodePacked(depositAddress, TICKER, chainId, depositAmount),
             abi.encodePacked(
-                depositInfo.userAddress,
+                depositInfo.depositAddress,
                 depositInfo.ticker,
                 depositInfo.chainId,
                 depositInfo.amount
@@ -127,72 +138,123 @@ contract FundsTest is BaseTest {
         uint256 depositAmount = 0; // invalid amount
         // fail case: invalid amount
         vm.expectRevert(IFundsHandler.InvalidAmount.selector);
-        taskIds[0] = fundsHandler.submitDepositTask(user, TICKER, chainId, depositAmount);
+        taskOpts[0].taskId = fundsHandler.submitDepositTask(
+            msgSender,
+            depositAddress,
+            TICKER,
+            chainId,
+            depositAmount
+        );
 
         // fail case: invalid user address
         depositAmount = 1 ether;
-        user = address(0);
+        depositAddress = "";
         vm.expectRevert(IFundsHandler.InvalidAddress.selector);
-        taskIds[0] = fundsHandler.submitDepositTask(user, TICKER, chainId, depositAmount);
+        taskOpts[0].taskId = fundsHandler.submitDepositTask(
+            msgSender,
+            depositAddress,
+            TICKER,
+            chainId,
+            depositAmount
+        );
         vm.stopPrank();
 
-        user = msgSender;
+        depositAddress = "0xDepositAddress";
         vm.prank(vmProxy);
         fundsHandler.setPauseState(TICKER, true);
         vm.expectRevert(IFundsHandler.Paused.selector);
         vm.prank(msgSender);
-        taskIds[0] = fundsHandler.submitDepositTask(user, TICKER, chainId, depositAmount);
+        taskOpts[0].taskId = fundsHandler.submitDepositTask(
+            msgSender,
+            depositAddress,
+            TICKER,
+            chainId,
+            depositAmount
+        );
     }
 
     function test_DepositBatch() public {
         vm.startPrank(msgSender);
         uint8 batchSize = 20;
         // setup deposit info
-        bytes memory callData;
-        uint64[] memory taskIds = new uint64[](batchSize);
-        address[] memory users = new address[](batchSize);
+        TaskOperation[] memory taskOperations = new TaskOperation[](batchSize);
+        string[] memory depositAddresses = new string[](batchSize);
         uint256[] memory amounts = new uint256[](batchSize);
         for (uint8 i; i < batchSize; ++i) {
-            users[i] = makeAddr(string(abi.encodePacked("user", i)));
+            depositAddresses[i] = string(abi.encodePacked("depositAddress", i));
             amounts[i] = 1 ether;
-            taskIds[i] = fundsHandler.submitDepositTask(users[i], TICKER, CHAIN_ID, amounts[i]);
+            taskOperations[i] = TaskOperation(
+                fundsHandler.submitDepositTask(
+                    msgSender,
+                    depositAddresses[i],
+                    TICKER,
+                    CHAIN_ID,
+                    amounts[i]
+                ),
+                State.Pending
+            );
         }
         for (uint16 i; i < batchSize; ++i) {
-            assertEq(uint8(taskManager.getTaskState(taskIds[i])), uint8(State.Created));
+            assertEq(
+                uint8(taskManager.getTaskState(taskOperations[i].taskId)),
+                uint8(State.Created)
+            );
         }
-        bytes memory signature = _generateOptSignature(taskIds, tssKey);
-        entryPoint.verifyAndCall(taskIds, signature);
+        bytes memory signature = _generateOptSignature(taskOperations, tssKey);
+        entryPoint.verifyAndCall(taskOperations, signature);
+
+        for (uint16 i; i < batchSize; ++i) {
+            assertEq(
+                uint8(taskManager.getTaskState(taskOperations[i].taskId)),
+                uint8(State.Pending)
+            );
+            taskOperations[i].state = State.Completed;
+        }
+        signature = _generateOptSignature(taskOperations, tssKey);
+        entryPoint.verifyAndCall(taskOperations, signature);
         IFundsHandler.DepositInfo memory depositInfo;
         for (uint8 i; i < batchSize; ++i) {
-            assertEq(uint8(taskManager.getTaskState(taskIds[i])), uint8(State.Completed));
-            depositInfo = fundsHandler.getDeposit(users[i], 0);
             assertEq(
-                abi.encodePacked(users[i], amounts[i]),
-                abi.encodePacked(depositInfo.userAddress, depositInfo.amount)
+                uint8(taskManager.getTaskState(taskOperations[i].taskId)),
+                uint8(State.Completed)
+            );
+            depositInfo = fundsHandler.getDeposit(depositAddresses[i], 0);
+            assertEq(
+                abi.encodePacked(depositAddresses[i], amounts[i]),
+                abi.encodePacked(depositInfo.depositAddress, depositInfo.amount)
             );
         }
         vm.stopPrank();
     }
 
-    function testFuzz_DepositFuzz(address _user, uint256 _amount) public {
+    function testFuzz_DepositFuzz(string calldata _depositAddress, uint256 _amount) public {
         vm.startPrank(msgSender);
-        vm.assume(_user != address(0));
+        vm.assume(bytes(_depositAddress).length > 0);
         vm.assume(_amount > MIN_DEPOSIT_AMOUNT);
         // setup deposit info
         bytes32 chainId = CHAIN_ID;
-        uint256 depositIndex = fundsHandler.getDeposits(user).length;
-        taskIds[0] = fundsHandler.submitDepositTask(_user, TICKER, chainId, _amount);
-        bytes memory signature = _generateOptSignature(taskIds, tssKey);
+        uint256 depositIndex = fundsHandler.getDeposits(_depositAddress).length;
+        taskOpts[0].taskId = fundsHandler.submitDepositTask(
+            msgSender,
+            _depositAddress,
+            TICKER,
+            chainId,
+            _amount
+        );
+        bytes memory signature = _generateOptSignature(taskOpts, tssKey);
 
         // check event and result
         vm.expectEmit(true, true, true, true);
-        emit IFundsHandler.DepositRecorded(_user, TICKER, chainId, _amount);
-        entryPoint.verifyAndCall(taskIds, signature);
-        IFundsHandler.DepositInfo memory depositInfo = fundsHandler.getDeposit(_user, depositIndex);
+        emit IFundsHandler.DepositRecorded(_depositAddress, TICKER, chainId, _amount);
+        entryPoint.verifyAndCall(taskOpts, signature);
+        IFundsHandler.DepositInfo memory depositInfo = fundsHandler.getDeposit(
+            _depositAddress,
+            depositIndex
+        );
         assertEq(
-            abi.encodePacked(_user, TICKER, chainId, _amount),
+            abi.encodePacked(_depositAddress, TICKER, chainId, _amount),
             abi.encodePacked(
-                depositInfo.userAddress,
+                depositInfo.depositAddress,
                 depositInfo.ticker,
                 depositInfo.chainId,
                 depositInfo.amount
@@ -204,23 +266,29 @@ contract FundsTest is BaseTest {
     function test_Withdraw() public {
         vm.startPrank(msgSender);
         // setup withdrawal info
-        uint256 withdrawIndex = fundsHandler.getWithdrawals(user).length;
+        uint256 withdrawIndex = fundsHandler.getWithdrawals(depositAddress).length;
         assertEq(withdrawIndex, 0);
         bytes32 chainId = CHAIN_ID;
         uint256 withdrawAmount = 1 ether;
-        taskIds[0] = fundsHandler.submitWithdrawTask(user, TICKER, chainId, withdrawAmount, 0);
-        bytes memory signature = _generateOptSignature(taskIds, tssKey);
+        taskOpts[0].taskId = fundsHandler.submitWithdrawTask(
+            msgSender,
+            depositAddress,
+            TICKER,
+            chainId,
+            withdrawAmount
+        );
+        bytes memory signature = _generateOptSignature(taskOpts, tssKey);
         // check event and result
         vm.expectEmit(true, true, true, true);
-        emit IFundsHandler.WithdrawalRecorded(user, TICKER, chainId, withdrawAmount, 0);
-        entryPoint.verifyAndCall(taskIds, signature);
+        emit IFundsHandler.WithdrawalRecorded(depositAddress, TICKER, chainId, withdrawAmount);
+        entryPoint.verifyAndCall(taskOpts, signature);
         IFundsHandler.WithdrawalInfo memory withdrawInfo = fundsHandler.getWithdrawal(
-            user,
+            depositAddress,
             withdrawIndex
         );
         assertEq(
-            abi.encodePacked(user, chainId, withdrawAmount),
-            abi.encodePacked(withdrawInfo.userAddress, withdrawInfo.chainId, withdrawInfo.amount)
+            abi.encodePacked(depositAddress, chainId, withdrawAmount),
+            abi.encodePacked(withdrawInfo.depositAddress, withdrawInfo.chainId, withdrawInfo.amount)
         );
         vm.stopPrank();
     }
@@ -232,55 +300,88 @@ contract FundsTest is BaseTest {
         uint256 withdrawAmount = 0; // invalid amount
         // fail case: invalid amount
         vm.expectRevert(IFundsHandler.InvalidAmount.selector);
-        taskIds[0] = fundsHandler.submitWithdrawTask(user, TICKER, chainId, withdrawAmount, 0);
-        // fail case: invalid user address
+        taskOpts[0].taskId = fundsHandler.submitWithdrawTask(
+            msgSender,
+            depositAddress,
+            TICKER,
+            chainId,
+            withdrawAmount
+        );
+        // fail case: invalid deposit address
         withdrawAmount = 1 ether;
-        user = address(0);
+        depositAddress = "";
         vm.expectRevert(IFundsHandler.InvalidAddress.selector);
-        taskIds[0] = fundsHandler.submitWithdrawTask(user, TICKER, chainId, withdrawAmount, 0);
+        taskOpts[0].taskId = fundsHandler.submitWithdrawTask(
+            msgSender,
+            depositAddress,
+            TICKER,
+            chainId,
+            withdrawAmount
+        );
         vm.stopPrank();
 
-        user = msgSender;
+        depositAddress = "0xDepositAddress";
         vm.prank(vmProxy);
         fundsHandler.setPauseState(TICKER, true);
         vm.expectRevert(IFundsHandler.Paused.selector);
         vm.prank(msgSender);
-        taskIds[0] = fundsHandler.submitWithdrawTask(user, TICKER, chainId, withdrawAmount, 0);
+        taskOpts[0].taskId = fundsHandler.submitWithdrawTask(
+            msgSender,
+            depositAddress,
+            TICKER,
+            chainId,
+            withdrawAmount
+        );
     }
 
     function test_WithdrawBatch() public {
         vm.startPrank(msgSender);
         uint8 batchSize = 20;
         // setup withdraw info
-        bytes memory callData;
-        uint64[] memory taskIds = new uint64[](batchSize);
-        address[] memory users = new address[](batchSize);
+        TaskOperation[] memory taskOperations = new TaskOperation[](batchSize);
+        string[] memory depositAddresses = new string[](batchSize);
         uint256[] memory amounts = new uint256[](batchSize);
-        uint256[] memory btcAmounts = new uint256[](batchSize);
         for (uint16 i; i < batchSize; ++i) {
-            users[i] = makeAddr(string(abi.encodePacked("user", i)));
+            depositAddresses[i] = string(abi.encodePacked("depositAddress", i));
             amounts[i] = 1 ether;
-            btcAmounts[i] = 0.1 ether;
-            taskIds[i] = fundsHandler.submitWithdrawTask(
-                users[i],
-                TICKER,
-                CHAIN_ID,
-                amounts[i],
-                btcAmounts[i]
+            taskOperations[i] = TaskOperation(
+                fundsHandler.submitWithdrawTask(
+                    msgSender,
+                    depositAddresses[i],
+                    TICKER,
+                    CHAIN_ID,
+                    amounts[i]
+                ),
+                State.Pending
             );
         }
-        bytes memory signature = _generateOptSignature(taskIds, tssKey);
         for (uint16 i; i < batchSize; ++i) {
-            assertEq(uint8(taskManager.getTaskState(taskIds[i])), uint8(State.Created));
+            assertEq(
+                uint8(taskManager.getTaskState(taskOperations[i].taskId)),
+                uint8(State.Created)
+            );
         }
-        entryPoint.verifyAndCall(taskIds, signature);
+        bytes memory signature = _generateOptSignature(taskOperations, tssKey);
+        entryPoint.verifyAndCall(taskOperations, signature);
+        for (uint16 i; i < batchSize; ++i) {
+            assertEq(
+                uint8(taskManager.getTaskState(taskOperations[i].taskId)),
+                uint8(State.Pending)
+            );
+            taskOperations[i].state = State.Completed;
+        }
+        signature = _generateOptSignature(taskOperations, tssKey);
+        entryPoint.verifyAndCall(taskOperations, signature);
         IFundsHandler.WithdrawalInfo memory withdrawalInfo;
         for (uint16 i; i < batchSize; ++i) {
-            assertEq(uint8(taskManager.getTaskState(taskIds[i])), uint8(State.Completed));
-            withdrawalInfo = fundsHandler.getWithdrawal(users[i], 0);
             assertEq(
-                abi.encodePacked(users[i], amounts[i]),
-                abi.encodePacked(withdrawalInfo.userAddress, withdrawalInfo.amount)
+                uint8(taskManager.getTaskState(taskOperations[i].taskId)),
+                uint8(State.Completed)
+            );
+            withdrawalInfo = fundsHandler.getWithdrawal(depositAddresses[i], 0);
+            assertEq(
+                abi.encodePacked(depositAddresses[i], amounts[i]),
+                abi.encodePacked(withdrawalInfo.depositAddress, withdrawalInfo.amount)
             );
         }
         vm.stopPrank();

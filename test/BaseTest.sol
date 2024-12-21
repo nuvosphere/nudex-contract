@@ -7,11 +7,10 @@ import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transpa
 
 import {NuvoLockUpgradeable} from "../src/NuvoLockUpgradeable.sol";
 import {ParticipantHandlerUpgradeable} from "../src/handlers/ParticipantHandlerUpgradeable.sol";
-import {TaskManagerUpgradeable} from "../src/tasks/TaskManagerUpgradeable.sol";
+import {TaskManagerUpgradeable} from "../src/TaskManagerUpgradeable.sol";
 import {EntryPointUpgradeable} from "../src/EntryPointUpgradeable.sol";
 
-import {IEntryPoint} from "../src/interfaces/IEntryPoint.sol";
-import {Operation} from "../src/interfaces/IEntryPoint.sol";
+import {IEntryPoint, TaskOperation} from "../src/interfaces/IEntryPoint.sol";
 import {State} from "../src/interfaces/ITaskManager.sol";
 import {UintToString} from "../src/libs/UintToString.sol";
 
@@ -39,7 +38,7 @@ contract BaseTest is Test {
     address public tssSigner;
     uint256 public tssKey;
 
-    uint64[] public taskIds;
+    TaskOperation[] public taskOpts;
     address[] public handlers;
 
     function setUp() public virtual {
@@ -100,7 +99,7 @@ contract BaseTest is Test {
         );
 
         // misc
-        taskIds.push(0);
+        taskOpts.push(TaskOperation(0, State.Completed));
     }
 
     function _deployProxy(address _logic, address _admin) internal returns (address) {
@@ -109,10 +108,10 @@ contract BaseTest is Test {
 
     // generate signature for operations
     function _generateOptSignature(
-        uint64[] memory _taskId,
+        TaskOperation[] memory _operations,
         uint256 _privateKey
     ) internal view returns (bytes memory) {
-        bytes memory encodedData = abi.encode(_taskId, entryPoint.tssNonce(), block.chainid);
+        bytes memory encodedData = abi.encode(_operations, entryPoint.tssNonce(), block.chainid);
         bytes32 digest = keccak256(encodedData).toEthSignedMessageHash();
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(_privateKey, digest);
         return abi.encodePacked(r, s, v);

@@ -25,6 +25,7 @@ contract MockData is Script {
 
         for (uint8 i; i < 10; ++i) {
             accountManager.registerNewAddress(
+                deployer,
                 10001,
                 IAccountHandler.AddressCategory.EVM,
                 i,
@@ -33,18 +34,21 @@ contract MockData is Script {
         }
 
         accountManager.registerNewAddress(
+            deployer,
             10002,
             IAccountHandler.AddressCategory.BTC,
             0,
             "124wd5urvxo4H3naXR6QACP1MGVpLeikeR"
         );
         accountManager.registerNewAddress(
+            deployer,
             10002,
             IAccountHandler.AddressCategory.BTC,
             1,
             "1HkJEUpgptueutWRFB1bjHGKA5wtKBoToW"
         );
         accountManager.registerNewAddress(
+            deployer,
             10002,
             IAccountHandler.AddressCategory.BTC,
             2,
@@ -52,18 +56,21 @@ contract MockData is Script {
         );
 
         accountManager.registerNewAddress(
+            deployer,
             10003,
             IAccountHandler.AddressCategory.SOL,
             0,
             "w9A6215VdjCgX9BVwK1ZXE7sKBuNGh7bdmeGBEs7625"
         );
         accountManager.registerNewAddress(
+            deployer,
             10003,
             IAccountHandler.AddressCategory.SOL,
             1,
             "4WMARsRWo8x7oJRwTQ9LhbDuiAnzz5TF3WzpTCgACrfe"
         );
         accountManager.registerNewAddress(
+            deployer,
             10003,
             IAccountHandler.AddressCategory.SOL,
             2,

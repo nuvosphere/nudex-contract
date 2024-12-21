@@ -35,14 +35,15 @@ contract AccountCreationTest is BaseTest {
     function test_Create() public {
         vm.startPrank(msgSender);
         // submit task
-        taskIds[0] = accountHandler.submitRegisterTask(
+        taskOpts[0].taskId = accountHandler.submitRegisterTask(
+            msgSender,
             DEFAULT_ACCOUNT,
             IAccountHandler.AddressCategory.BTC,
             0,
             depositAddress
         );
-        bytes memory signature = _generateOptSignature(taskIds, tssKey);
-        entryPoint.verifyAndCall(taskIds, signature);
+        bytes memory signature = _generateOptSignature(taskOpts, tssKey);
+        entryPoint.verifyAndCall(taskOpts, signature);
 
         // check mappings|reverseMapping
         assertEq(
@@ -63,7 +64,7 @@ contract AccountCreationTest is BaseTest {
             accountHandler.userMapping(depositAddress, IAccountHandler.AddressCategory.BTC),
             DEFAULT_ACCOUNT
         );
-        assertEq(uint8(taskManager.getTaskState(taskIds[0])), uint8(State.Completed));
+        assertEq(uint8(taskManager.getTaskState(taskOpts[0].taskId)), uint8(State.Completed));
 
         // fail: already registered
         vm.expectRevert(
@@ -73,7 +74,8 @@ contract AccountCreationTest is BaseTest {
                 depositAddress
             )
         );
-        taskIds[0] = accountHandler.submitRegisterTask(
+        taskOpts[0].taskId = accountHandler.submitRegisterTask(
+            msgSender,
             DEFAULT_ACCOUNT,
             IAccountHandler.AddressCategory.BTC,
             0,
@@ -84,9 +86,20 @@ contract AccountCreationTest is BaseTest {
 
     function test_TaskRevert() public {
         vm.startPrank(msgSender);
+        // fail case: user address as address zero
+        vm.expectRevert(IAccountHandler.InvalidUserAddress.selector);
+        accountHandler.submitRegisterTask(
+            address(0),
+            DEFAULT_ACCOUNT,
+            IAccountHandler.AddressCategory.BTC,
+            0,
+            depositAddress
+        );
+
         // fail case: deposit address as address zero
         vm.expectRevert(IAccountHandler.InvalidAddress.selector);
         accountHandler.submitRegisterTask(
+            msgSender,
             DEFAULT_ACCOUNT,
             IAccountHandler.AddressCategory.BTC,
             0,
@@ -99,6 +112,7 @@ contract AccountCreationTest is BaseTest {
             abi.encodeWithSelector(IAccountHandler.InvalidAccountNumber.selector, invalidAccountNum)
         );
         accountHandler.submitRegisterTask(
+            msgSender,
             invalidAccountNum,
             IAccountHandler.AddressCategory.BTC,
             0,
@@ -119,12 +133,12 @@ contract AccountCreationTest is BaseTest {
         IAccountHandler.AddressCategory chain = IAccountHandler.AddressCategory(_chain);
         vm.startPrank(msgSender);
         if (_account > 10000) {
-            accountHandler.submitRegisterTask(_account, chain, _index, _address);
+            accountHandler.submitRegisterTask(msgSender, _account, chain, _index, _address);
         } else {
             vm.expectRevert(
                 abi.encodeWithSelector(IAccountHandler.InvalidAccountNumber.selector, _account)
             );
-            accountHandler.submitRegisterTask(_account, chain, _index, _address);
+            accountHandler.submitRegisterTask(msgSender, _account, chain, _index, _address);
         }
         vm.stopPrank();
     }

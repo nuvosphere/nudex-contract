@@ -2,8 +2,9 @@ pragma solidity ^0.8.0;
 
 import "./BaseTest.sol";
 
-import {AssetHandlerUpgradeable, AssetParam, AssetType, TokenInfo} from "../src/handlers/AssetHandlerUpgradeable.sol";
-import {ITaskManager, TaskOperation} from "../src/interfaces/ITaskManager.sol";
+import {AssetHandlerUpgradeable} from "../src/handlers/AssetHandlerUpgradeable.sol";
+import {IAssetHandler, AssetParam, TokenInfo} from "../src/interfaces/IAssetHandler.sol";
+import {ITaskManager, Task} from "../src/interfaces/ITaskManager.sol";
 
 contract AssetsTest is BaseTest {
     bytes32 public constant TICKER = "TOKEN_TICKER_18";
@@ -32,18 +33,15 @@ contract AssetsTest is BaseTest {
         assetHandler.grantRole(FUNDS_ROLE, msgSender);
         handlers.push(ahProxy);
         taskManager.initialize(daoContract, vmProxy, handlers);
-    }
 
-    function test_ListAsset() public {
+        // list new asset and token
         vm.startPrank(vmProxy);
         AssetParam memory assetParam = AssetParam(
-            AssetType.BTC,
             18,
             true,
             true,
             MIN_DEPOSIT_AMOUNT,
             MIN_WITHDRAW_AMOUNT,
-            "",
             ""
         );
         assetHandler.listNewAsset(TICKER, assetParam);
@@ -51,30 +49,107 @@ contract AssetsTest is BaseTest {
         testTokenInfo[0] = TokenInfo(
             CHAIN_ID,
             true,
-            AssetType.BTC,
             uint8(18),
-            address(0),
+            "0xContractAddress",
             "SYMBOL",
             0,
-            100 ether,
             100 ether
         );
         assetHandler.linkToken(TICKER, testTokenInfo);
+        vm.stopPrank();
+    }
+
+    function test_AssetOperations() public {
+        vm.startPrank(msgSender);
+        // list asset
+        bytes32 assetTicker = "TOKEN_TICKER_10";
+        assertEq(assetHandler.getAllAssets().length, 1);
+        AssetParam memory assetParam = AssetParam(10, false, false, 0, 0, "Token02");
+        taskOpts[0].taskId = assetHandler.submitListAssetTask(assetTicker, assetParam);
+        bytes memory signature = _generateOptSignature(taskOpts, tssKey);
+        entryPoint.verifyAndCall(taskOpts, signature);
+        assertEq(assetHandler.getAllAssets().length, 2);
+
+        // update listed asset
+        assertEq(assetHandler.getAssetDetails(TICKER).decimals, 18);
+        assetParam = AssetParam(10, false, true, 0, MIN_WITHDRAW_AMOUNT, "Token01");
+        taskOpts[0].taskId = assetHandler.submitAssetTask(
+            TICKER,
+            abi.encodeWithSelector(assetHandler.updateAsset.selector, TICKER, assetParam)
+        );
+        signature = _generateOptSignature(taskOpts, tssKey);
+        entryPoint.verifyAndCall(taskOpts, signature);
+        assertEq(assetHandler.getAssetDetails(TICKER).decimals, 10);
+
+        // link new token
+        TokenInfo[] memory newTokens = new TokenInfo[](2);
+        newTokens[0] = TokenInfo(
+            bytes32(uint256(0x01)),
+            true,
+            uint8(18),
+            "0xNewTokenContractAddress",
+            "TOKEN_SYMBOL",
+            1 ether,
+            50 ether
+        );
+        newTokens[1] = TokenInfo(
+            bytes32(uint256(0x02)),
+            true,
+            uint8(18),
+            "0xNewTokenContractAddress2",
+            "TOKEN_SYMBOL2",
+            5 ether,
+            80 ether
+        );
+        taskOpts[0].taskId = assetHandler.submitAssetTask(
+            TICKER,
+            abi.encodeWithSelector(assetHandler.linkToken.selector, TICKER, newTokens)
+        );
+        signature = _generateOptSignature(taskOpts, tssKey);
+        entryPoint.verifyAndCall(taskOpts, signature);
+        assertEq(assetHandler.getAllLinkedTokens(TICKER).length, 3);
+        assertEq(assetHandler.linkedTokenList(TICKER, 2), bytes32(uint256(0x02)));
+
+        // deactive token
+        assertTrue(assetHandler.getLinkedToken(TICKER, CHAIN_ID).isActive);
+        taskOpts[0].taskId = assetHandler.submitAssetTask(
+            TICKER,
+            abi.encodeWithSelector(assetHandler.tokenSwitch.selector, TICKER, CHAIN_ID, false)
+        );
+        signature = _generateOptSignature(taskOpts, tssKey);
+        entryPoint.verifyAndCall(taskOpts, signature);
+        assertFalse(assetHandler.getLinkedToken(TICKER, CHAIN_ID).isActive);
+
+        // unlink tokens
+        taskOpts[0].taskId = assetHandler.submitAssetTask(
+            TICKER,
+            abi.encodeWithSelector(assetHandler.resetlinkedToken.selector, TICKER)
+        );
+        signature = _generateOptSignature(taskOpts, tssKey);
+        entryPoint.verifyAndCall(taskOpts, signature);
+        assertEq(assetHandler.getAllLinkedTokens(TICKER).length, 0);
+        assertFalse(assetHandler.getLinkedToken(TICKER, CHAIN_ID).isActive);
+
+        // delist asset
+        assertTrue(assetHandler.isAssetListed(TICKER));
+        taskOpts[0].taskId = assetHandler.submitAssetTask(
+            TICKER,
+            abi.encodeWithSelector(assetHandler.delistAsset.selector, TICKER)
+        );
+        signature = _generateOptSignature(taskOpts, tssKey);
+        entryPoint.verifyAndCall(taskOpts, signature);
+        vm.expectRevert(abi.encodeWithSelector(IAssetHandler.AssetNotListed.selector, TICKER));
+        assetHandler.getAssetDetails(TICKER);
+        assertFalse(assetHandler.isAssetListed(TICKER));
 
         vm.stopPrank();
+    }
 
+    function test_ListAsset() public {
         vm.startPrank(msgSender);
-        taskIds[0] = assetHandler.submitConsolidateTask(TICKER);
-        TaskOperation memory task = taskManager.getTask(taskIds[0]);
-        bytes[] memory callData = new bytes[](1);
-        callData[0] = abi.encode(TICKER, CHAIN_ID, 1 ether, 0);
-        bytes memory signature = _generateDataSignature(
-            abi.encode(taskIds, callData, entryPoint.tssNonce(), block.chainid),
-            tssKey
-        );
-        entryPoint.pendingTask(taskIds, callData, signature);
-        task = taskManager.getTask(taskIds[0]);
-        signature = _generateOptSignature(taskIds, tssKey);
-        entryPoint.verifyAndCall(taskIds, signature);
+        taskOpts[0].taskId = assetHandler.submitConsolidateTask(TICKER, CHAIN_ID, 1 ether);
+        bytes memory signature = _generateOptSignature(taskOpts, tssKey);
+        entryPoint.verifyAndCall(taskOpts, signature);
+        vm.stopPrank();
     }
 }
