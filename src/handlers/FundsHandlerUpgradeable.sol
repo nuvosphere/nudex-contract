@@ -2,7 +2,7 @@
 pragma solidity ^0.8.26;
 
 import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
-import {IAssetHandler, AssetType} from "../interfaces/IAssetHandler.sol";
+import {IAssetHandler} from "../interfaces/IAssetHandler.sol";
 import {IFundsHandler} from "../interfaces/IFundsHandler.sol";
 import {ITaskManager} from "../interfaces/ITaskManager.sol";
 import {INIP20} from "../interfaces/INIP20.sol";
@@ -82,10 +82,10 @@ contract FundsHandlerUpgradeable is IFundsHandler, AccessControlUpgradeable {
 
     function submitDepositTask(
         address _userAddress,
+        string calldata _depositAddress,
         bytes32 _ticker,
         bytes32 _chainId,
-        uint256 _amount,
-        string calldata _depositAddress
+        uint256 _amount
     ) external onlyRole(SUBMITTER_ROLE) returns (uint64) {
         require(!pauseState[_ticker] && !pauseState[bytes32(_chainId)], Paused());
         require(_amount >= assetHandler.getAssetDetails(_ticker).minDepositAmount, InvalidAmount());
@@ -95,6 +95,7 @@ contract FundsHandlerUpgradeable is IFundsHandler, AccessControlUpgradeable {
                 msg.sender,
                 abi.encodeWithSelector(
                     this.recordDeposit.selector,
+                    _userAddress,
                     _depositAddress,
                     _ticker,
                     _chainId,
@@ -108,17 +109,17 @@ contract FundsHandlerUpgradeable is IFundsHandler, AccessControlUpgradeable {
      */
     function recordDeposit(
         address _userAddress,
+        string calldata _depositAddress,
         bytes32 _ticker,
         bytes32 _chainId,
-        uint256 _amount,
-        string calldata _depositAddress
+        uint256 _amount
     ) external onlyRole(ENTRYPOINT_ROLE) returns (bytes memory) {
         deposits[_depositAddress].push(
             DepositInfo({
+                depositAddress: _depositAddress,
                 ticker: _ticker,
                 chainId: _chainId,
-                amount: _amount,
-                depositAddress: _depositAddress
+                amount: _amount
             })
         );
         emit INIP20.NIP20TokenEvent_mintb(_userAddress, _ticker, _amount);
@@ -128,10 +129,10 @@ contract FundsHandlerUpgradeable is IFundsHandler, AccessControlUpgradeable {
 
     function submitWithdrawTask(
         address _userAddress,
+        string calldata _depositAddress,
         bytes32 _ticker,
         bytes32 _chainId,
-        uint256 _amount,
-        string calldata _depositAddress
+        uint256 _amount
     ) external onlyRole(SUBMITTER_ROLE) returns (uint64) {
         require(!pauseState[_ticker] && !pauseState[bytes32(_chainId)], Paused());
         require(bytes(_depositAddress).length > 0, InvalidAddress());
@@ -145,11 +146,10 @@ contract FundsHandlerUpgradeable is IFundsHandler, AccessControlUpgradeable {
                 msg.sender,
                 abi.encodeWithSelector(
                     this.recordWithdrawal.selector,
-                    _userAddress,
+                    _depositAddress,
                     _ticker,
                     _chainId,
-                    _amount,
-                    _depositAddress
+                    _amount
                 )
             );
     }
@@ -158,18 +158,17 @@ contract FundsHandlerUpgradeable is IFundsHandler, AccessControlUpgradeable {
      * @dev Record withdraw info.
      */
     function recordWithdrawal(
-        address _userAddress,
+        string calldata _depositAddress,
         bytes32 _ticker,
         bytes32 _chainId,
-        uint256 _amount,
-        string calldata _depositAddress
+        uint256 _amount
     ) external onlyRole(ENTRYPOINT_ROLE) returns (bytes memory) {
         withdrawals[_depositAddress].push(
             WithdrawalInfo({
+                depositAddress: _depositAddress,
                 ticker: _ticker,
                 chainId: _chainId,
-                amount: _amount,
-                depositAddress: _depositAddress
+                amount: _amount
             })
         );
         assetHandler.withdraw(_ticker, _chainId, _amount);

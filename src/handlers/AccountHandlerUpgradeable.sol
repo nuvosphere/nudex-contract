@@ -44,11 +44,13 @@ contract AccountHandlerUpgradeable is IAccountHandler, AccessControlUpgradeable 
     }
 
     function submitRegisterTask(
+        address _userAddr,
         uint256 _account,
         AddressCategory _chain,
         uint256 _index,
         string calldata _address
     ) external onlyRole(SUBMITTER_ROLE) returns (uint64) {
+        require(_userAddr != address(0), InvalidUserAddress());
         require(bytes(_address).length > 0, InvalidAddress());
         require(_account > 10000, InvalidAccountNumber(_account));
         require(
@@ -60,6 +62,7 @@ contract AccountHandlerUpgradeable is IAccountHandler, AccessControlUpgradeable 
                 msg.sender,
                 abi.encodeWithSelector(
                     this.registerNewAddress.selector,
+                    _userAddr,
                     _account,
                     _chain,
                     _index,
@@ -70,12 +73,14 @@ contract AccountHandlerUpgradeable is IAccountHandler, AccessControlUpgradeable 
 
     /**
      * @dev Register new deposit address for user account.
+     * @param _userAddr The EVM address of the user.
      * @param _account Account number, must be greater than 10000.
      * @param _chain The chain type of the address.
      * @param _index The index of adress.
      * @param _address The registering address.
      */
     function registerNewAddress(
+        address _userAddr,
         uint256 _account,
         AddressCategory _chain,
         uint256 _index,
@@ -83,7 +88,7 @@ contract AccountHandlerUpgradeable is IAccountHandler, AccessControlUpgradeable 
     ) external onlyRole(ENTRYPOINT_ROLE) returns (bytes memory) {
         addressRecord[abi.encodePacked(_account, _chain, _index)] = _address;
         userMapping[_address][_chain] = _account;
-        emit AddressRegistered(_account, _chain, _index, _address);
+        emit AddressRegistered(_userAddr, _account, _chain, _index, _address);
         return abi.encodePacked(uint8(1), _account, _chain, _index, _address);
     }
 }

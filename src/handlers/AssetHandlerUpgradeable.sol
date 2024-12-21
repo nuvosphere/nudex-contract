@@ -2,7 +2,7 @@
 pragma solidity ^0.8.26;
 
 import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
-import {IAssetHandler, AssetParam, AssetType, NudexAsset, TokenInfo} from "../interfaces/IAssetHandler.sol";
+import {IAssetHandler, AssetParam, NudexAsset, TokenInfo} from "../interfaces/IAssetHandler.sol";
 import {ITaskManager} from "../interfaces/ITaskManager.sol";
 
 contract AssetHandlerUpgradeable is IAssetHandler, AccessControlUpgradeable {
@@ -15,7 +15,7 @@ contract AssetHandlerUpgradeable is IAssetHandler, AccessControlUpgradeable {
     bytes32[] public assetTickerList;
     mapping(bytes32 ticker => NudexAsset) public nudexAssets;
     mapping(bytes32 ticker => bytes32[] chainIds) public linkedTokenList;
-    mapping(bytes32 ticker => mapping(bytes32 chainId => TokenInfo index)) public linkedTokens;
+    mapping(bytes32 ticker => mapping(bytes32 chainId => TokenInfo)) public linkedTokens;
 
     modifier checkListing(bytes32 _ticker) {
         require(nudexAssets[_ticker].isListed, AssetNotListed(_ticker));
@@ -54,6 +54,18 @@ contract AssetHandlerUpgradeable is IAssetHandler, AccessControlUpgradeable {
         return assetTickerList;
     }
 
+    // Get the list of all listed assets
+    function getAllLinkedTokens(bytes32 _ticker) external view returns (bytes32[] memory) {
+        return linkedTokenList[_ticker];
+    }
+
+    function getLinkedToken(
+        bytes32 _ticker,
+        bytes32 _chainId
+    ) external view returns (TokenInfo memory) {
+        return linkedTokens[_ticker][_chainId];
+    }
+
     function submitListAssetTask(
         bytes32 _ticker,
         AssetParam calldata _assetParam
@@ -79,7 +91,6 @@ contract AssetHandlerUpgradeable is IAssetHandler, AccessControlUpgradeable {
         tempNudexAsset.updatedTime = uint32(block.timestamp);
 
         // info from param
-        tempNudexAsset.assetType = _assetParam.assetType;
         tempNudexAsset.decimals = _assetParam.decimals;
         tempNudexAsset.depositEnabled = _assetParam.depositEnabled;
         tempNudexAsset.withdrawalEnabled = _assetParam.withdrawalEnabled;
@@ -102,13 +113,12 @@ contract AssetHandlerUpgradeable is IAssetHandler, AccessControlUpgradeable {
     function updateAsset(
         bytes32 _ticker,
         AssetParam calldata _assetParam
-    ) external onlyRole(ENTRYPOINT_ROLE) checkListing(_ticker) {
+    ) external onlyRole(ENTRYPOINT_ROLE) {
         NudexAsset storage tempNudexAsset = nudexAssets[_ticker];
         // update listed assets
         tempNudexAsset.updatedTime = uint32(block.timestamp);
 
         // info from param
-        tempNudexAsset.assetType = _assetParam.assetType;
         tempNudexAsset.decimals = _assetParam.decimals;
         tempNudexAsset.depositEnabled = _assetParam.depositEnabled;
         tempNudexAsset.withdrawalEnabled = _assetParam.withdrawalEnabled;
@@ -120,22 +130,23 @@ contract AssetHandlerUpgradeable is IAssetHandler, AccessControlUpgradeable {
     }
 
     // Delist an existing asset
-    function delistAsset(bytes32 _ticker) external onlyRole(ENTRYPOINT_ROLE) checkListing(_ticker) {
+    function delistAsset(bytes32 _ticker) external onlyRole(ENTRYPOINT_ROLE) {
         NudexAsset storage tempNudexAsset = nudexAssets[_ticker];
         uint32 listIndex = tempNudexAsset.listIndex;
-        resetlinkedToken(_ticker);
+        // TODO: do we need to reset linked tokens?
+        // resetlinkedToken(_ticker);
         tempNudexAsset.isListed = false;
         tempNudexAsset.updatedTime = uint32(block.timestamp);
         assetTickerList[listIndex] = assetTickerList[assetTickerList.length - 1];
-        assetTickerList.pop();
         nudexAssets[assetTickerList[listIndex]].listIndex = listIndex;
+        assetTickerList.pop();
         emit AssetDelisted(_ticker);
     }
 
     function linkToken(
         bytes32 _ticker,
         TokenInfo[] calldata _tokenInfos
-    ) external onlyRole(ENTRYPOINT_ROLE) checkListing(_ticker) {
+    ) external onlyRole(ENTRYPOINT_ROLE) {
         for (uint8 i; i < _tokenInfos.length; ++i) {
             bytes32 chainId = _tokenInfos[i].chainId;
             require(linkedTokens[_ticker][chainId].chainId == 0, "Linked Token");
@@ -145,22 +156,20 @@ contract AssetHandlerUpgradeable is IAssetHandler, AccessControlUpgradeable {
         emit LinkToken(_ticker, _tokenInfos);
     }
 
-    function resetlinkedToken(
-        bytes32 _ticker
-    ) public onlyRole(ENTRYPOINT_ROLE) checkListing(_ticker) {
+    function resetlinkedToken(bytes32 _ticker) public onlyRole(ENTRYPOINT_ROLE) {
         bytes32[] memory chainIds = linkedTokenList[_ticker];
         delete linkedTokenList[_ticker];
         for (uint32 i; i < chainIds.length; ++i) {
             linkedTokens[_ticker][chainIds[i]].isActive = false;
         }
-        emit ResetlinkedToken(_ticker);
+        emit ResetLinkedToken(_ticker);
     }
 
     function tokenSwitch(
         bytes32 _ticker,
         bytes32 _chainId,
         bool _isActive
-    ) external onlyRole(ENTRYPOINT_ROLE) checkListing(_ticker) {
+    ) external onlyRole(ENTRYPOINT_ROLE) {
         linkedTokens[_ticker][_chainId].isActive = _isActive;
         emit TokenSwitch(_ticker, _chainId, _isActive);
     }
@@ -181,7 +190,7 @@ contract AssetHandlerUpgradeable is IAssetHandler, AccessControlUpgradeable {
         bytes32 _ticker,
         bytes32 _chainId,
         uint256 _amount
-    ) external onlyRole(ENTRYPOINT_ROLE) checkListing(_ticker) {
+    ) external onlyRole(ENTRYPOINT_ROLE) {
         linkedTokens[_ticker][_chainId].balance += _amount;
         emit Consolidate(_ticker, _chainId, _amount);
     }

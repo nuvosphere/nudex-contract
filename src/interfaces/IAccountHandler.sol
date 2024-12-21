@@ -11,6 +11,7 @@ interface IAccountHandler {
     }
 
     event AddressRegistered(
+        address userAddr,
         uint256 indexed account,
         AddressCategory indexed chain,
         uint256 indexed index,
@@ -18,6 +19,7 @@ interface IAccountHandler {
     );
 
     error InvalidAddress();
+    error InvalidUserAddress();
     error InvalidAccountNumber(uint);
     error InvalidInput();
     error RegisteredAccount(uint256, string);
@@ -36,6 +38,7 @@ interface IAccountHandler {
     ) external view returns (string memory);
 
     function registerNewAddress(
+        address _userAddr,
         uint _account,
         AddressCategory _chain,
         uint _index,

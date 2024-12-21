@@ -1,17 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-enum AssetType {
-    BTC,
-    TRON,
-    SOL,
-    EVM,
-    Ordinal,
-    Inscription
-}
-
 struct AssetParam {
-    AssetType assetType; // Type of the asset (BTC, EVM, Ordinal, Inscription)
     uint8 decimals;
     bool depositEnabled;
     bool withdrawalEnabled;
@@ -22,7 +12,6 @@ struct AssetParam {
 
 struct NudexAsset {
     uint32 listIndex;
-    AssetType assetType; // Type of the asset (BTC, EVM, Ordinal, Inscription)
     uint8 decimals;
     bool depositEnabled;
     bool withdrawalEnabled;
@@ -37,7 +26,6 @@ struct NudexAsset {
 struct TokenInfo {
     bytes32 chainId; // Chain ID for EVM-based assets, or specific IDs for BTC/Ordinal
     bool isActive;
-    AssetType assetType; // Type of the asset (BTC, EVM, Ordinal, Inscription)
     uint8 decimals;
     string contractAddress; // Address for ERC20, Inscription, or 0x0 for BTC/Ordinal/Native token
     string symbol;
@@ -49,12 +37,12 @@ interface IAssetHandler {
     // events
     event AssetListed(bytes32 indexed ticker, AssetParam assetParam);
     event AssetUpdated(bytes32 indexed ticker, AssetParam assetParam);
-    event AssetDelisted(bytes32 indexed assetId);
+    event AssetDelisted(bytes32 indexed ticker);
     event LinkToken(bytes32 indexed ticker, TokenInfo[] tokens);
-    event ResetlinkedToken(bytes32 indexed ticker);
+    event ResetLinkedToken(bytes32 indexed ticker);
     event TokenSwitch(bytes32 indexed ticker, bytes32 indexed chainId, bool isActive);
-    event Consolidate(bytes32 indexed assetId, bytes32 indexed chainId, uint256 amount);
-    event Withdraw(bytes32 indexed assetId, bytes32 indexed chainId, uint256 amount);
+    event Consolidate(bytes32 indexed ticker, bytes32 indexed chainId, uint256 amount);
+    event Withdraw(bytes32 indexed ticker, bytes32 indexed chainId, uint256 amount);
 
     // errors
     error InsufficientBalance(bytes32 ticker, bytes32 chainId);

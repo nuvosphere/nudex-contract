@@ -3,28 +3,28 @@ pragma solidity ^0.8.26;
 
 interface IFundsHandler {
     struct DepositInfo {
+        string depositAddress;
         bytes32 ticker;
         bytes32 chainId;
         uint256 amount;
-        string depositAddress;
     }
 
     struct WithdrawalInfo {
+        string depositAddress;
         bytes32 ticker;
         bytes32 chainId;
         uint256 amount;
-        string depositAddress;
     }
 
     event NewPauseState(bytes32 condition, bool newState);
     event DepositRecorded(
-        string indexed depositAddress,
+        string depositAddress,
         bytes32 indexed ticker,
         bytes32 indexed chainId,
         uint256 amount
     );
     event WithdrawalRecorded(
-        string indexed depositAddress,
+        string depositAddress,
         bytes32 indexed ticker,
         bytes32 indexed chainId,
         uint256 amount
@@ -37,18 +37,17 @@ interface IFundsHandler {
 
     function recordDeposit(
         address _userAddress,
+        string calldata _depositAddress,
         bytes32 _ticker,
         bytes32 _chainId,
-        uint256 _amount,
-        string calldata _depositAddress
+        uint256 _amount
     ) external returns (bytes memory);
 
     function recordWithdrawal(
-        address _userAddress,
+        string calldata _depositAddress,
         bytes32 _ticker,
         bytes32 _chainId,
-        uint256 _amount,
-        string calldata _depositAddress
+        uint256 _amount
     ) external returns (bytes memory);
 
     function getDeposits(
