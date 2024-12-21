@@ -8,11 +8,6 @@ enum State {
     Failed
 }
 
-struct TaskOperation {
-    uint64 taskId;
-    State state;
-}
-
 struct Task {
     uint64 id;
     State state;
