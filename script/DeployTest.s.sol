@@ -33,21 +33,31 @@ contract DeployTest is Script {
     }
 
     function run() public {
-        uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
+        run(false);
+    }
+
+    function run(bool _useEntryPoint) public {
+        uint256 deployerPrivateKey = vm.envUint("PARTICIPANT_KEY_1");
         address deployer = vm.createWallet(deployerPrivateKey).addr;
         console.log("Deployer address: ", deployer);
         vm.startBroadcast(deployerPrivateKey);
 
+        address entryPointAddr;
+        if (_useEntryPoint) {
+            // deploy entryPoint proxy
+            EntryPointUpgradeable entryPoint = new EntryPointUpgradeable();
+            entryPointAddr = address(entryPoint);
+            console.log("|EntryPoint| ", entryPointAddr);
+        } else {
+            entryPointAddr = deployer;
+        }
+
         MockNuvoToken nuvoToken = new MockNuvoToken();
         console.log("|NuvoToken|", address(nuvoToken));
 
-        // deploy votingManager proxy
-        EntryPointUpgradeable votingManager = new EntryPointUpgradeable();
-        console.log("|EntryPoint| ", address(votingManager));
-
         // deploy nuvoLock
         NuvoLockUpgradeable nuvoLock = new NuvoLockUpgradeable();
-        nuvoLock.initialize(address(nuvoToken), deployer, address(votingManager), 300, 10);
+        nuvoLock.initialize(address(nuvoToken), deployer, entryPointAddr, 300, 10);
         console.log("|NuvoLock|", address(nuvoLock));
 
         // deploy taskManager
@@ -59,24 +69,22 @@ contract DeployTest is Script {
             address(nuvoLock),
             address(taskManager)
         );
-        participantManager.initialize(
-            daoContract,
-            address(votingManager),
-            deployer,
-            initialParticipants
-        );
+        participantManager.initialize(daoContract, entryPointAddr, deployer, initialParticipants);
+        handlers.push(address(participantManager));
         console.log("|ParticipantHandler|", address(participantManager));
 
         // deploy accountManager
         AccountHandlerUpgradeable accountManager = new AccountHandlerUpgradeable(
             address(taskManager)
         );
-        accountManager.initialize(daoContract, address(votingManager), deployer);
+        accountManager.initialize(daoContract, entryPointAddr, deployer);
+        handlers.push(address(accountManager));
         console.log("|AccountHandler|", address(accountManager));
 
         // deploy accountManager
         AssetHandlerUpgradeable assetHandler = new AssetHandlerUpgradeable(address(taskManager));
-        assetHandler.initialize(daoContract, address(votingManager), deployer);
+        assetHandler.initialize(daoContract, entryPointAddr, deployer);
+        handlers.push(address(assetHandler));
         console.log("|AssetHandler|", address(assetHandler));
 
         // deploy depositManager
@@ -84,17 +92,21 @@ contract DeployTest is Script {
             address(assetHandler),
             address(taskManager)
         );
-        depositManager.initialize(daoContract, address(votingManager), deployer);
+        depositManager.initialize(daoContract, entryPointAddr, deployer);
+        handlers.push(address(depositManager));
         console.log("|FundsHandler|", address(depositManager));
 
-        // initialize votingManager link to all contracts
-        taskManager.initialize(daoContract, address(votingManager), handlers);
-        votingManager.initialize(
-            tssSigner, // tssSigner
-            address(participantManager), // participantManager
-            address(taskManager), // taskManager
-            address(nuvoLock) // nuvoLock
-        );
+        // initialize entryPoint link to all contracts
+        taskManager.initialize(daoContract, entryPointAddr, handlers);
+        if (_useEntryPoint) {
+            EntryPointUpgradeable entryPoint = EntryPointUpgradeable(entryPointAddr);
+            entryPoint.initialize(
+                tssSigner, // tssSigner
+                address(participantManager), // participantManager
+                address(taskManager), // taskManager
+                address(nuvoLock) // nuvoLock
+            );
+        }
 
         vm.stopBroadcast();
     }

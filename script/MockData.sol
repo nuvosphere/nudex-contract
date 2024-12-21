@@ -11,7 +11,7 @@ import {IAccountHandler} from "../src/interfaces/IAccountHandler.sol";
 // this contract is only used for contract testing
 contract MockData is Script {
     function run() public {
-        uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
+        uint256 deployerPrivateKey = vm.envUint("PARTICIPANT_KEY_1");
         address deployer = vm.createWallet(deployerPrivateKey).addr;
         console.log("Deployer address: ", deployer);
         vm.startBroadcast(deployerPrivateKey);

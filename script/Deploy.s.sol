@@ -46,7 +46,7 @@ contract Deploy is Script {
         console.log("Deployer address: ", deployer);
         vm.startBroadcast(deployerPrivateKey);
 
-        // deploy votingManager proxy
+        // deploy entryPoint proxy
         vmProxy = deployProxy(address(new EntryPointUpgradeable()), daoContract);
 
         // deploy nuvoLock
@@ -85,10 +85,10 @@ contract Deploy is Script {
         depositManager.initialize(daoContract, vmProxy, deployer);
         handlers.push(dmProxy);
 
-        // initialize votingManager link to all contracts
+        // initialize entryPoint link to all contracts
         taskManager.initialize(daoContract, vmProxy, handlers);
-        EntryPointUpgradeable votingManager = EntryPointUpgradeable(vmProxy);
-        votingManager.initialize(
+        EntryPointUpgradeable entryPoint = EntryPointUpgradeable(vmProxy);
+        entryPoint.initialize(
             tssSigner, // tssSigner
             pmProxy, // participantManager
             tmProxy, // taskManager
