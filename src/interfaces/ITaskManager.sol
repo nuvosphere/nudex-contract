@@ -23,8 +23,8 @@ interface ITaskManager {
     event TaskUpdated(
         uint64 indexed taskId,
         address indexed submitter,
-        uint256 indexed updateTime,
-        State state,
+        State indexed state,
+        uint256 updateTime,
         bytes result
     );
 

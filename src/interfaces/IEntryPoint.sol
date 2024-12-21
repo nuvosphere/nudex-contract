@@ -11,7 +11,6 @@ struct TaskOperation {
 contract IEntryPoint {
     event SubmitterChosen(address indexed newSubmitter);
     event SubmitterRotationRequested(address indexed requester, address indexed currentSubmitter);
-    event OperationFailed(bytes indexed errInfo);
 
     error EmptyOperationsArray();
     error InvalidSigner(address sender);

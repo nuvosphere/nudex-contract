@@ -113,6 +113,6 @@ contract TaskManagerUpgradeable is ITaskManager, AccessControlUpgradeable {
         if (_result.length > 0) {
             task.result = _result;
         }
-        emit TaskUpdated(_taskId, task.submitter, block.timestamp, _state, _result);
+        emit TaskUpdated(_taskId, task.submitter, _state, block.timestamp, _result);
     }
 }
