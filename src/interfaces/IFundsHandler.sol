@@ -16,7 +16,7 @@ interface IFundsHandler {
         uint256 amount;
     }
 
-    event NewPauseState(bytes32 condition, bool newState);
+    event NewPauseState(bytes32 indexed condition, bool indexed newState);
     event DepositRecorded(
         string depositAddress,
         bytes32 indexed ticker,

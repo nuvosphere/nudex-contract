@@ -23,3 +23,4 @@ bscTestnet = "${BSC_TESTNET_RPC_URL}"
 
 [etherscan]
 sepolia = { key = "${SEPOLIA_ETHERSCAN_API_KEY}" }
+bscTestnet = { key = "${BSC_ETHERSCAN_API_KEY}" }

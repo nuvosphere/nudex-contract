@@ -28,8 +28,8 @@ contract DeployTest is Script {
 
         tssSigner = vm.envAddress("TSS_SIGNER_ADDR");
         initialParticipants.push(vm.envAddress("PARTICIPANT_1"));
-        initialParticipants.push(vm.envAddress("PARTICIPANT_2"));
-        initialParticipants.push(vm.envAddress("PARTICIPANT_3"));
+        initialParticipants.push(vm.envAddress("PARTICIPANT_1"));
+        initialParticipants.push(vm.envAddress("PARTICIPANT_1"));
     }
 
     function run() public {
@@ -38,7 +38,7 @@ contract DeployTest is Script {
 
     function run(bool _useEntryPoint) public {
         uint256 deployerPrivateKey = vm.envUint("PARTICIPANT_KEY_1");
-        address deployer = vm.createWallet(deployerPrivateKey).addr;
+        address deployer = vm.envAddress("PARTICIPANT_1");
         console.log("Deployer address: ", deployer);
         vm.startBroadcast(deployerPrivateKey);
 
