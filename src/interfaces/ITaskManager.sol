@@ -29,7 +29,7 @@ interface ITaskManager {
         uint64[] indexed taskIds,
         address indexed submitter,
         address indexed handler,
-        bytes[] callData
+        bytes32[] callData
     );
     event TaskUpdated(
         uint64 indexed taskId,

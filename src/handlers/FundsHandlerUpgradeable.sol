@@ -99,7 +99,7 @@ contract FundsHandlerUpgradeable is IFundsHandler, HandlerBase {
     ) external onlyRole(SUBMITTER_ROLE) returns (uint64[] memory taskIds) {
         require(_params.length > 0, "FundsHandlerUpgradeable: empty input");
         taskIds = new uint64[](_params.length);
-        bytes32[] memory dataHash = new bytes[](_params.length);
+        bytes32[] memory dataHash = new bytes32[](_params.length);
         for (uint8 i; i < _params.length; i++) {
             require(
                 !pauseState[_params[i].ticker] && !pauseState[bytes32(uint256(_params[i].chainId))],

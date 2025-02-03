@@ -106,7 +106,7 @@ contract TaskManagerUpgradeable is ITaskManager, AccessControlUpgradeable {
                 handler: msg.sender,
                 createdAt: uint32(block.timestamp),
                 updatedAt: uint32(0),
-                result: _dataHash[i]
+                dataHash: _dataHash[i]
             });
             taskHashes[_dataHash[i]] = true;
         }
