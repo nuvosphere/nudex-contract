@@ -2,7 +2,7 @@ pragma solidity ^0.8.0;
 
 import "./BaseTest.sol";
 
-import {NuvoDao, TimelockController} from "../src/dao/NuvoDao.sol";
+import {NuvoDao, TimelockController} from "../src/DAO/NuvoDao.sol";
 
 contract DAOTest is BaseTest {
     bytes32 public constant PROPOSER_ROLE = keccak256("PROPOSER_ROLE");
