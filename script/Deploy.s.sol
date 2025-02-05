@@ -39,7 +39,6 @@ contract Deploy is Script {
         initialParticipants.push(vm.envAddress("PARTICIPANT_1"));
         initialParticipants.push(vm.envAddress("PARTICIPANT_2"));
         initialParticipants.push(vm.envAddress("PARTICIPANT_3"));
-        // proxyAdminContract = address(new ProxyAdmin(daoContract));
 
         console.log("DAO contract addr: ", daoContract);
         console.log("TSS signer addr: ", tssSigner);
@@ -111,7 +110,7 @@ contract Deploy is Script {
         handlers.push(accountHandlerProxy);
         console.log("|AccountHandler|", accountHandlerProxy);
 
-        // deploy accountHandler
+        // deploy assetHandlerProxy
         assetHandlerProxy = deployProxy(address(new AssetHandlerUpgradeable(taskManagerProxy)));
         AssetHandlerUpgradeable assetHandler = AssetHandlerUpgradeable(assetHandlerProxy);
         assetHandler.initialize(daoContract, entryPointProxy, submitter);
@@ -128,6 +127,7 @@ contract Deploy is Script {
         console.log("|FundsHandler|", fundsHandlerProxy);
 
         // initialize entryPoint link to all contracts
+        assetHandler.grantRole(assetHandler.FUNDS_ROLE(), fundsHandlerProxy);
         taskManager.initialize(daoContract, entryPointProxy, handlers);
         if (_entryPointInit) {
             EntryPointUpgradeable entryPoint = EntryPointUpgradeable(entryPointProxy);

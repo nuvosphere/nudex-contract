@@ -109,7 +109,7 @@ contract DeployTest is Script {
         handlers.push(address(accountHandler));
         console.log("|AccountHandler|", address(accountHandler));
 
-        // deploy accountHandler
+        // deploy assetHandlerProxy
         AssetHandlerUpgradeable assetHandler = new AssetHandlerUpgradeable(address(taskManager));
         assetHandler.initialize(daoContract, address(entryPoint), submitter);
         handlers.push(address(assetHandler));
@@ -125,6 +125,7 @@ contract DeployTest is Script {
         console.log("|FundsHandler|", address(fundsHandler));
 
         // initialize entryPoint link to all contracts
+        assetHandler.grantRole(assetHandler.FUNDS_ROLE(), address(fundsHandler));
         taskManager.initialize(daoContract, address(entryPoint), handlers);
         if (_entryPointInit) {
             entryPoint.initialize(
