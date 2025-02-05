@@ -31,9 +31,18 @@ contract MockData is Script {
     function setUp() public {
         deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         deployer = vm.createWallet(deployerPrivateKey).addr;
+    }
 
+    function run() public {
         vm.startBroadcast(deployerPrivateKey);
+
         _setupContracts(true);
+
+        _assetData();
+        // fundsData(0x4e554445585f555344435f313800000000000000000000000000000000000000, 59902);
+        _accountData();
+        _updateTask();
+
         vm.stopBroadcast();
     }
 
@@ -44,6 +53,7 @@ contract MockData is Script {
             assetHandler = AssetHandlerUpgradeable(vm.envAddress("ASSET_HANDLER"));
             fundsHandler = FundsHandlerUpgradeable(vm.envAddress("FUNDS_HANDLER"));
             // grant role to deployer
+            taskManager.grantRole(ENTRYPOINT_ROLE, deployer);
             accountHandler.grantRole(ENTRYPOINT_ROLE, deployer);
             assetHandler.grantRole(ENTRYPOINT_ROLE, deployer);
             fundsHandler.grantRole(ENTRYPOINT_ROLE, deployer);
@@ -81,25 +91,14 @@ contract MockData is Script {
         }
     }
 
-    function run() public {
-        vm.startBroadcast(deployerPrivateKey);
-
-        assetData();
-        // fundsData(0x4e554445585f555344435f313800000000000000000000000000000000000000, 59902);
-        accountData();
-        // updateTask();
-
-        vm.stopBroadcast();
-    }
-
-    function assetData() public {
+    function _assetData() internal {
         // asset
         AssetParam memory assetParam = AssetParam(18, true, true, 1 ether, 1 ether, "Token_Alias");
         assetHandler.listNewAsset(TICKER, assetParam);
         TokenInfo[] memory testTokenInfo = new TokenInfo[](1);
         testTokenInfo[0] = TokenInfo(CHAIN_ID, true, uint8(18), "0xContractAddress", "SYMBOL", 0);
         assetHandler.linkToken(TICKER, testTokenInfo);
-
+        return;
         // consolidate
         ConsolidateTaskParam[] memory consolidateTaskParams = new ConsolidateTaskParam[](3);
         consolidateTaskParams[0] = ConsolidateTaskParam(
@@ -196,13 +195,13 @@ contract MockData is Script {
         fundsHandler.setPauseState(bytes32(uint256(_chainId)), false);
     }
 
-    function accountData() public {
+    function _accountData() internal {
         for (uint8 i; i < 5; ++i) {
             accountHandler.registerNewAddress(
                 makeAddr(Strings.toString(i)),
                 10001 + i,
                 AddressCategory.EVM,
-                i,
+                0,
                 Strings.toHexString(makeAddr(Strings.toString(i)))
             );
         }
@@ -252,7 +251,7 @@ contract MockData is Script {
         );
     }
 
-    function updateTask() public {
+    function _updateTask() internal {
         taskManager.updateTask(0, State.Completed, bytes("0x01"));
         taskManager.updateTask(1, State.Pending, bytes("0x02"));
         taskManager.updateTask(2, State.Failed, bytes("0x03"));
