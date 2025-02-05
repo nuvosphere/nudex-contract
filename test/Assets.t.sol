@@ -153,17 +153,35 @@ contract AssetsTest is BaseTest {
         ConsolidateTaskParam[] memory consolidateParams = new ConsolidateTaskParam[](1);
 
         // empty from address
-        consolidateParams[0] = ConsolidateTaskParam("", TICKER, CHAIN_ID, amount);
+        consolidateParams[0] = ConsolidateTaskParam(
+            "",
+            TICKER,
+            CHAIN_ID,
+            amount,
+            bytes32(uint256(0))
+        );
         vm.expectRevert("Invalid address");
         assetHandler.submitConsolidateTask(consolidateParams);
 
         // below minimum amount
-        consolidateParams[0] = ConsolidateTaskParam(fromAddr, TICKER, CHAIN_ID, 0);
+        consolidateParams[0] = ConsolidateTaskParam(
+            fromAddr,
+            TICKER,
+            CHAIN_ID,
+            0,
+            bytes32(uint256(1))
+        );
         vm.expectRevert("Invalid amount");
         assetHandler.submitConsolidateTask(consolidateParams);
 
         // correct amount
-        consolidateParams[0] = ConsolidateTaskParam(fromAddr, TICKER, CHAIN_ID, amount);
+        consolidateParams[0] = ConsolidateTaskParam(
+            fromAddr,
+            TICKER,
+            CHAIN_ID,
+            amount,
+            bytes32(uint256(2))
+        );
         assetHandler.submitConsolidateTask(consolidateParams);
         taskOpts[0].extraData = TestHelper.getPaddedString(txHash);
         signature = _generateOptSignature(taskOpts, tssKey);
@@ -175,7 +193,8 @@ contract AssetsTest is BaseTest {
             string memory tempAddr,
             bytes32 tempTicker,
             uint64 tempChainId,
-            uint256 tempAmount
+            uint256 tempAmount,
+
         ) = assetHandler.consolidateRecords(TICKER, CHAIN_ID, 0);
         assertEq(
             abi.encode(tempAddr, tempTicker, tempChainId, tempAmount),
@@ -193,22 +212,50 @@ contract AssetsTest is BaseTest {
         TransferParam[] memory transferParams = new TransferParam[](1);
 
         // empty from address
-        transferParams[0] = TransferParam("", toAddr, TICKER, CHAIN_ID, amount);
+        transferParams[0] = TransferParam(
+            "",
+            toAddr,
+            TICKER,
+            CHAIN_ID,
+            amount,
+            bytes32(uint256(0))
+        );
         vm.expectRevert("Invalid address");
         assetHandler.submitTransferTask(transferParams);
 
         // empty from address
-        transferParams[0] = TransferParam(fromAddr, "", TICKER, CHAIN_ID, amount);
+        transferParams[0] = TransferParam(
+            fromAddr,
+            "",
+            TICKER,
+            CHAIN_ID,
+            amount,
+            bytes32(uint256(1))
+        );
         vm.expectRevert("Invalid address");
         assetHandler.submitTransferTask(transferParams);
 
         // below minimum amount
-        transferParams[0] = TransferParam(fromAddr, toAddr, TICKER, CHAIN_ID, 0);
+        transferParams[0] = TransferParam(
+            fromAddr,
+            toAddr,
+            TICKER,
+            CHAIN_ID,
+            0,
+            bytes32(uint256(2))
+        );
         vm.expectRevert("Invalid amount");
         assetHandler.submitTransferTask(transferParams);
 
         // correct amount
-        transferParams[0] = TransferParam(fromAddr, toAddr, TICKER, CHAIN_ID, amount);
+        transferParams[0] = TransferParam(
+            fromAddr,
+            toAddr,
+            TICKER,
+            CHAIN_ID,
+            amount,
+            bytes32(uint256(3))
+        );
         assetHandler.submitTransferTask(transferParams);
         taskOpts[0].extraData = TestHelper.getPaddedString(txHash);
         signature = _generateOptSignature(taskOpts, tssKey);

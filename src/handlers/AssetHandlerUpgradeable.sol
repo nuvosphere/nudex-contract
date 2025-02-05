@@ -246,7 +246,7 @@ contract AssetHandlerUpgradeable is IAssetHandler, HandlerBase {
                     _params[i].salt,
                     // offset for txHash
                     // @dev "-1" if it is exact 32 bytes it does not take one extra slot
-                    uint256(320) +
+                    uint256(352) +
                         (32 * ((fromAddrLength - 1) / 32)) +
                         (32 * ((toAddrLength - 1) / 32))
                 )
@@ -300,7 +300,7 @@ contract AssetHandlerUpgradeable is IAssetHandler, HandlerBase {
                     _params[i].salt,
                     // offset for txHash
                     // @dev "-1" if it is exact 32 bytes it does not take one extra slot
-                    uint256(224) + (32 * ((addrLength - 1) / 32))
+                    uint256(256) + (32 * ((addrLength - 1) / 32))
                 )
             );
             emit RequestConsolidate(taskIds[i], _params[i]);

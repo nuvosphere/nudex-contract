@@ -73,7 +73,14 @@ contract FundsTest is BaseTest {
             )
         );
         withdrawTaskParams.push(
-            WithdrawalInfo(msgSender, CHAIN_ID, TICKER, DEPOSIT_ADDRESS, DEFAULT_AMOUNT)
+            WithdrawalInfo(
+                msgSender,
+                CHAIN_ID,
+                TICKER,
+                DEPOSIT_ADDRESS,
+                DEFAULT_AMOUNT,
+                bytes32(uint256(0))
+            )
         );
     }
 
@@ -353,7 +360,8 @@ contract FundsTest is BaseTest {
                 CHAIN_ID,
                 TICKER,
                 DEPOSIT_ADDRESS,
-                amounts[i]
+                amounts[i],
+                bytes32(uint256(i))
             );
             taskOperations[i] = TaskOperation(
                 i,
@@ -408,7 +416,8 @@ contract FundsTest is BaseTest {
             CHAIN_ID,
             TICKER,
             _toAddress,
-            _amount
+            _amount,
+            bytes32(uint256(0))
         );
         fundsHandler.submitWithdrawTask(tempWithdrawTaskParams);
 

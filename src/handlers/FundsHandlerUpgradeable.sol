@@ -176,9 +176,10 @@ contract FundsHandlerUpgradeable is IFundsHandler, HandlerBase {
                     _params[i].ticker,
                     _params[i].toAddress,
                     _params[i].amount,
+                    _params[i].salt,
                     // offset for txHash
                     // @dev "-1" if it is exact 32 bytes it does not take one extra slot
-                    256 + (32 * ((addrLength - 1) / 32))
+                    uint256(288) + (32 * ((addrLength - 1) / 32))
                 )
             );
             emit RequestWithdrawal(taskIds[i], _params[i]);
@@ -194,11 +195,12 @@ contract FundsHandlerUpgradeable is IFundsHandler, HandlerBase {
         bytes32 _ticker,
         string calldata _toAddress,
         uint256 _amount,
+        bytes32 _salt,
         string calldata _txHash
     ) external onlyRole(ENTRYPOINT_ROLE) returns (bytes memory) {
         require(!pauseState[_ticker] && !pauseState[bytes32(uint256(_chainId))], Paused());
         withdrawals[_userAddress].push(
-            WithdrawalInfo(_userAddress, _chainId, _ticker, _toAddress, _amount)
+            WithdrawalInfo(_userAddress, _chainId, _ticker, _toAddress, _amount, _salt)
         );
         assetHandler.withdraw(_ticker, _chainId, _amount);
         emit WithdrawalRecorded(_userAddress, _ticker, _chainId, _toAddress, _amount, _txHash);
