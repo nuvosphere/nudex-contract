@@ -163,7 +163,6 @@ contract DeployTest is Script {
             initialParticipants.push(participant1);
             initialParticipants.push(participant1);
             initialParticipants.push(participant1);
-            console.log("\nSubmitter: ", participant1);
             console.logBytes32(bytes32(key1));
             submitter = participant1;
         }

@@ -23,7 +23,7 @@ participantSetup:
 	forge script --rpc-url goatTestnet script/ParticipantSetup.s.sol:ParticipantSetup --broadcast -vvvv
 
 mockData:
-	forge script --rpc-url bscTestnet script/MockData.s.sol:MockData --broadcast -vvvv --verify 
+	forge script --rpc-url localhost script/MockData.s.sol:MockData --broadcast -vvvv
 
 .PHONY: abi
 abi:
