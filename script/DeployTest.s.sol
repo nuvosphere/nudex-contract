@@ -61,6 +61,34 @@ contract DeployTest is Script {
         }
     }
 
+    function setupParticipant(bool _fromEnv) public {
+        if (_fromEnv) {
+            uint256 privKey1 = vm.envUint("PARTICIPANT_KEY_1");
+            address participant1 = vm.createWallet(privKey1).addr;
+            _lockWithPermit(privKey1, 1 ether, 300);
+
+            uint256 privKey2 = vm.envUint("PARTICIPANT_KEY_2");
+            address participant2 = vm.createWallet(privKey2).addr;
+            _lockWithPermit(privKey2, 1 ether, 300);
+
+            uint256 privKey3 = vm.envUint("PARTICIPANT_KEY_3");
+            address participant3 = vm.createWallet(privKey3).addr;
+            _lockWithPermit(privKey3, 1 ether, 300);
+
+            submitter = vm.envAddress("SUBMITTER_ADDR");
+            initialParticipants.push(participant1);
+            initialParticipants.push(participant2);
+            initialParticipants.push(participant3);
+        } else {
+            (address participant1, uint256 key1) = makeAddrAndKey("participant1");
+            initialParticipants.push(participant1);
+            initialParticipants.push(participant1);
+            initialParticipants.push(participant1);
+            console.logBytes32(bytes32(key1));
+            submitter = participant1;
+        }
+    }
+
     function deployTopLevel(bool _fromEnv) public {
         if (_fromEnv) {
             entryPoint = EntryPointUpgradeable(vm.envAddress("ENTRY_POINT"));
@@ -137,56 +165,26 @@ contract DeployTest is Script {
         }
     }
 
-    function setupParticipant(bool _fromEnv) public {
-        if (_fromEnv) {
-            uint256 privKey1 = vm.envUint("PARTICIPANT_KEY_1");
-            address participant1 = vm.createWallet(privKey1).addr;
-            nuvoToken.mint(participant1, 1 ether);
-            _lockWithPermit(privKey1, participant1, 1 ether, 300);
-
-            uint256 privKey2 = vm.envUint("PARTICIPANT_KEY_2");
-            address participant2 = vm.createWallet(privKey2).addr;
-            nuvoToken.mint(participant2, 1 ether);
-            _lockWithPermit(privKey2, participant2, 1 ether, 300);
-
-            uint256 privKey3 = vm.envUint("PARTICIPANT_KEY_3");
-            address participant3 = vm.createWallet(privKey3).addr;
-            nuvoToken.mint(participant3, 1 ether);
-            _lockWithPermit(privKey3, participant3, 1 ether, 300);
-
-            submitter = vm.envAddress("SUBMITTER_ADDR");
-            initialParticipants.push(participant1);
-            initialParticipants.push(participant2);
-            initialParticipants.push(participant3);
-        } else {
-            (address participant1, uint256 key1) = makeAddrAndKey("participant1");
-            initialParticipants.push(participant1);
-            initialParticipants.push(participant1);
-            initialParticipants.push(participant1);
-            console.logBytes32(bytes32(key1));
-            submitter = participant1;
-        }
-    }
-
     function _lockWithPermit(
         uint256 _privateKey,
-        address _owner,
         uint256 _value,
         uint32 _period
     ) internal returns (uint8 v, bytes32 r, bytes32 s) {
+        address owner = vm.createWallet(_privateKey).addr;
+        nuvoToken.mint(owner, _value);
         bytes32 structHash = keccak256(
             abi.encode(
                 PERMIT_TYPEHASH,
-                _owner,
+                owner,
                 address(nuvoLock),
                 _value,
-                nuvoToken.nonces(_owner),
+                nuvoToken.nonces(owner),
                 type(uint256).max
             )
         );
         bytes32 domainSeparator = nuvoToken.DOMAIN_SEPARATOR();
         structHash = keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
         (v, r, s) = vm.sign(_privateKey, structHash);
-        nuvoLock.lockWithpermit(_owner, _value, _period, v, r, s);
+        nuvoLock.lockWithpermit(owner, _value, _period, v, r, s);
     }
 }

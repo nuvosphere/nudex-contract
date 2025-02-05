@@ -39,3 +39,10 @@ submitter: 0x1D2cd50A3cF3c55a7982AD54F9f364C1e953Bc57
 participant 0 address: 0x3a818294ca1F3C27d7588b123Ec43F2546fa07f4  
 participant 1 address: 0x04d9389Cf937b1e6F2258d842e7237E955d6ab04  
 participant 2 address: 0xf6D37CE75dB465DcDb4c7097bEB9c1D46b171037
+
+## Environment setup
+
+1. Setup your `.env` file, you can find reference from `.env.example`.
+2. Run local node using `anvil`.
+3. Run `make deployDev` for setting up local environment.
+4. (optional) Run `make mockData` for getting mock data.
