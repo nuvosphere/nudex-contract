@@ -194,6 +194,13 @@ contract EntryPointUpgradeable is IEntryPoint, Initializable, ReentrancyGuardUpg
                 taskManager.updateTask(_operations[i].taskId, State.Failed);
                 continue;
             }
+
+            // only override task state if dataHash is 0
+            if (task.dataHash == 0) {
+                taskManager.updateTask(_operations[i].taskId, _operations[i].state);
+                continue;
+            }
+
             require(keccak256(_operations[i].initialCalldata) == task.dataHash, "Hash mismatch");
             // execute task
             if (_operations[i].state == State.Completed) {

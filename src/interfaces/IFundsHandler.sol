@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-struct DepositInfo {
+struct DepositParam {
     address userAddress;
     uint64 chainId;
     bytes32 ticker;
@@ -12,13 +12,29 @@ struct DepositInfo {
     uint256 logIndex;
 }
 
-struct WithdrawalInfo {
+struct DepositInfo {
+    address userAddress;
+    uint64 chainId;
+    bytes32 ticker;
+    string depositAddress;
+    uint256 amount;
+}
+
+struct WithdrawalParam {
     address userAddress;
     uint64 chainId;
     bytes32 ticker;
     string toAddress;
     uint256 amount;
     bytes32 salt;
+}
+
+struct WithdrawalInfo {
+    address userAddress;
+    uint64 chainId;
+    bytes32 ticker;
+    string toAddress;
+    uint256 amount;
 }
 
 struct TransferParam {
@@ -63,8 +79,7 @@ interface IFundsHandler {
         address indexed userAddress,
         uint64 indexed chainId,
         bytes32 indexed ticker,
-        uint256 feeAmount,
-        bytes32 salt
+        uint256 feeAmount
     );
 
     event RequestTransfer(uint64[] taskIds, TransferParam[] params);
@@ -89,18 +104,18 @@ interface IFundsHandler {
     error InvalidInput();
     error InvalidAddress();
 
-    function recordDeposit(DepositInfo calldata _param) external;
+    // function recordDeposit(DepositInfo calldata _param) external;
 
-    function recordWithdrawal(
-        address _userAddress,
-        uint64 _chainId,
-        bytes32 _ticker,
-        string calldata _toAddress,
-        uint256 _amount,
-        uint256 _withdrawFee,
-        bytes32 _salt,
-        string calldata _txHash
-    ) external;
+    // function recordWithdrawal(
+    //     address _userAddress,
+    //     uint64 _chainId,
+    //     bytes32 _ticker,
+    //     string calldata _toAddress,
+    //     uint256 _amount,
+    //     uint256 _withdrawFee,
+    //     bytes32 _salt,
+    //     string calldata _txHash
+    // ) external;
 
     function getDeposits(address depositAddress) external view returns (DepositInfo[] memory);
     function getWithdrawals(address depositAddress) external view returns (WithdrawalInfo[] memory);

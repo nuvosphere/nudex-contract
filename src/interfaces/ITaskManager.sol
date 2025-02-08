@@ -10,31 +10,18 @@ enum State {
 
 struct Task {
     State state;
-    address submitter;
     address handler;
-    uint32 createdAt;
-    uint32 updatedAt;
     bytes32 dataHash;
 }
 
 interface ITaskManager {
-    event TaskSubmitted(
-        uint64 indexed taskId,
-        address indexed submitter,
-        address indexed handler,
-        bytes32 dataHash
-    );
-    event TaskSubmittedBatch(
-        uint64[] taskIds,
-        address indexed submitter,
-        address indexed handler,
-        bytes32[] dataHashs
-    );
+    event TaskSubmitted(uint64 indexed taskId, address indexed handler, bytes32 dataHash);
+    event TaskSubmittedBatch(uint64[] taskIds, address indexed handler, bytes32[] dataHashs);
     event TaskUpdated(
         uint64 indexed taskId,
         address indexed submitter,
         State indexed state,
-        uint256 updateTime
+        uint32 updateTime
     );
 
     error EmptyTask();
@@ -48,12 +35,9 @@ interface ITaskManager {
 
     function getTaskState(uint64 _taskId) external view returns (State);
 
-    function submitTask(address _submitter, bytes32 _context) external returns (uint64);
+    function submitTask(bytes32 _context) external returns (uint64);
 
-    function submitTaskBatch(
-        address _submitter,
-        bytes32[] calldata _context
-    ) external returns (uint64[] memory);
+    function submitTaskBatch(bytes32[] calldata _context) external returns (uint64[] memory);
 
     function updateTask(uint64 _taskId, State _state) external;
 }

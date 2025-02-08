@@ -71,30 +71,18 @@ contract TaskManagerUpgradeable is ITaskManager, AccessControlUpgradeable {
 
     /**
      * @dev Add new task.
-     * @param _submitter The submitter of the task.
      * @param _dataHash The context of the task.
      */
-    function submitTask(
-        address _submitter,
-        bytes32 _dataHash
-    ) external onlyRole(HANDLER_ROLE) returns (uint64 taskId) {
+    function submitTask(bytes32 _dataHash) external onlyRole(HANDLER_ROLE) returns (uint64 taskId) {
         require(taskHashes[_dataHash] == 0, "Duplicate task");
         taskId = nextTaskId++;
-        tasks[taskId] = Task({
-            state: State.Created,
-            submitter: _submitter,
-            handler: msg.sender,
-            createdAt: uint32(block.timestamp),
-            updatedAt: uint32(0),
-            dataHash: _dataHash
-        });
+        tasks[taskId] = Task({state: State.Created, handler: msg.sender, dataHash: _dataHash});
         taskHashes[_dataHash] = taskId;
 
-        emit TaskSubmitted(taskId, _submitter, msg.sender, _dataHash);
+        emit TaskSubmitted(taskId, msg.sender, _dataHash);
     }
 
     function submitTaskBatch(
-        address _submitter,
         bytes32[] calldata _dataHashes
     ) external onlyRole(HANDLER_ROLE) returns (uint64[] memory taskIds) {
         require(_dataHashes.length <= MAX_BATCH_SIZE, "Exceed max batch size");
@@ -104,15 +92,12 @@ contract TaskManagerUpgradeable is ITaskManager, AccessControlUpgradeable {
             taskIds[i] = nextTaskId++;
             tasks[taskIds[i]] = Task({
                 state: State.Created,
-                submitter: _submitter,
                 handler: msg.sender,
-                createdAt: uint32(block.timestamp),
-                updatedAt: uint32(0),
                 dataHash: _dataHashes[i]
             });
             taskHashes[_dataHashes[i]] = taskIds[i];
         }
-        emit TaskSubmittedBatch(taskIds, _submitter, msg.sender, _dataHashes);
+        emit TaskSubmittedBatch(taskIds, msg.sender, _dataHashes);
     }
 
     /**
@@ -128,7 +113,6 @@ contract TaskManagerUpgradeable is ITaskManager, AccessControlUpgradeable {
             require(task.state == State.Pending, "Task completed");
         }
         task.state = _state;
-        task.updatedAt = uint32(block.timestamp);
-        emit TaskUpdated(_taskId, task.handler, _state, block.timestamp);
+        emit TaskUpdated(_taskId, task.handler, _state, uint32(block.timestamp));
     }
 }

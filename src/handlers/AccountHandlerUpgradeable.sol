@@ -82,7 +82,7 @@ contract AccountHandlerUpgradeable is IAccountHandler, HandlerBase {
                 )
             );
         }
-        taskIds = taskManager.submitTaskBatch(msg.sender, dataHash);
+        taskIds = taskManager.submitTaskBatch(dataHash);
     }
 
     /**

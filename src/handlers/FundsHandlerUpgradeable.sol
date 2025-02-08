@@ -3,7 +3,7 @@ pragma solidity ^0.8.26;
 
 import {HandlerBase} from "./HandlerBase.sol";
 import {IAssetHandler} from "../interfaces/IAssetHandler.sol";
-import {IFundsHandler, DepositInfo, WithdrawalInfo, TransferParam, ConsolidateTaskParam} from "../interfaces/IFundsHandler.sol";
+import {IFundsHandler, DepositParam, DepositInfo, WithdrawalParam, WithdrawalInfo, TransferParam, ConsolidateTaskParam} from "../interfaces/IFundsHandler.sol";
 import {INIP20} from "../interfaces/INIP20.sol";
 // import {console} from "forge-std/console.sol";
 contract FundsHandlerUpgradeable is IFundsHandler, HandlerBase {
@@ -12,8 +12,6 @@ contract FundsHandlerUpgradeable is IFundsHandler, HandlerBase {
 
     mapping(address userAddr => DepositInfo[]) public deposits;
     mapping(address userAddr => WithdrawalInfo[]) public withdrawals;
-    mapping(bytes32 ticker => mapping(uint64 chainId => ConsolidateTaskParam[]))
-        public consolidateRecords;
 
     constructor(address _assetHandler, address _taskManager) HandlerBase(_taskManager) {
         assetHandler = IAssetHandler(_assetHandler);
@@ -76,7 +74,7 @@ contract FundsHandlerUpgradeable is IFundsHandler, HandlerBase {
      * amount The amount to deposit.
      */
     function submitDepositTask(
-        DepositInfo[] calldata _params
+        DepositParam[] calldata _params
     ) external onlyRole(SUBMITTER_ROLE) returns (uint64[] memory taskIds) {
         require(_params.length > 0, "FundsHandlerUpgradeable: empty input");
         taskIds = new uint64[](_params.length);
@@ -90,20 +88,33 @@ contract FundsHandlerUpgradeable is IFundsHandler, HandlerBase {
             );
             require(bytes(_params[i].depositAddress).length > 0, "Invalid address");
             dataHash[i] = keccak256(
-                abi.encodeWithSelector(this.recordDeposit.selector, _params[i])
+                abi.encodeWithSelector(
+                    this.recordDeposit.selector,
+                    _params[i].userAddress,
+                    _params[i].chainId,
+                    _params[i].ticker,
+                    _params[i].depositAddress,
+                    _params[i].amount
+                )
             );
         }
-        taskIds = taskManager.submitTaskBatch(msg.sender, dataHash);
+        taskIds = taskManager.submitTaskBatch(dataHash);
     }
 
     /**
      * @dev Record deposit info.
      */
     function recordDeposit(
-        DepositInfo calldata _param
-    ) external onlyRole(ENTRYPOINT_ROLE) validateAsset(_param.ticker, _param.chainId) {
-        deposits[_param.userAddress].push(_param);
-        emit INIP20.NIP20TokenEvent_mintb(_param.userAddress, _param.ticker, _param.amount);
+        address _userAddress,
+        uint64 _chainId,
+        bytes32 _ticker,
+        string calldata _depositAddress,
+        uint256 _amount
+    ) external onlyRole(ENTRYPOINT_ROLE) validateAsset(_ticker, _chainId) {
+        deposits[_userAddress].push(
+            DepositInfo(_userAddress, _chainId, _ticker, _depositAddress, _amount)
+        );
+        emit INIP20.NIP20TokenEvent_mintb(_userAddress, _ticker, _amount);
     }
 
     /**
@@ -117,7 +128,7 @@ contract FundsHandlerUpgradeable is IFundsHandler, HandlerBase {
      * salt The salt for withdrawal.
      */
     function submitWithdrawTask(
-        WithdrawalInfo[] calldata _params
+        WithdrawalParam[] calldata _params
     ) external onlyRole(SUBMITTER_ROLE) returns (uint64[] memory taskIds) {
         require(_params.length > 0, "FundsHandlerUpgradeable: empty input");
         taskIds = new uint64[](_params.length);
@@ -144,8 +155,7 @@ contract FundsHandlerUpgradeable is IFundsHandler, HandlerBase {
                 _params[i].userAddress,
                 _params[i].chainId,
                 _params[i].ticker,
-                withdrawFee,
-                _params[i].salt
+                withdrawFee
             );
             dataHash[i] = keccak256(
                 abi.encodeWithSelector(
@@ -156,14 +166,13 @@ contract FundsHandlerUpgradeable is IFundsHandler, HandlerBase {
                     _params[i].toAddress,
                     _params[i].amount - withdrawFee,
                     withdrawFee,
-                    _params[i].salt,
                     // offset for txHash
                     // @dev "-1" if it is exact 32 bytes it does not take one extra slot
-                    uint256(320) + (32 * ((addrLength - 1) / 32))
+                    uint256(288) + (32 * ((addrLength - 1) / 32))
                 )
             );
         }
-        taskIds = taskManager.submitTaskBatch(msg.sender, dataHash);
+        taskIds = taskManager.submitTaskBatch(dataHash);
     }
 
     /**
@@ -176,11 +185,10 @@ contract FundsHandlerUpgradeable is IFundsHandler, HandlerBase {
         string calldata _toAddress,
         uint256 _amount,
         uint256 _withdrawFee,
-        bytes32 _salt,
-        string calldata _txHash
+        string calldata // _txHash (not used)
     ) external onlyRole(ENTRYPOINT_ROLE) validateAsset(_ticker, _chainId) {
         withdrawals[_userAddress].push(
-            WithdrawalInfo(_userAddress, _chainId, _ticker, _toAddress, _amount, _salt)
+            WithdrawalInfo(_userAddress, _chainId, _ticker, _toAddress, _amount)
         );
         emit INIP20.NIP20TokenEvent_mintb(feeReceiver, _ticker, _withdrawFee);
     }
@@ -204,40 +212,10 @@ contract FundsHandlerUpgradeable is IFundsHandler, HandlerBase {
             uint256 fromAddrLength = bytes(_params[i].fromAddress).length;
             uint256 toAddrLength = bytes(_params[i].toAddress).length;
             require(fromAddrLength > 0 && toAddrLength > 0, "Invalid address");
-
-            dataHash[i] = keccak256(
-                abi.encodeWithSelector(
-                    this.transfer.selector,
-                    _params[i].fromAddress,
-                    _params[i].toAddress,
-                    _params[i].ticker,
-                    _params[i].chainId,
-                    _params[i].amount,
-                    _params[i].salt,
-                    // offset for txHash
-                    // @dev "-1" if it is exact 32 bytes it does not take one extra slot
-                    uint256(352) +
-                        (32 * ((fromAddrLength - 1) / 32)) +
-                        (32 * ((toAddrLength - 1) / 32))
-                )
-            );
+            // empty dataHash, no future on-chain operation
+            dataHash[i] = 0;
         }
-        taskIds = taskManager.submitTaskBatch(msg.sender, dataHash);
-    }
-
-    /**
-     * @dev Transfer the asset
-     */
-    function transfer(
-        string calldata _fromAddress,
-        string calldata _toAddress,
-        bytes32 _ticker,
-        uint64 _chainId,
-        uint256 _amount,
-        bytes32 _salt,
-        string calldata _txHash
-    ) external onlyRole(ENTRYPOINT_ROLE) validateAsset(_ticker, _chainId) {
-        emit Transfer(_ticker, _chainId, _fromAddress, _toAddress, _amount, _txHash);
+        taskIds = taskManager.submitTaskBatch(dataHash);
     }
 
     /**
@@ -261,36 +239,9 @@ contract FundsHandlerUpgradeable is IFundsHandler, HandlerBase {
             );
             uint256 addrLength = bytes(_params[i].fromAddress).length;
             require(addrLength > 0, "Invalid address");
-            dataHash[i] = keccak256(
-                abi.encodeWithSelector(
-                    this.consolidate.selector,
-                    _params[i].fromAddress,
-                    _params[i].ticker,
-                    _params[i].chainId,
-                    _params[i].amount,
-                    _params[i].salt,
-                    // offset for txHash
-                    // @dev "-1" if it is exact 32 bytes it does not take one extra slot
-                    uint256(256) + (32 * ((addrLength - 1) / 32))
-                )
-            );
+            // empty dataHash, no future on-chain operation
+            dataHash[i] = 0;
         }
-        taskIds = taskManager.submitTaskBatch(msg.sender, dataHash);
-    }
-
-    /**
-     * @dev Consolidate the token
-     */
-    function consolidate(
-        string calldata _fromAddress,
-        bytes32 _ticker,
-        uint64 _chainId,
-        uint256 _amount,
-        bytes32 _salt,
-        string calldata _txHash
-    ) external onlyRole(ENTRYPOINT_ROLE) validateAsset(_ticker, _chainId) {
-        consolidateRecords[_ticker][_chainId].push(
-            ConsolidateTaskParam(_fromAddress, _ticker, _chainId, _amount, _salt)
-        );
+        taskIds = taskManager.submitTaskBatch(dataHash);
     }
 }
