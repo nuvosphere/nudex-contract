@@ -7,7 +7,7 @@ import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {NuvoProxy, ITransparentUpgradeableProxy} from "../src/proxies/NuvoProxy.sol";
 import {AccountHandlerUpgradeable} from "../src/handlers/AccountHandlerUpgradeable.sol";
 import {AssetHandlerUpgradeable, AssetParam, TokenInfo} from "../src/handlers/AssetHandlerUpgradeable.sol";
-import {FundsHandlerUpgradeable, DepositInfo, WithdrawalInfo, ConsolidateTaskParam} from "../src/handlers/FundsHandlerUpgradeable.sol";
+import {FundsHandlerUpgradeable, DepositParam, WithdrawalParam, ConsolidateTaskParam} from "../src/handlers/FundsHandlerUpgradeable.sol";
 import {TaskManagerUpgradeable, State} from "../src/TaskManagerUpgradeable.sol";
 import {IAccountHandler, AddressCategory} from "../src/interfaces/IAccountHandler.sol";
 
@@ -109,8 +109,8 @@ contract MockData is Script {
 
     function fundsData(bytes32 _ticker, uint64 _chainId) public {
         // deposit
-        DepositInfo[] memory depositInfos = new DepositInfo[](1);
-        depositInfos[0] = DepositInfo(
+        DepositParam[] memory depositInfos = new DepositParam[](1);
+        depositInfos[0] = DepositParam(
             deployer,
             _chainId,
             _ticker,
@@ -121,11 +121,17 @@ contract MockData is Script {
             0
         );
         fundsHandler.submitDepositTask(depositInfos);
-        fundsHandler.recordDeposit(depositInfos[0]);
+        fundsHandler.recordDeposit(
+            deployer,
+            _chainId,
+            _ticker,
+            "124wd5urvxo4H3naXR6QACP1MGVpLeikeR",
+            1 ether
+        );
 
         // withdraw
-        WithdrawalInfo[] memory withdrawalInfos = new WithdrawalInfo[](1);
-        withdrawalInfos[0] = WithdrawalInfo(
+        WithdrawalParam[] memory withdrawalInfos = new WithdrawalParam[](1);
+        withdrawalInfos[0] = WithdrawalParam(
             deployer,
             _chainId,
             _ticker,
@@ -142,7 +148,6 @@ contract MockData is Script {
             "124wd5urvxo4H3naXR6QACP1MGVpLeikeR",
             1 ether,
             0.1 ether,
-            bytes32(uint256(0)),
             "TxHash"
         );
 
@@ -170,30 +175,6 @@ contract MockData is Script {
             bytes32(uint256(2))
         );
         fundsHandler.submitConsolidateTask(consolidateTaskParams);
-        fundsHandler.consolidate(
-            "fromAddr1",
-            TICKER,
-            CHAIN_ID,
-            1 ether,
-            bytes32(uint256(0)),
-            "consolidate txHash1"
-        );
-        fundsHandler.consolidate(
-            "fromAddr2",
-            TICKER,
-            CHAIN_ID,
-            2.5 ether,
-            bytes32(uint256(1)),
-            "consolidate txHash2"
-        );
-        fundsHandler.consolidate(
-            "fromAddr3",
-            TICKER,
-            CHAIN_ID,
-            3.3 ether,
-            bytes32(uint256(2)),
-            "consolidate txHash3"
-        );
     }
 
     function accountData() public {

@@ -113,6 +113,6 @@ contract TaskManagerUpgradeable is ITaskManager, AccessControlUpgradeable {
             require(task.state == State.Pending, "Task completed");
         }
         task.state = _state;
-        emit TaskUpdated(_taskId, task.handler, _state, uint32(block.timestamp));
+        emit TaskUpdated(_taskId, _state, uint32(block.timestamp));
     }
 }

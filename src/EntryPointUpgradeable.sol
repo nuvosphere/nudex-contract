@@ -8,7 +8,7 @@ import {IEntryPoint, TaskOperation} from "./interfaces/IEntryPoint.sol";
 import {IParticipantHandler} from "./interfaces/IParticipantHandler.sol";
 import {INuvoLock} from "./interfaces/INuvoLock.sol";
 import {ITaskManager, State, Task} from "./interfaces/ITaskManager.sol";
-
+// import {console} from "forge-std/console.sol";
 /**
  * @dev Manage all onchain information.
  */
@@ -187,20 +187,18 @@ contract EntryPointUpgradeable is IEntryPoint, Initializable, ReentrancyGuardUpg
         // require(_verifyOperation(_operations, tssNonce++, _signature), InvalidSigner(msg.sender));
         bool success;
         Task memory task;
-        for (uint8 i; i < _operations.length; ) {
+        for (uint8 i; i < _operations.length; ++i) {
             task = taskManager.getTask(_operations[i].taskId);
             // fail task
             if (_operations[i].state == State.Failed) {
                 taskManager.updateTask(_operations[i].taskId, State.Failed);
                 continue;
             }
-
             // only override task state if dataHash is 0
             if (task.dataHash == 0) {
                 taskManager.updateTask(_operations[i].taskId, _operations[i].state);
                 continue;
             }
-
             require(keccak256(_operations[i].initialCalldata) == task.dataHash, "Hash mismatch");
             // execute task
             if (_operations[i].state == State.Completed) {
@@ -218,10 +216,6 @@ contract EntryPointUpgradeable is IEntryPoint, Initializable, ReentrancyGuardUpg
             // pending task
             else if (_operations[i].state == State.Pending) {
                 taskManager.updateTask(_operations[i].taskId, State.Pending);
-            }
-
-            unchecked {
-                ++i;
             }
         }
     }
