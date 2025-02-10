@@ -5,7 +5,6 @@ struct DepositParam {
     address userAddress;
     uint64 chainId;
     bytes32 ticker;
-    string depositAddress;
     uint256 amount;
     string txHash;
     uint256 blockHeight;

@@ -110,16 +110,7 @@ contract MockData is Script {
     function fundsData(bytes32 _ticker, uint64 _chainId) public {
         // deposit
         DepositParam[] memory depositInfos = new DepositParam[](1);
-        depositInfos[0] = DepositParam(
-            deployer,
-            _chainId,
-            _ticker,
-            "124wd5urvxo4H3naXR6QACP1MGVpLeikeR",
-            1 ether,
-            "txHash",
-            0,
-            0
-        );
+        depositInfos[0] = DepositParam(deployer, _chainId, _ticker, 1 ether, "txHash", 0, 0);
         fundsHandler.submitDepositTask(depositInfos);
         fundsHandler.recordDeposit(deployer, _chainId, _ticker, 1 ether, "txHash");
 

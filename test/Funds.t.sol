@@ -70,16 +70,7 @@ contract FundsTest is BaseTest {
 
         // default task param
         depositTaskParams.push(
-            DepositParam(
-                msgSender,
-                CHAIN_ID,
-                TICKER,
-                DEPOSIT_ADDRESS,
-                DEFAULT_AMOUNT,
-                "txHash",
-                100,
-                0
-            )
+            DepositParam(msgSender, CHAIN_ID, TICKER, DEFAULT_AMOUNT, "txHash", 100, 0)
         );
         withdrawTaskParams.push(
             WithdrawalParam(
@@ -159,9 +150,8 @@ contract FundsTest is BaseTest {
         fundsHandler.submitDepositTask(depositTaskParams);
 
         // fail case: invalid user address
-        depositTaskParams[0].amount = 1 ether;
-        depositTaskParams[0].depositAddress = "";
-        vm.expectRevert("Invalid address");
+        depositTaskParams.pop();
+        vm.expectRevert("Empty input");
         fundsHandler.submitDepositTask(depositTaskParams);
         vm.stopPrank();
     }
@@ -171,17 +161,14 @@ contract FundsTest is BaseTest {
         uint8 batchSize = 20;
         // setup deposit info
         TaskOperation[] memory taskOperations = new TaskOperation[](batchSize);
-        string[] memory depositAddresses = new string[](batchSize);
         uint256[] memory amounts = new uint256[](batchSize);
         DepositParam[] memory batchDepositTaskParams = new DepositParam[](batchSize);
         for (uint8 i; i < batchSize; ++i) {
-            depositAddresses[i] = string(abi.encodePacked("depositAddress", i));
             amounts[i] = 1 ether;
             batchDepositTaskParams[i] = DepositParam(
                 msgSender,
                 CHAIN_ID,
                 TICKER,
-                depositAddresses[i],
                 amounts[i],
                 string(abi.encodePacked("txHash ", i)),
                 100,
@@ -231,14 +218,14 @@ contract FundsTest is BaseTest {
         vm.stopPrank();
     }
 
-    function testFuzz_DepositFuzz(string calldata _depositAddress, uint256 _amount) public {
+    function testFuzz_DepositFuzz(uint256 _amount, string calldata _txHash) public {
         vm.startPrank(msgSender);
-        vm.assume(bytes(_depositAddress).length > 0);
         vm.assume(_amount > MIN_DEFAULT_AMOUNT);
+        vm.assume(bytes(_txHash).length > 0);
         // setup deposit info
         uint256 depositIndex = fundsHandler.getDeposits(msgSender, TICKER, CHAIN_ID).length;
-        depositTaskParams[0].depositAddress = _depositAddress;
         depositTaskParams[0].amount = _amount;
+        depositTaskParams[0].txHash = _txHash;
         fundsHandler.submitDepositTask(depositTaskParams);
 
         taskOpts[0].initialCalldata = abi.encodeWithSelector(
@@ -320,6 +307,11 @@ contract FundsTest is BaseTest {
         withdrawTaskParams[0].amount = 1 ether;
         withdrawTaskParams[0].toAddress = "";
         vm.expectRevert("Invalid address");
+        fundsHandler.submitWithdrawTask(withdrawTaskParams);
+
+        // fail case: empty input array
+        withdrawTaskParams.pop();
+        vm.expectRevert("Empty input");
         fundsHandler.submitWithdrawTask(withdrawTaskParams);
         vm.stopPrank();
     }

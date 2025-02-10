@@ -88,7 +88,7 @@ contract FundsHandlerUpgradeable is IFundsHandler, HandlerBase {
     function submitDepositTask(
         DepositParam[] calldata _params
     ) external onlyRole(SUBMITTER_ROLE) returns (uint64[] memory taskIds) {
-        require(_params.length > 0, "FundsHandlerUpgradeable: empty input");
+        require(_params.length > 0, "Empty input");
         taskIds = new uint64[](_params.length);
         bytes32[] memory dataHash = new bytes32[](_params.length);
         for (uint8 i; i < _params.length; i++) {
@@ -98,7 +98,6 @@ contract FundsHandlerUpgradeable is IFundsHandler, HandlerBase {
                     assetHandler.getAssetDetails(_params[i].ticker).minDepositAmount,
                 "Invalid amount"
             );
-            require(bytes(_params[i].depositAddress).length > 0, "Invalid address");
             dataHash[i] = keccak256(
                 abi.encodeWithSelector(
                     this.recordDeposit.selector,
@@ -140,7 +139,7 @@ contract FundsHandlerUpgradeable is IFundsHandler, HandlerBase {
     function submitWithdrawTask(
         WithdrawalParam[] calldata _params
     ) external onlyRole(SUBMITTER_ROLE) returns (uint64[] memory taskIds) {
-        require(_params.length > 0, "FundsHandlerUpgradeable: empty input");
+        require(_params.length > 0, "Empty input");
         taskIds = new uint64[](_params.length);
         bytes32[] memory dataHash = new bytes32[](_params.length);
         for (uint8 i; i < _params.length; i++) {
