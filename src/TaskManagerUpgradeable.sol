@@ -112,6 +112,11 @@ contract TaskManagerUpgradeable is ITaskManager, AccessControlUpgradeable {
         } else {
             require(task.state == State.Pending, "Task completed");
         }
+
+        // TODO: reset dataHash if task failed?
+        // if (_state == State.Failed) {
+        //     taskHashes[_dataHashes[i]] = 0;
+        // }
         task.state = _state;
         emit TaskUpdated(_taskId, _state, uint32(block.timestamp));
     }

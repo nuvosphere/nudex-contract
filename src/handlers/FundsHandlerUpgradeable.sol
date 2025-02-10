@@ -3,7 +3,7 @@ pragma solidity ^0.8.26;
 
 import {HandlerBase} from "./HandlerBase.sol";
 import {IAssetHandler} from "../interfaces/IAssetHandler.sol";
-import {IFundsHandler, DepositParam, DepositInfo, WithdrawalParam, WithdrawalInfo, TransferParam, ConsolidateTaskParam} from "../interfaces/IFundsHandler.sol";
+import {IFundsHandler, DepositParam, WithdrawalParam, TransferParam, ConsolidateTaskParam} from "../interfaces/IFundsHandler.sol";
 import {INIP20} from "../interfaces/INIP20.sol";
 // import {console} from "forge-std/console.sol";
 contract FundsHandlerUpgradeable is IFundsHandler, HandlerBase {

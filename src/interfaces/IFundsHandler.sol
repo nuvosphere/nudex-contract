@@ -11,14 +11,6 @@ struct DepositParam {
     uint256 logIndex;
 }
 
-struct DepositInfo {
-    address userAddress;
-    uint64 chainId;
-    bytes32 ticker;
-    string depositAddress;
-    uint256 amount;
-}
-
 struct WithdrawalParam {
     address userAddress;
     uint64 chainId;
@@ -26,14 +18,6 @@ struct WithdrawalParam {
     string toAddress;
     uint256 amount;
     bytes32 salt;
-}
-
-struct WithdrawalInfo {
-    address userAddress;
-    uint64 chainId;
-    bytes32 ticker;
-    string toAddress;
-    uint256 amount;
 }
 
 struct TransferParam {
@@ -55,8 +39,6 @@ struct ConsolidateTaskParam {
 }
 
 interface IFundsHandler {
-    event RequestDeposit(uint64 taskId, DepositInfo depositInfo);
-    event RequestWithdrawal(uint64 taskId, WithdrawalInfo withdrawalInfo);
     event DepositRecorded(
         address indexed userAddress,
         bytes32 indexed ticker,
@@ -99,10 +81,6 @@ interface IFundsHandler {
         uint256 amount,
         string txHash
     );
-
-    error InvalidAmount();
-    error InvalidInput();
-    error InvalidAddress();
 
     // function recordDeposit(DepositInfo calldata _param) external;
 

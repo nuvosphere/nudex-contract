@@ -189,16 +189,12 @@ contract EntryPointUpgradeable is IEntryPoint, Initializable, ReentrancyGuardUpg
         Task memory task;
         for (uint8 i; i < _operations.length; ++i) {
             task = taskManager.getTask(_operations[i].taskId);
-            // fail task
-            if (_operations[i].state == State.Failed) {
-                taskManager.updateTask(_operations[i].taskId, State.Failed);
-                continue;
-            }
             // only override task state if initialCalldata is empty
             if (_operations[i].initialCalldata.length == 0) {
                 taskManager.updateTask(_operations[i].taskId, _operations[i].state);
                 continue;
             }
+
             require(keccak256(_operations[i].initialCalldata) == task.dataHash, "Hash mismatch");
             // execute task
             if (_operations[i].state == State.Completed) {

@@ -5,7 +5,7 @@ import {TestHelper} from "./utils/TestHelper.sol";
 
 import {AssetHandlerUpgradeable, AssetParam, TokenInfo} from "../src/handlers/AssetHandlerUpgradeable.sol";
 import {FundsHandlerUpgradeable} from "../src/handlers/FundsHandlerUpgradeable.sol";
-import {IFundsHandler, DepositParam, DepositInfo, WithdrawalParam, WithdrawalInfo, ConsolidateTaskParam, TransferParam} from "../src/interfaces/IFundsHandler.sol";
+import {IFundsHandler, DepositParam, WithdrawalParam, ConsolidateTaskParam, TransferParam} from "../src/interfaces/IFundsHandler.sol";
 import {ITaskManager, State} from "../src/interfaces/ITaskManager.sol";
 
 contract FundsTest is BaseTest {

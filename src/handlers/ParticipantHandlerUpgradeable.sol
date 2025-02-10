@@ -69,7 +69,6 @@ contract ParticipantHandlerUpgradeable is IParticipantHandler, HandlerBase {
         taskId = taskManager.submitTask(
             keccak256(abi.encodeWithSelector(this.addParticipant.selector, _newParticipant, _salt))
         );
-        emit RequestAddParticipant(taskId, _newParticipant);
     }
 
     /**
