@@ -87,6 +87,7 @@ contract FundsTest is BaseTest {
     function test_Deposit() public {
         vm.startPrank(msgSender);
         // setup deposit info
+        assertEq(fundsHandler.totalValueLocked(TICKER), 0);
         uint256 depositIndex = fundsHandler.getDeposits(msgSender, TICKER, CHAIN_ID).length;
         fundsHandler.submitDepositTask(depositTaskParams);
         taskOpts[0].initialCalldata = abi.encodeWithSelector(
@@ -105,6 +106,7 @@ contract FundsTest is BaseTest {
 
         uint256 depositAmount = fundsHandler.getDeposit(msgSender, TICKER, CHAIN_ID, depositIndex);
         assertEq(depositAmount, depositTaskParams[0].amount);
+        assertEq(fundsHandler.totalValueLocked(TICKER), depositAmount);
         depositIndex = fundsHandler.getDeposits(msgSender, TICKER, CHAIN_ID).length;
         assertEq(depositIndex, 1); // should have increased by 1
 
@@ -139,6 +141,7 @@ contract FundsTest is BaseTest {
                 .length - 1
         );
         assertEq(newAmount, depositAmount);
+        assertEq(fundsHandler.totalValueLocked(TICKER), DEFAULT_AMOUNT + newAmount);
         vm.stopPrank();
     }
 
@@ -248,7 +251,10 @@ contract FundsTest is BaseTest {
     }
 
     function test_Withdraw() public {
+        vm.prank(entryPointProxy);
+        fundsHandler.recordDeposit(msgSender, CHAIN_ID, TICKER, DEFAULT_AMOUNT, "txHash");
         vm.startPrank(msgSender);
+        assertEq(fundsHandler.totalValueLocked(TICKER), DEFAULT_AMOUNT);
         // setup withdrawal info
         uint256 withdrawIndex = fundsHandler.getWithdrawals(msgSender, TICKER, CHAIN_ID).length;
         string
@@ -287,6 +293,7 @@ contract FundsTest is BaseTest {
             withdrawIndex
         );
         assertEq(DEFAULT_AMOUNT - WITHDRAW_FEE, withdrawAmount);
+        assertEq(fundsHandler.totalValueLocked(TICKER), DEFAULT_AMOUNT - withdrawAmount);
         vm.stopPrank();
     }
 
@@ -317,6 +324,8 @@ contract FundsTest is BaseTest {
     }
 
     function test_WithdrawBatch() public {
+        vm.prank(entryPointProxy);
+        fundsHandler.recordDeposit(msgSender, CHAIN_ID, TICKER, type(uint256).max, "txHash");
         vm.startPrank(msgSender);
         uint8 batchSize = 20;
         // setup withdraw info
@@ -386,11 +395,14 @@ contract FundsTest is BaseTest {
         bytes32 _salt,
         string calldata _txHash
     ) public {
-        vm.startPrank(msgSender);
         vm.assume(bytes(_toAddress).length > 0);
         vm.assume(_amount > MIN_DEFAULT_AMOUNT);
         vm.assume(_amount > WITHDRAW_FEE);
         vm.assume(bytes(_txHash).length > 0);
+        vm.prank(entryPointProxy);
+        fundsHandler.recordDeposit(msgSender, CHAIN_ID, TICKER, type(uint256).max, "txHash");
+
+        vm.startPrank(msgSender);
         // setup withdrawal info
         WithdrawalParam[] memory tempWithdrawTaskParams = new WithdrawalParam[](1);
         tempWithdrawTaskParams[0] = WithdrawalParam(

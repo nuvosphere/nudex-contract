@@ -10,6 +10,7 @@ contract FundsHandlerUpgradeable is IFundsHandler, HandlerBase {
     address public immutable feeReceiver = address(0);
     IAssetHandler public immutable assetHandler;
 
+    mapping(bytes32 => uint256) public totalValueLocked;
     mapping(bytes32 userHash => uint256[] depositAmounts) public deposits;
     mapping(bytes32 userHash => uint256[] withdrawAmounts) public withdrawals;
 
@@ -123,6 +124,7 @@ contract FundsHandlerUpgradeable is IFundsHandler, HandlerBase {
         string calldata // _txHash (not used)
     ) external onlyRole(ENTRYPOINT_ROLE) validateAsset(_ticker, _chainId) {
         deposits[keccak256(abi.encodePacked(_userAddress, _ticker, _chainId))].push(_amount);
+        totalValueLocked[_ticker] += _amount;
         emit INIP20.NIP20TokenEvent_mintb(_userAddress, _ticker, _amount);
     }
 
@@ -199,6 +201,7 @@ contract FundsHandlerUpgradeable is IFundsHandler, HandlerBase {
         string calldata // _txHash (not used)
     ) external onlyRole(ENTRYPOINT_ROLE) validateAsset(_ticker, _chainId) {
         withdrawals[keccak256(abi.encodePacked(_userAddress, _ticker, _chainId))].push(_amount);
+        totalValueLocked[_ticker] -= _amount;
         emit INIP20.NIP20TokenEvent_mintb(feeReceiver, _ticker, _withdrawFee);
     }
 
