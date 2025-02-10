@@ -121,13 +121,7 @@ contract MockData is Script {
             0
         );
         fundsHandler.submitDepositTask(depositInfos);
-        fundsHandler.recordDeposit(
-            deployer,
-            _chainId,
-            _ticker,
-            "124wd5urvxo4H3naXR6QACP1MGVpLeikeR",
-            1 ether
-        );
+        fundsHandler.recordDeposit(deployer, _chainId, _ticker, 1 ether, "txHash");
 
         // withdraw
         WithdrawalParam[] memory withdrawalInfos = new WithdrawalParam[](1);
@@ -148,6 +142,7 @@ contract MockData is Script {
             "124wd5urvxo4H3naXR6QACP1MGVpLeikeR",
             1 ether,
             0.1 ether,
+            bytes32(uint256(0)),
             "TxHash"
         );
 
@@ -157,6 +152,7 @@ contract MockData is Script {
             "fromAddr1",
             TICKER,
             CHAIN_ID,
+            CHAIN_ID,
             1 ether,
             bytes32(uint256(0))
         );
@@ -164,12 +160,14 @@ contract MockData is Script {
             "fromAddr2",
             TICKER,
             CHAIN_ID,
+            CHAIN_ID,
             2.5 ether,
             bytes32(uint256(1))
         );
         consolidateTaskParams[2] = ConsolidateTaskParam(
             "fromAddr3",
             TICKER,
+            CHAIN_ID,
             CHAIN_ID,
             3.3 ether,
             bytes32(uint256(2))

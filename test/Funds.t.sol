@@ -96,15 +96,15 @@ contract FundsTest is BaseTest {
     function test_Deposit() public {
         vm.startPrank(msgSender);
         // setup deposit info
-        uint256 depositIndex = fundsHandler.getDeposits(msgSender).length;
+        uint256 depositIndex = fundsHandler.getDeposits(msgSender, TICKER, CHAIN_ID).length;
         fundsHandler.submitDepositTask(depositTaskParams);
         taskOpts[0].initialCalldata = abi.encodeWithSelector(
             fundsHandler.recordDeposit.selector,
             depositTaskParams[0].userAddress,
             depositTaskParams[0].chainId,
             depositTaskParams[0].ticker,
-            depositTaskParams[0].depositAddress,
-            depositTaskParams[0].amount
+            depositTaskParams[0].amount,
+            depositTaskParams[0].txHash
         );
         signature = _generateOptSignature(taskOpts, tssKey);
         // check event and result
@@ -112,21 +112,13 @@ contract FundsTest is BaseTest {
         emit ITaskManager.TaskUpdated(taskOpts[0].taskId, State.Completed, uint32(block.timestamp));
         entryPoint.verifyAndCall(taskOpts, signature);
 
-        DepositInfo memory depositInfo = fundsHandler.getDeposit(msgSender, depositIndex);
-        assertEq(
-            abi.encodePacked(DEPOSIT_ADDRESS, TICKER, CHAIN_ID, DEFAULT_AMOUNT),
-            abi.encodePacked(
-                depositInfo.depositAddress,
-                depositInfo.ticker,
-                depositInfo.chainId,
-                depositInfo.amount
-            )
-        );
+        uint256 depositAmount = fundsHandler.getDeposit(msgSender, TICKER, CHAIN_ID, depositIndex);
+        assertEq(depositAmount, depositTaskParams[0].amount);
+        depositIndex = fundsHandler.getDeposits(msgSender, TICKER, CHAIN_ID).length;
+        assertEq(depositIndex, 1); // should have increased by 1
 
         // second deposit
         // setup deposit info
-        depositIndex = fundsHandler.getDeposits(msgSender).length;
-        assertEq(depositIndex, 1); // should have increased by 1
         uint64 newChainId = uint64(1);
         uint256 newAmount = 5 ether;
         depositTaskParams[0].chainId = newChainId;
@@ -138,8 +130,8 @@ contract FundsTest is BaseTest {
             depositTaskParams[0].userAddress,
             depositTaskParams[0].chainId,
             depositTaskParams[0].ticker,
-            depositTaskParams[0].depositAddress,
-            depositTaskParams[0].amount
+            depositTaskParams[0].amount,
+            depositTaskParams[0].txHash
         );
         signature = _generateOptSignature(taskOpts, tssKey);
 
@@ -147,16 +139,15 @@ contract FundsTest is BaseTest {
         vm.expectEmit(true, true, true, true);
         emit ITaskManager.TaskUpdated(taskOpts[0].taskId, State.Completed, uint32(block.timestamp));
         entryPoint.verifyAndCall(taskOpts, signature);
-        depositInfo = fundsHandler.getDeposit(msgSender, depositIndex);
-        assertEq(
-            abi.encodePacked(DEPOSIT_ADDRESS, TICKER, newChainId, newAmount),
-            abi.encodePacked(
-                depositInfo.depositAddress,
-                depositInfo.ticker,
-                depositInfo.chainId,
-                depositInfo.amount
-            )
+        depositAmount = fundsHandler.getDeposit(
+            msgSender,
+            depositTaskParams[0].ticker,
+            depositTaskParams[0].chainId,
+            fundsHandler
+                .getDeposits(msgSender, depositTaskParams[0].ticker, depositTaskParams[0].chainId)
+                .length - 1
         );
+        assertEq(newAmount, depositAmount);
         vm.stopPrank();
     }
 
@@ -192,7 +183,7 @@ contract FundsTest is BaseTest {
                 TICKER,
                 depositAddresses[i],
                 amounts[i],
-                "txHash",
+                string(abi.encodePacked("txHash ", i)),
                 100,
                 0
             );
@@ -204,8 +195,8 @@ contract FundsTest is BaseTest {
                     msgSender,
                     CHAIN_ID,
                     TICKER,
-                    depositAddresses[i],
-                    amounts[i]
+                    amounts[i],
+                    string(abi.encodePacked("txHash ", i))
                 ),
                 ""
             );
@@ -229,17 +220,13 @@ contract FundsTest is BaseTest {
         }
         signature = _generateOptSignature(taskOperations, tssKey);
         entryPoint.verifyAndCall(taskOperations, signature);
-        DepositInfo memory depositInfo;
         for (uint8 i; i < batchSize; ++i) {
             assertEq(
                 uint8(taskManager.getTaskState(taskOperations[i].taskId)),
                 uint8(State.Completed)
             );
-            depositInfo = fundsHandler.getDeposit(msgSender, i);
-            assertEq(
-                abi.encodePacked(depositAddresses[i], amounts[i]),
-                abi.encodePacked(depositInfo.depositAddress, depositInfo.amount)
-            );
+            uint256 depositAmount = fundsHandler.getDeposit(msgSender, TICKER, CHAIN_ID, i);
+            assertEq(amounts[i], depositAmount);
         }
         vm.stopPrank();
     }
@@ -249,7 +236,7 @@ contract FundsTest is BaseTest {
         vm.assume(bytes(_depositAddress).length > 0);
         vm.assume(_amount > MIN_DEFAULT_AMOUNT);
         // setup deposit info
-        uint256 depositIndex = fundsHandler.getDeposits(msgSender).length;
+        uint256 depositIndex = fundsHandler.getDeposits(msgSender, TICKER, CHAIN_ID).length;
         depositTaskParams[0].depositAddress = _depositAddress;
         depositTaskParams[0].amount = _amount;
         fundsHandler.submitDepositTask(depositTaskParams);
@@ -259,8 +246,8 @@ contract FundsTest is BaseTest {
             depositTaskParams[0].userAddress,
             depositTaskParams[0].chainId,
             depositTaskParams[0].ticker,
-            depositTaskParams[0].depositAddress,
-            depositTaskParams[0].amount
+            depositTaskParams[0].amount,
+            depositTaskParams[0].txHash
         );
         signature = _generateOptSignature(taskOpts, tssKey);
 
@@ -268,23 +255,15 @@ contract FundsTest is BaseTest {
         vm.expectEmit(true, true, true, true);
         emit ITaskManager.TaskUpdated(taskOpts[0].taskId, State.Completed, uint32(block.timestamp));
         entryPoint.verifyAndCall(taskOpts, signature);
-        DepositInfo memory depositInfo = fundsHandler.getDeposit(msgSender, depositIndex);
-        assertEq(
-            abi.encodePacked(_depositAddress, TICKER, CHAIN_ID, _amount),
-            abi.encodePacked(
-                depositInfo.depositAddress,
-                depositInfo.ticker,
-                depositInfo.chainId,
-                depositInfo.amount
-            )
-        );
+        uint256 depositAmount = fundsHandler.getDeposit(msgSender, TICKER, CHAIN_ID, depositIndex);
+        assertEq(depositAmount, _amount);
         vm.stopPrank();
     }
 
     function test_Withdraw() public {
         vm.startPrank(msgSender);
         // setup withdrawal info
-        uint256 withdrawIndex = fundsHandler.getWithdrawals(msgSender).length;
+        uint256 withdrawIndex = fundsHandler.getWithdrawals(msgSender, TICKER, CHAIN_ID).length;
         string
             memory withdrawTxHash = "--------------------------------txHash--------------------------------";
         assertEq(withdrawIndex, 0);
@@ -300,7 +279,8 @@ contract FundsTest is BaseTest {
             withdrawTaskParams[0].toAddress,
             withdrawTaskParams[0].amount - WITHDRAW_FEE,
             WITHDRAW_FEE,
-            uint256(288)
+            bytes32(uint256(0)),
+            uint256(320)
         );
         signature = _generateOptSignature(taskOpts, tssKey);
         entryPoint.verifyAndCall(taskOpts, signature);
@@ -313,11 +293,13 @@ contract FundsTest is BaseTest {
         vm.expectEmit(true, true, true, true);
         emit ITaskManager.TaskUpdated(taskOpts[0].taskId, State.Completed, uint32(block.timestamp));
         entryPoint.verifyAndCall(taskOpts, signature);
-        WithdrawalInfo memory withdrawInfo = fundsHandler.getWithdrawal(msgSender, withdrawIndex);
-        assertEq(
-            abi.encodePacked(msgSender, CHAIN_ID, DEFAULT_AMOUNT - WITHDRAW_FEE),
-            abi.encodePacked(withdrawInfo.userAddress, withdrawInfo.chainId, withdrawInfo.amount)
+        uint256 withdrawAmount = fundsHandler.getWithdrawal(
+            msgSender,
+            TICKER,
+            CHAIN_ID,
+            withdrawIndex
         );
+        assertEq(DEFAULT_AMOUNT - WITHDRAW_FEE, withdrawAmount);
         vm.stopPrank();
     }
 
@@ -370,7 +352,8 @@ contract FundsTest is BaseTest {
                     DEPOSIT_ADDRESS,
                     amounts[i] - WITHDRAW_FEE,
                     WITHDRAW_FEE,
-                    uint256(288) + (32 * ((bytes(DEPOSIT_ADDRESS).length - 1) / 32))
+                    bytes32(uint256(i)),
+                    uint256(320) + (32 * ((bytes(DEPOSIT_ADDRESS).length - 1) / 32))
                 ),
                 ""
             );
@@ -394,14 +377,13 @@ contract FundsTest is BaseTest {
         }
         signature = _generateOptSignature(taskOperations, tssKey);
         entryPoint.verifyAndCall(taskOperations, signature);
-        WithdrawalInfo memory withdrawalInfo;
         for (uint16 i; i < batchSize; ++i) {
             assertEq(
                 uint8(taskManager.getTaskState(taskOperations[i].taskId)),
                 uint8(State.Completed)
             );
-            withdrawalInfo = fundsHandler.getWithdrawal(msgSender, i);
-            assertEq(withdrawalInfo.amount, amounts[i] - WITHDRAW_FEE);
+            uint256 withdrawAmount = fundsHandler.getWithdrawal(msgSender, TICKER, CHAIN_ID, i);
+            assertEq(withdrawAmount, amounts[i] - WITHDRAW_FEE);
         }
         vm.stopPrank();
     }
@@ -439,7 +421,8 @@ contract FundsTest is BaseTest {
             _toAddress,
             _amount - WITHDRAW_FEE,
             WITHDRAW_FEE,
-            uint256(288) + (32 * ((bytes(_toAddress).length - 1) / 32))
+            _salt,
+            uint256(320) + (32 * ((bytes(_toAddress).length - 1) / 32))
         );
         signature = _generateOptSignature(taskOpts, tssKey);
         entryPoint.verifyAndCall(taskOpts, signature);
@@ -467,6 +450,7 @@ contract FundsTest is BaseTest {
             "",
             TICKER,
             CHAIN_ID,
+            CHAIN_ID,
             amount,
             bytes32(uint256(0))
         );
@@ -478,6 +462,7 @@ contract FundsTest is BaseTest {
             fromAddr,
             TICKER,
             CHAIN_ID,
+            CHAIN_ID,
             0,
             bytes32(uint256(0))
         );
@@ -488,6 +473,7 @@ contract FundsTest is BaseTest {
         consolidateParams[0] = ConsolidateTaskParam(
             fromAddr,
             TICKER,
+            CHAIN_ID,
             CHAIN_ID,
             amount,
             bytes32(uint256(0))

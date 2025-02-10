@@ -194,8 +194,8 @@ contract EntryPointUpgradeable is IEntryPoint, Initializable, ReentrancyGuardUpg
                 taskManager.updateTask(_operations[i].taskId, State.Failed);
                 continue;
             }
-            // only override task state if dataHash is 0
-            if (task.dataHash == 0) {
+            // only override task state if initialCalldata is empty
+            if (_operations[i].initialCalldata.length == 0) {
                 taskManager.updateTask(_operations[i].taskId, _operations[i].state);
                 continue;
             }

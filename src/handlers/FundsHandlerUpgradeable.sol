@@ -10,8 +10,8 @@ contract FundsHandlerUpgradeable is IFundsHandler, HandlerBase {
     address public immutable feeReceiver = address(0);
     IAssetHandler public immutable assetHandler;
 
-    mapping(address userAddr => DepositInfo[]) public deposits;
-    mapping(address userAddr => WithdrawalInfo[]) public withdrawals;
+    mapping(bytes32 userHash => uint256[] depositAmounts) public deposits;
+    mapping(bytes32 userHash => uint256[] withdrawAmounts) public withdrawals;
 
     constructor(address _assetHandler, address _taskManager) HandlerBase(_taskManager) {
         assetHandler = IAssetHandler(_assetHandler);
@@ -33,8 +33,12 @@ contract FundsHandlerUpgradeable is IFundsHandler, HandlerBase {
     /**
      * @dev Get all deposit records of user.
      */
-    function getDeposits(address _userAddress) external view returns (DepositInfo[] memory) {
-        return deposits[_userAddress];
+    function getDeposits(
+        address _userAddress,
+        bytes32 _ticker,
+        uint64 _chainId
+    ) external view returns (uint256[] memory) {
+        return deposits[keccak256(abi.encodePacked(_userAddress, _ticker, _chainId))];
     }
 
     /**
@@ -42,16 +46,22 @@ contract FundsHandlerUpgradeable is IFundsHandler, HandlerBase {
      */
     function getDeposit(
         address _userAddress,
+        bytes32 _ticker,
+        uint64 _chainId,
         uint256 _index
-    ) external view returns (DepositInfo memory) {
-        return deposits[_userAddress][_index];
+    ) external view returns (uint256) {
+        return deposits[keccak256(abi.encodePacked(_userAddress, _ticker, _chainId))][_index];
     }
 
     /**
      * @dev Get all withdraw records of user.
      */
-    function getWithdrawals(address _userAddress) external view returns (WithdrawalInfo[] memory) {
-        return withdrawals[_userAddress];
+    function getWithdrawals(
+        address _userAddress,
+        bytes32 _ticker,
+        uint64 _chainId
+    ) external view returns (uint256[] memory) {
+        return withdrawals[keccak256(abi.encodePacked(_userAddress, _ticker, _chainId))];
     }
 
     /**
@@ -59,9 +69,11 @@ contract FundsHandlerUpgradeable is IFundsHandler, HandlerBase {
      */
     function getWithdrawal(
         address _userAddress,
+        bytes32 _ticker,
+        uint64 _chainId,
         uint256 _index
-    ) external view returns (WithdrawalInfo memory) {
-        return withdrawals[_userAddress][_index];
+    ) external view returns (uint256) {
+        return withdrawals[keccak256(abi.encodePacked(_userAddress, _ticker, _chainId))][_index];
     }
 
     /**
@@ -93,8 +105,8 @@ contract FundsHandlerUpgradeable is IFundsHandler, HandlerBase {
                     _params[i].userAddress,
                     _params[i].chainId,
                     _params[i].ticker,
-                    _params[i].depositAddress,
-                    _params[i].amount
+                    _params[i].amount,
+                    _params[i].txHash
                 )
             );
         }
@@ -108,12 +120,10 @@ contract FundsHandlerUpgradeable is IFundsHandler, HandlerBase {
         address _userAddress,
         uint64 _chainId,
         bytes32 _ticker,
-        string calldata _depositAddress,
-        uint256 _amount
+        uint256 _amount,
+        string calldata // _txHash (not used)
     ) external onlyRole(ENTRYPOINT_ROLE) validateAsset(_ticker, _chainId) {
-        deposits[_userAddress].push(
-            DepositInfo(_userAddress, _chainId, _ticker, _depositAddress, _amount)
-        );
+        deposits[keccak256(abi.encodePacked(_userAddress, _ticker, _chainId))].push(_amount);
         emit INIP20.NIP20TokenEvent_mintb(_userAddress, _ticker, _amount);
     }
 
@@ -166,9 +176,10 @@ contract FundsHandlerUpgradeable is IFundsHandler, HandlerBase {
                     _params[i].toAddress,
                     _params[i].amount - withdrawFee,
                     withdrawFee,
+                    _params[i].salt,
                     // offset for txHash
                     // @dev "-1" if it is exact 32 bytes it does not take one extra slot
-                    uint256(288) + (32 * ((addrLength - 1) / 32))
+                    uint256(320) + (32 * ((addrLength - 1) / 32))
                 )
             );
         }
@@ -185,11 +196,10 @@ contract FundsHandlerUpgradeable is IFundsHandler, HandlerBase {
         string calldata _toAddress,
         uint256 _amount,
         uint256 _withdrawFee,
+        bytes32, // _salt (not used)
         string calldata // _txHash (not used)
     ) external onlyRole(ENTRYPOINT_ROLE) validateAsset(_ticker, _chainId) {
-        withdrawals[_userAddress].push(
-            WithdrawalInfo(_userAddress, _chainId, _ticker, _toAddress, _amount)
-        );
+        withdrawals[keccak256(abi.encodePacked(_userAddress, _ticker, _chainId))].push(_amount);
         emit INIP20.NIP20TokenEvent_mintb(feeReceiver, _ticker, _withdrawFee);
     }
 
@@ -213,7 +223,7 @@ contract FundsHandlerUpgradeable is IFundsHandler, HandlerBase {
             uint256 toAddrLength = bytes(_params[i].toAddress).length;
             require(fromAddrLength > 0 && toAddrLength > 0, "Invalid address");
             // empty dataHash, no future on-chain operation
-            dataHash[i] = 0;
+            dataHash[i] = keccak256(abi.encode(_params[i]));
         }
         taskIds = taskManager.submitTaskBatch(dataHash);
     }
@@ -224,6 +234,7 @@ contract FundsHandlerUpgradeable is IFundsHandler, HandlerBase {
      * address[] fromAddr The addresses to consolidate from
      * bytes32 ticker The asset ticker
      * uint64 chainId The chain id
+     * uint64 chainIdTo The chain id of destination chain (if cross chain)
      * uint256 amount The amount to deposit
      */
     function submitConsolidateTask(
@@ -240,7 +251,7 @@ contract FundsHandlerUpgradeable is IFundsHandler, HandlerBase {
             uint256 addrLength = bytes(_params[i].fromAddress).length;
             require(addrLength > 0, "Invalid address");
             // empty dataHash, no future on-chain operation
-            dataHash[i] = 0;
+            dataHash[i] = keccak256(abi.encode(_params[i]));
         }
         taskIds = taskManager.submitTaskBatch(dataHash);
     }

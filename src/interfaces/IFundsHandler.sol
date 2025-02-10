@@ -49,7 +49,8 @@ struct TransferParam {
 struct ConsolidateTaskParam {
     string fromAddress;
     bytes32 ticker;
-    uint64 chainId;
+    uint64 chainIdFrom;
+    uint64 chainIdTo; // optional for cross chain
     uint256 amount;
     bytes32 salt;
 }
@@ -117,6 +118,6 @@ interface IFundsHandler {
     //     string calldata _txHash
     // ) external;
 
-    function getDeposits(address depositAddress) external view returns (DepositInfo[] memory);
-    function getWithdrawals(address depositAddress) external view returns (WithdrawalInfo[] memory);
+    // function getDeposits(address depositAddress) external view returns (DepositInfo[] memory);
+    // function getWithdrawals(address depositAddress) external view returns (WithdrawalInfo[] memory);
 }
