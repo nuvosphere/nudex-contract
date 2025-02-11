@@ -98,7 +98,7 @@ contract TaskManagerUpgradeable is ITaskManager, AccessControlUpgradeable {
         emit TaskSubmittedBatch(taskIds, msg.sender, _dataHashes);
     }
 
-    function updateTaskBatch(
+    function updateTask(
         uint64[] calldata _taskIds,
         State[] calldata _states
     ) external onlyRole(ENTRYPOINT_ROLE) {
@@ -112,6 +112,6 @@ contract TaskManagerUpgradeable is ITaskManager, AccessControlUpgradeable {
             //     taskHashes[_dataHashes[i]] = 0;
             // }
         }
-        emit TaskUpdatedBatch(_taskIds, _states, uint32(block.timestamp));
+        emit TaskUpdated(_taskIds, _states, uint32(block.timestamp));
     }
 }

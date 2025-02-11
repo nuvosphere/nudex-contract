@@ -217,7 +217,7 @@ contract EntryPointUpgradeable is IEntryPoint, Initializable, ReentrancyGuardUpg
                 states[i] = State.Pending;
             }
         }
-        taskManager.updateTaskBatch(taskIds, states);
+        taskManager.updateTask(taskIds, states);
     }
 
     /**

@@ -240,6 +240,6 @@ contract MockData is Script {
         states[0] = State.Completed;
         states[1] = State.Pending;
         states[2] = State.Failed;
-        taskManager.updateTaskBatch(taskIds, states);
+        taskManager.updateTask(taskIds, states);
     }
 }
