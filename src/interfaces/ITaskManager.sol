@@ -17,7 +17,7 @@ struct Task {
 interface ITaskManager {
     event TaskSubmitted(uint64 indexed taskId, address indexed handler, bytes32 dataHash);
     event TaskSubmittedBatch(uint64[] taskIds, address indexed handler, bytes32[] dataHashs);
-    event TaskUpdated(uint64 indexed taskId, State indexed state, uint32 updateTime);
+    event TaskUpdatedBatch(uint64[] taskIds, State[] state, uint32 updateTime);
 
     error EmptyTask();
     error InvalidTask(uint64 taskId);
@@ -34,5 +34,5 @@ interface ITaskManager {
 
     function submitTaskBatch(bytes32[] calldata _context) external returns (uint64[] memory);
 
-    function updateTask(uint64 _taskId, State _state) external;
+    function updateTaskBatch(uint64[] calldata _taskId, State[] calldata _state) external;
 }

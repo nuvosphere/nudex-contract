@@ -223,8 +223,14 @@ contract MockData is Script {
     }
 
     function updateTask() public {
-        taskManager.updateTask(0, State.Completed);
-        taskManager.updateTask(1, State.Pending);
-        taskManager.updateTask(2, State.Failed);
+        uint64[] memory taskIds = new uint64[](3);
+        taskIds[0] = 0;
+        taskIds[1] = 1;
+        taskIds[2] = 2;
+        State[] memory states = new State[](3);
+        states[0] = State.Completed;
+        states[1] = State.Pending;
+        states[2] = State.Failed;
+        taskManager.updateTaskBatch(taskIds, states);
     }
 }

@@ -10,7 +10,6 @@ contract TaskManagerUpgradeable is ITaskManager, AccessControlUpgradeable {
     uint256 public constant MAX_BATCH_SIZE = 200;
 
     uint64 public nextTaskId;
-    uint64 public nextCreatedTaskId;
     mapping(uint64 taskId => Task) public tasks;
     mapping(bytes32 hash => uint64 taskId) public taskHashes;
 
@@ -26,7 +25,6 @@ contract TaskManagerUpgradeable is ITaskManager, AccessControlUpgradeable {
         }
 
         nextTaskId = 1;
-        nextCreatedTaskId = 1;
     }
 
     function getTask(uint64 _taskId) external view returns (Task memory) {
@@ -100,24 +98,20 @@ contract TaskManagerUpgradeable is ITaskManager, AccessControlUpgradeable {
         emit TaskSubmittedBatch(taskIds, msg.sender, _dataHashes);
     }
 
-    /**
-     * @dev Update tast state.
-     * @param _taskId Id of the task.
-     * @param _state The new state of the tast.
-     */
-    function updateTask(uint64 _taskId, State _state) external onlyRole(ENTRYPOINT_ROLE) {
-        Task storage task = tasks[_taskId];
-        if (task.state == State.Created) {
-            require(_taskId == nextCreatedTaskId++, InvalidTask(_taskId));
-        } else {
-            require(task.state == State.Pending, "Task completed");
+    function updateTaskBatch(
+        uint64[] calldata _taskIds,
+        State[] calldata _states
+    ) external onlyRole(ENTRYPOINT_ROLE) {
+        Task storage task;
+        for (uint8 i; i < _taskIds.length; ++i) {
+            task = tasks[_taskIds[i]];
+            require(task.state != State.Completed && task.state != State.Failed, "Task finalized");
+            task.state = _states[i];
+            // TODO: reset dataHash if task failed?
+            // if (_state == State.Failed) {
+            //     taskHashes[_dataHashes[i]] = 0;
+            // }
         }
-
-        // TODO: reset dataHash if task failed?
-        // if (_state == State.Failed) {
-        //     taskHashes[_dataHashes[i]] = 0;
-        // }
-        task.state = _state;
-        emit TaskUpdated(_taskId, _state, uint32(block.timestamp));
+        emit TaskUpdatedBatch(_taskIds, _states, uint32(block.timestamp));
     }
 }

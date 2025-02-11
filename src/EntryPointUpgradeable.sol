@@ -187,11 +187,14 @@ contract EntryPointUpgradeable is IEntryPoint, Initializable, ReentrancyGuardUpg
         // require(_verifyOperation(_operations, tssNonce++, _signature), InvalidSigner(msg.sender));
         bool success;
         Task memory task;
+        uint64[] memory taskIds = new uint64[](_operations.length);
+        State[] memory states = new State[](_operations.length);
         for (uint8 i; i < _operations.length; ++i) {
+            taskIds[i] = _operations[i].taskId;
             task = taskManager.getTask(_operations[i].taskId);
             // only override task state if initialCalldata is empty
             if (_operations[i].initialCalldata.length == 0) {
-                taskManager.updateTask(_operations[i].taskId, _operations[i].state);
+                states[i] = _operations[i].state;
                 continue;
             }
 
@@ -203,17 +206,18 @@ contract EntryPointUpgradeable is IEntryPoint, Initializable, ReentrancyGuardUpg
                 );
                 if (success) {
                     // success
-                    taskManager.updateTask(_operations[i].taskId, State.Completed);
+                    states[i] = State.Completed;
                 } else {
                     // fail
-                    taskManager.updateTask(_operations[i].taskId, State.Failed);
+                    states[i] = State.Failed;
                 }
             }
             // pending task
             else if (_operations[i].state == State.Pending) {
-                taskManager.updateTask(_operations[i].taskId, State.Pending);
+                states[i] = State.Pending;
             }
         }
+        taskManager.updateTaskBatch(taskIds, states);
     }
 
     /**

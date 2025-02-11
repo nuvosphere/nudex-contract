@@ -25,6 +25,9 @@ contract FundsTest is BaseTest {
     DepositParam[] public depositTaskParams;
     WithdrawalParam[] public withdrawTaskParams;
 
+    uint64[] private taskIds;
+    State[] private taskStates;
+
     function setUp() public override {
         super.setUp();
 
@@ -82,6 +85,8 @@ contract FundsTest is BaseTest {
                 bytes32(uint256(0))
             )
         );
+        taskIds.push(1);
+        taskStates.push(State.Completed);
     }
 
     function test_Deposit() public {
@@ -101,7 +106,7 @@ contract FundsTest is BaseTest {
         signature = _generateOptSignature(taskOpts, tssKey);
         // check event and result
         vm.expectEmit(true, true, true, true);
-        emit ITaskManager.TaskUpdated(taskOpts[0].taskId, State.Completed, uint32(block.timestamp));
+        emit ITaskManager.TaskUpdatedBatch(taskIds, taskStates, uint32(block.timestamp));
         entryPoint.verifyAndCall(taskOpts, signature);
 
         uint256 depositAmount = fundsHandler.getDeposit(msgSender, TICKER, CHAIN_ID, depositIndex);
@@ -117,6 +122,7 @@ contract FundsTest is BaseTest {
         depositTaskParams[0].chainId = newChainId;
         depositTaskParams[0].amount = newAmount;
         fundsHandler.submitDepositTask(depositTaskParams);
+        taskIds[0] = 2;
         taskOpts[0].taskId++;
         taskOpts[0].initialCalldata = abi.encodeWithSelector(
             fundsHandler.recordDeposit.selector,
@@ -130,7 +136,7 @@ contract FundsTest is BaseTest {
 
         // check event and result
         vm.expectEmit(true, true, true, true);
-        emit ITaskManager.TaskUpdated(taskOpts[0].taskId, State.Completed, uint32(block.timestamp));
+        emit ITaskManager.TaskUpdatedBatch(taskIds, taskStates, uint32(block.timestamp));
         entryPoint.verifyAndCall(taskOpts, signature);
         depositAmount = fundsHandler.getDeposit(
             msgSender,
@@ -243,7 +249,7 @@ contract FundsTest is BaseTest {
 
         // check event and result
         vm.expectEmit(true, true, true, true);
-        emit ITaskManager.TaskUpdated(taskOpts[0].taskId, State.Completed, uint32(block.timestamp));
+        emit ITaskManager.TaskUpdatedBatch(taskIds, taskStates, uint32(block.timestamp));
         entryPoint.verifyAndCall(taskOpts, signature);
         uint256 depositAmount = fundsHandler.getDeposit(msgSender, TICKER, CHAIN_ID, depositIndex);
         assertEq(depositAmount, _amount);
@@ -284,7 +290,7 @@ contract FundsTest is BaseTest {
         signature = _generateOptSignature(taskOpts, tssKey);
         // check event and result
         vm.expectEmit(true, true, true, true);
-        emit ITaskManager.TaskUpdated(taskOpts[0].taskId, State.Completed, uint32(block.timestamp));
+        emit ITaskManager.TaskUpdatedBatch(taskIds, taskStates, uint32(block.timestamp));
         entryPoint.verifyAndCall(taskOpts, signature);
         uint256 withdrawAmount = fundsHandler.getWithdrawal(
             msgSender,
@@ -437,7 +443,7 @@ contract FundsTest is BaseTest {
         signature = _generateOptSignature(taskOpts, tssKey);
         // check event and result
         vm.expectEmit(true, true, true, true);
-        emit ITaskManager.TaskUpdated(taskOpts[0].taskId, State.Completed, uint32(block.timestamp));
+        emit ITaskManager.TaskUpdatedBatch(taskIds, taskStates, uint32(block.timestamp));
         entryPoint.verifyAndCall(taskOpts, signature);
         vm.stopPrank();
     }
@@ -487,7 +493,7 @@ contract FundsTest is BaseTest {
         signature = _generateOptSignature(taskOpts, tssKey);
 
         vm.expectEmit(true, true, true, true);
-        emit ITaskManager.TaskUpdated(taskOpts[0].taskId, State.Completed, uint32(block.timestamp));
+        emit ITaskManager.TaskUpdatedBatch(taskIds, taskStates, uint32(block.timestamp));
         entryPoint.verifyAndCall(taskOpts, signature);
         vm.stopPrank();
     }
