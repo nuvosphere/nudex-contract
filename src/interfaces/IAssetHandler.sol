@@ -1,6 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
+enum AssetType {
+    ERC20,
+    Native,
+    BTC,
+    Inscription,
+    Ordinal
+}
+
 enum PairState {
     Inactive,
     Active,
@@ -13,6 +21,7 @@ enum PairType {
 }
 
 struct AssetParam {
+    AssetType assetType;
     uint8 decimals;
     bool depositEnabled;
     bool withdrawalEnabled;
@@ -23,6 +32,7 @@ struct AssetParam {
 
 struct NudexAsset {
     uint32 listIndex;
+    AssetType assetType;
     uint8 decimals;
     bool depositEnabled;
     bool withdrawalEnabled;

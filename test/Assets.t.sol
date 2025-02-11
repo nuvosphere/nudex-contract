@@ -4,7 +4,7 @@ import "./BaseTest.sol";
 import {TestHelper} from "./utils/TestHelper.sol";
 
 import {AssetHandlerUpgradeable} from "../src/handlers/AssetHandlerUpgradeable.sol";
-import {IAssetHandler, AssetParam, Pair, PairState, PairType, TokenInfo} from "../src/interfaces/IAssetHandler.sol";
+import {IAssetHandler, AssetType, AssetParam, Pair, PairState, PairType, TokenInfo} from "../src/interfaces/IAssetHandler.sol";
 import {ITaskManager, Task} from "../src/interfaces/ITaskManager.sol";
 
 contract AssetsTest is BaseTest {
@@ -35,6 +35,7 @@ contract AssetsTest is BaseTest {
 
         // list new asset and token
         AssetParam memory assetParam = AssetParam(
+            AssetType.ERC20,
             18,
             true,
             true,
@@ -54,13 +55,29 @@ contract AssetsTest is BaseTest {
         // list asset
         bytes32 assetBTicker = "TOKEN_TICKER_10";
         assertEq(assetHandler.getAllAssets().length, 1);
-        AssetParam memory assetParam = AssetParam(10, false, false, 0, 0, "Token02");
+        AssetParam memory assetParam = AssetParam(
+            AssetType.ERC20,
+            10,
+            false,
+            false,
+            0,
+            0,
+            "Token02"
+        );
         assetHandler.listNewAsset(assetBTicker, assetParam);
         assertEq(assetHandler.getAllAssets().length, 2);
 
         // update listed asset
         assertEq(assetHandler.getAssetDetails(TICKER).decimals, 18);
-        assetParam = AssetParam(10, false, true, 0, MIN_WITHDRAW_AMOUNT, "Token01");
+        assetParam = AssetParam(
+            AssetType.ERC20,
+            10,
+            false,
+            true,
+            0,
+            MIN_WITHDRAW_AMOUNT,
+            "Token01"
+        );
         assetHandler.updateAsset(TICKER, assetParam);
         assertEq(assetHandler.getAssetDetails(TICKER).decimals, 10);
 

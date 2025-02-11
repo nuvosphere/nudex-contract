@@ -6,7 +6,8 @@ import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 
 import {NuvoProxy, ITransparentUpgradeableProxy} from "../src/proxies/NuvoProxy.sol";
 import {AccountHandlerUpgradeable} from "../src/handlers/AccountHandlerUpgradeable.sol";
-import {AssetHandlerUpgradeable, AssetParam, TokenInfo} from "../src/handlers/AssetHandlerUpgradeable.sol";
+import {AssetHandlerUpgradeable} from "../src/handlers/AssetHandlerUpgradeable.sol";
+import {AssetType, AssetParam, TokenInfo} from "../src/interfaces/IAssetHandler.sol";
 import {FundsHandlerUpgradeable, DepositParam, WithdrawalParam, ConsolidateTaskParam} from "../src/handlers/FundsHandlerUpgradeable.sol";
 import {TaskManagerUpgradeable, State} from "../src/TaskManagerUpgradeable.sol";
 import {IAccountHandler, AddressCategory} from "../src/interfaces/IAccountHandler.sol";
@@ -93,7 +94,15 @@ contract MockData is Script {
 
     function assetData() public {
         // asset
-        AssetParam memory assetParam = AssetParam(18, true, true, 1 ether, 1 ether, "Token_Alias");
+        AssetParam memory assetParam = AssetParam(
+            AssetType.ERC20,
+            18,
+            true,
+            true,
+            1 ether,
+            1 ether,
+            "Token_Alias"
+        );
         assetHandler.listNewAsset(TICKER, assetParam);
         TokenInfo[] memory testTokenInfo = new TokenInfo[](1);
         testTokenInfo[0] = TokenInfo(CHAIN_ID, true, uint8(18), "0xContractAddress", "SYMBOL", 0);

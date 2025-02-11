@@ -3,7 +3,8 @@ pragma solidity ^0.8.0;
 import "./BaseTest.sol";
 import {TestHelper} from "./utils/TestHelper.sol";
 
-import {AssetHandlerUpgradeable, AssetParam, TokenInfo} from "../src/handlers/AssetHandlerUpgradeable.sol";
+import {AssetHandlerUpgradeable} from "../src/handlers/AssetHandlerUpgradeable.sol";
+import {AssetType, AssetParam, TokenInfo} from "../src/interfaces/IAssetHandler.sol";
 import {FundsHandlerUpgradeable} from "../src/handlers/FundsHandlerUpgradeable.sol";
 import {IFundsHandler, DepositParam, WithdrawalParam, ConsolidateTaskParam, TransferParam} from "../src/interfaces/IFundsHandler.sol";
 import {ITaskManager, State} from "../src/interfaces/ITaskManager.sol";
@@ -39,6 +40,7 @@ contract FundsTest is BaseTest {
         assetHandler = AssetHandlerUpgradeable(ahProxy);
         assetHandler.initialize(thisAddr, thisAddr, msgSender);
         AssetParam memory assetParam = AssetParam(
+            AssetType.ERC20,
             18,
             true,
             true,
