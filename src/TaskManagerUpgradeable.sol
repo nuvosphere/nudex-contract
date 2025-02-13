@@ -69,18 +69,9 @@ contract TaskManagerUpgradeable is ITaskManager, AccessControlUpgradeable {
 
     /**
      * @dev Add new task.
-     * @param _dataHash The context of the task.
+     * @param _dataHashes The context of the task.
      */
-    function submitTask(bytes32 _dataHash) external onlyRole(HANDLER_ROLE) returns (uint64 taskId) {
-        require(taskHashes[_dataHash] == 0, "Duplicate task");
-        taskId = nextTaskId++;
-        tasks[taskId] = Task({state: State.Created, handler: msg.sender, dataHash: _dataHash});
-        taskHashes[_dataHash] = taskId;
-
-        emit TaskSubmitted(taskId, msg.sender, _dataHash);
-    }
-
-    function submitTaskBatch(
+    function submitTask(
         bytes32[] calldata _dataHashes
     ) external onlyRole(HANDLER_ROLE) returns (uint64[] memory taskIds) {
         require(_dataHashes.length <= MAX_BATCH_SIZE, "Exceed max batch size");
@@ -95,7 +86,7 @@ contract TaskManagerUpgradeable is ITaskManager, AccessControlUpgradeable {
             });
             taskHashes[_dataHashes[i]] = taskIds[i];
         }
-        emit TaskSubmittedBatch(taskIds, msg.sender, _dataHashes);
+        emit TaskSubmitted(taskIds, msg.sender, _dataHashes);
     }
 
     function updateTask(
@@ -112,6 +103,6 @@ contract TaskManagerUpgradeable is ITaskManager, AccessControlUpgradeable {
             //     taskHashes[_dataHashes[i]] = 0;
             // }
         }
-        emit TaskUpdated(_taskIds, _states, uint32(block.timestamp));
+        emit TaskUpdated(_taskIds, _states);
     }
 }

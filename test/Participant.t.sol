@@ -86,10 +86,7 @@ contract ParticipantTest is BaseTest {
 
         // successfully add new user
         vm.prank(msgSender);
-        taskOpts[0].taskId = participantHandler.submitAddParticipantTask(
-            newParticipant,
-            bytes32(uint256(1))
-        );
+        participantHandler.submitAddParticipantTask(newParticipant, bytes32(uint256(1)));
         taskOpts[0].initialCalldata = abi.encodeWithSelector(
             participantHandler.addParticipant.selector,
             newParticipant,
@@ -116,10 +113,8 @@ contract ParticipantTest is BaseTest {
 
         // remove the added user
         vm.prank(msgSender);
-        taskOpts[0].taskId = participantHandler.submitRemoveParticipantTask(
-            newParticipant,
-            bytes32(uint256(0))
-        );
+        participantHandler.submitRemoveParticipantTask(newParticipant, bytes32(uint256(0)));
+        taskOpts[0].taskId = taskManager.nextTaskId() - 1;
         taskOpts[0].initialCalldata = abi.encodeWithSelector(
             participantHandler.removeParticipant.selector,
             newParticipant,
@@ -152,6 +147,7 @@ contract ParticipantTest is BaseTest {
     }
 
     function test_massAddAndRemove() public {
+        uint64 initialTaskId = taskManager.nextTaskId();
         uint8 initNumOfParticipant = 3;
         uint8 batchSize = 20;
         TaskOperation[] memory taskOperations = new TaskOperation[](batchSize);
@@ -160,11 +156,9 @@ contract ParticipantTest is BaseTest {
             // add a participant
             newParticipants[i] = makeAddr(UintToString.uint256ToString(i));
             _lockFor(newParticipants[i]);
+            participantHandler.submitAddParticipantTask(newParticipants[i], bytes32(uint256(i)));
             taskOperations[i] = TaskOperation(
-                participantHandler.submitAddParticipantTask(
-                    newParticipants[i],
-                    bytes32(uint256(i))
-                ),
+                i + initialTaskId,
                 State.Completed,
                 abi.encodeWithSelector(
                     participantHandler.addParticipant.selector,
@@ -183,11 +177,9 @@ contract ParticipantTest is BaseTest {
         vm.startPrank(msgSender);
         for (uint8 i; i < batchSize; ++i) {
             // remove a participant
+            participantHandler.submitRemoveParticipantTask(newParticipants[i], bytes32(uint256(i)));
             taskOperations[i] = TaskOperation(
-                participantHandler.submitRemoveParticipantTask(
-                    newParticipants[i],
-                    bytes32(uint256(i))
-                ),
+                i + initialTaskId + batchSize,
                 State.Completed,
                 abi.encodeWithSelector(
                     participantHandler.removeParticipant.selector,
@@ -208,10 +200,7 @@ contract ParticipantTest is BaseTest {
     function _addParticipant(address _newParticipant) internal returns (address) {
         _lockFor(_newParticipant);
         // add new user through entryPoint
-        taskOpts[0].taskId = participantHandler.submitAddParticipantTask(
-            _newParticipant,
-            bytes32(uint256(999))
-        );
+        participantHandler.submitAddParticipantTask(_newParticipant, bytes32(uint256(999)));
         taskOpts[0].initialCalldata = abi.encodeWithSelector(
             participantHandler.addParticipant.selector,
             _newParticipant,

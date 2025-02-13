@@ -108,7 +108,7 @@ contract FundsTest is BaseTest {
         signature = _generateOptSignature(taskOpts, tssKey);
         // check event and result
         vm.expectEmit(true, true, true, true);
-        emit ITaskManager.TaskUpdated(taskIds, taskStates, uint32(block.timestamp));
+        emit ITaskManager.TaskUpdated(taskIds, taskStates);
         entryPoint.verifyAndCall(taskOpts, signature);
 
         uint256 depositAmount = fundsHandler.getDeposit(msgSender, TICKER, CHAIN_ID, depositIndex);
@@ -138,7 +138,7 @@ contract FundsTest is BaseTest {
 
         // check event and result
         vm.expectEmit(true, true, true, true);
-        emit ITaskManager.TaskUpdated(taskIds, taskStates, uint32(block.timestamp));
+        emit ITaskManager.TaskUpdated(taskIds, taskStates);
         entryPoint.verifyAndCall(taskOpts, signature);
         depositAmount = fundsHandler.getDeposit(
             msgSender,
@@ -251,7 +251,7 @@ contract FundsTest is BaseTest {
 
         // check event and result
         vm.expectEmit(true, true, true, true);
-        emit ITaskManager.TaskUpdated(taskIds, taskStates, uint32(block.timestamp));
+        emit ITaskManager.TaskUpdated(taskIds, taskStates);
         entryPoint.verifyAndCall(taskOpts, signature);
         uint256 depositAmount = fundsHandler.getDeposit(msgSender, TICKER, CHAIN_ID, depositIndex);
         assertEq(depositAmount, _amount);
@@ -292,7 +292,7 @@ contract FundsTest is BaseTest {
         signature = _generateOptSignature(taskOpts, tssKey);
         // check event and result
         vm.expectEmit(true, true, true, true);
-        emit ITaskManager.TaskUpdated(taskIds, taskStates, uint32(block.timestamp));
+        emit ITaskManager.TaskUpdated(taskIds, taskStates);
         entryPoint.verifyAndCall(taskOpts, signature);
         uint256 withdrawAmount = fundsHandler.getWithdrawal(
             msgSender,
@@ -445,7 +445,7 @@ contract FundsTest is BaseTest {
         signature = _generateOptSignature(taskOpts, tssKey);
         // check event and result
         vm.expectEmit(true, true, true, true);
-        emit ITaskManager.TaskUpdated(taskIds, taskStates, uint32(block.timestamp));
+        emit ITaskManager.TaskUpdated(taskIds, taskStates);
         entryPoint.verifyAndCall(taskOpts, signature);
         vm.stopPrank();
     }
@@ -495,7 +495,7 @@ contract FundsTest is BaseTest {
         signature = _generateOptSignature(taskOpts, tssKey);
 
         vm.expectEmit(true, true, true, true);
-        emit ITaskManager.TaskUpdated(taskIds, taskStates, uint32(block.timestamp));
+        emit ITaskManager.TaskUpdated(taskIds, taskStates);
         entryPoint.verifyAndCall(taskOpts, signature);
         vm.stopPrank();
     }
@@ -556,7 +556,6 @@ contract FundsTest is BaseTest {
         fundsHandler.submitTransferTask(transferParams);
         taskOpts[0].extraData = TestHelper.getPaddedString(txHash);
         signature = _generateOptSignature(taskOpts, tssKey);
-        console.log("taskOpts len", taskOpts.length);
         entryPoint.verifyAndCall(taskOpts, signature);
         vm.stopPrank();
     }

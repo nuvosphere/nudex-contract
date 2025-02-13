@@ -110,7 +110,7 @@ contract FundsHandlerUpgradeable is IFundsHandler, HandlerBase {
                 )
             );
         }
-        taskIds = taskManager.submitTaskBatch(dataHash);
+        taskIds = taskManager.submitTask(dataHash);
     }
 
     /**
@@ -184,7 +184,7 @@ contract FundsHandlerUpgradeable is IFundsHandler, HandlerBase {
                 )
             );
         }
-        taskIds = taskManager.submitTaskBatch(dataHash);
+        taskIds = taskManager.submitTask(dataHash);
     }
 
     /**
@@ -227,7 +227,7 @@ contract FundsHandlerUpgradeable is IFundsHandler, HandlerBase {
             // empty dataHash, no future on-chain operation
             dataHash[i] = keccak256(abi.encode(_params[i]));
         }
-        taskIds = taskManager.submitTaskBatch(dataHash);
+        taskIds = taskManager.submitTask(dataHash);
     }
 
     /**
@@ -255,6 +255,6 @@ contract FundsHandlerUpgradeable is IFundsHandler, HandlerBase {
             // empty dataHash, no future on-chain operation
             dataHash[i] = keccak256(abi.encode(_params[i]));
         }
-        taskIds = taskManager.submitTaskBatch(dataHash);
+        taskIds = taskManager.submitTask(dataHash);
     }
 }
