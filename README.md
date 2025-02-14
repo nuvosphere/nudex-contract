@@ -9,13 +9,13 @@ Smart contracts used by nuDex deposits and withdraw
 | Contract           | Address                                    |
 | ------------------ | ------------------------------------------ |
 | NuvoToken          | 0xb1de22C4DAAcB986d8bD39Fb0FCC9D54C511002E |
-| EntryPoint         | 0x90dF20818B42083453C183A451753EC31defB3Cb |
-| NuvoLock           | 0x151E1300149e60C261b4AaF172B8a41e50AbeC42 |
-| TaskManager        | 0x4884ebc702D5Af39Bff42ef382c7EaadCF30dD1e |
-| ParticipantHandler | 0x782079f3bC220C3a98E7060481DE5278f853A4a4 |
-| AccountHandler     | 0xb113553b8aa58b6999B3FefDFF16E15CcD9F8b48 |
-| AssetHandler       | 0xb6E9Bbdd37681011575c781f4D5b5104AF4343A1 |
-| FundsHandler       | 0x80d1040B128AC35906aFECcE8D25f735b63E7Fa5 |
+| EntryPoint         | 0x409825a8EC85C10f853ed22D0DBA47f0DcA15089 |
+| NuvoLock           | 0x37FBCF60EdA311D25954fD0837a86Ba389a4155B |
+| TaskManager        | 0x09825E7364bcFd776251467115439328e67E8346 |
+| ParticipantHandler | 0x0335bb52282521015FF96FcD15e5DA30001613b2 |
+| AccountHandler     | 0x4b70853C7f73b2f1daBb526C9fACC955415a8EEA |
+| AssetHandler       | 0x8f5020E514A36ff8e50B15a53c121b5CE59CaAdD |
+| FundsHandler       | 0x38D55C9c45C97AD624d47bA03560D3a569146359 |
 
 submitter: 0x1D2cd50A3cF3c55a7982AD54F9f364C1e953Bc57  
 participant 0 address: 0x3a818294ca1F3C27d7588b123Ec43F2546fa07f4  
