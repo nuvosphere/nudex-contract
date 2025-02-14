@@ -2,19 +2,27 @@
 pragma solidity ^0.8.26;
 
 import {HandlerBase} from "./HandlerBase.sol";
+import {IAccountHandler} from "../interfaces/IAccountHandler.sol";
 import {IAssetHandler} from "../interfaces/IAssetHandler.sol";
-import {IFundsHandler, DepositParam, WithdrawalParam, TransferParam, ConsolidateTaskParam} from "../interfaces/IFundsHandler.sol";
+import {IFundsHandler, AddressCategory, DepositParam, WithdrawalParam, TransferParam, ConsolidateTaskParam} from "../interfaces/IFundsHandler.sol";
 import {INIP20} from "../interfaces/INIP20.sol";
 // import {console} from "forge-std/console.sol";
+
 contract FundsHandlerUpgradeable is IFundsHandler, HandlerBase {
     address public immutable feeReceiver = address(0);
+    IAccountHandler public immutable accountHandler;
     IAssetHandler public immutable assetHandler;
 
     mapping(bytes32 => uint256) public totalValueLocked;
-    mapping(bytes32 userHash => uint256[] depositAmounts) public deposits;
-    mapping(bytes32 userHash => uint256[] withdrawAmounts) public withdrawals;
+    mapping(bytes32 userHash => uint256[] depositAmounts) private deposits;
+    mapping(bytes32 userHash => uint256[] withdrawAmounts) private withdrawals;
 
-    constructor(address _assetHandler, address _taskManager) HandlerBase(_taskManager) {
+    constructor(
+        address _accountHandler,
+        address _assetHandler,
+        address _taskManager
+    ) HandlerBase(_taskManager) {
+        accountHandler = IAccountHandler(_accountHandler);
         assetHandler = IAssetHandler(_assetHandler);
     }
 
@@ -35,46 +43,46 @@ contract FundsHandlerUpgradeable is IFundsHandler, HandlerBase {
      * @dev Get all deposit records of user.
      */
     function getDeposits(
-        address _userAddress,
+        uint32 _accountNumber,
         bytes32 _ticker,
         uint64 _chainId
     ) external view returns (uint256[] memory) {
-        return deposits[keccak256(abi.encodePacked(_userAddress, _ticker, _chainId))];
+        return deposits[keccak256(abi.encodePacked(_accountNumber, _ticker, _chainId))];
     }
 
     /**
      * @dev Get n-th deposit record of user.
      */
     function getDeposit(
-        address _userAddress,
+        uint32 _accountNumber,
         bytes32 _ticker,
         uint64 _chainId,
         uint256 _index
     ) external view returns (uint256) {
-        return deposits[keccak256(abi.encodePacked(_userAddress, _ticker, _chainId))][_index];
+        return deposits[keccak256(abi.encodePacked(_accountNumber, _ticker, _chainId))][_index];
     }
 
     /**
      * @dev Get all withdraw records of user.
      */
     function getWithdrawals(
-        address _userAddress,
+        uint32 _accountNumber,
         bytes32 _ticker,
         uint64 _chainId
     ) external view returns (uint256[] memory) {
-        return withdrawals[keccak256(abi.encodePacked(_userAddress, _ticker, _chainId))];
+        return withdrawals[keccak256(abi.encodePacked(_accountNumber, _ticker, _chainId))];
     }
 
     /**
      * @dev Get n-th withdraw record of user.
      */
     function getWithdrawal(
-        address _userAddress,
+        uint32 _accountNumber,
         bytes32 _ticker,
         uint64 _chainId,
         uint256 _index
     ) external view returns (uint256) {
-        return withdrawals[keccak256(abi.encodePacked(_userAddress, _ticker, _chainId))][_index];
+        return withdrawals[keccak256(abi.encodePacked(_accountNumber, _ticker, _chainId))][_index];
     }
 
     /**
@@ -102,7 +110,7 @@ contract FundsHandlerUpgradeable is IFundsHandler, HandlerBase {
             dataHash[i] = keccak256(
                 abi.encodeWithSelector(
                     this.recordDeposit.selector,
-                    _params[i].userAddress,
+                    _params[i].accountNumber,
                     _params[i].chainId,
                     _params[i].ticker,
                     _params[i].amount,
@@ -117,15 +125,19 @@ contract FundsHandlerUpgradeable is IFundsHandler, HandlerBase {
      * @dev Record deposit info.
      */
     function recordDeposit(
-        address _userAddress,
+        uint32 _accountNumber,
         uint64 _chainId,
         bytes32 _ticker,
         uint256 _amount,
         string calldata // _txHash (not used)
     ) external onlyRole(ENTRYPOINT_ROLE) validateAsset(_ticker, _chainId) {
-        deposits[keccak256(abi.encodePacked(_userAddress, _ticker, _chainId))].push(_amount);
+        deposits[keccak256(abi.encodePacked(_accountNumber, _ticker, _chainId))].push(_amount);
         totalValueLocked[_ticker] += _amount;
-        emit INIP20.NIP20TokenEvent_mintb(_userAddress, _ticker, _amount);
+        emit INIP20.NIP20TokenEvent_mintb(
+            accountHandler.userAddresses(_accountNumber),
+            _ticker,
+            _amount
+        );
     }
 
     /**
@@ -158,12 +170,12 @@ contract FundsHandlerUpgradeable is IFundsHandler, HandlerBase {
             require(withdrawFee < _params[i].amount, "Insufficient balance to pay fee");
             // remove asset from user's account
             emit INIP20.NIP20TokenEvent_burnb(
-                _params[i].userAddress,
+                accountHandler.userAddresses(_params[i].accountNumber),
                 _params[i].ticker,
                 _params[i].amount
             );
             emit WithdrawFee(
-                _params[i].userAddress,
+                _params[i].accountNumber,
                 _params[i].chainId,
                 _params[i].ticker,
                 withdrawFee
@@ -171,7 +183,7 @@ contract FundsHandlerUpgradeable is IFundsHandler, HandlerBase {
             dataHash[i] = keccak256(
                 abi.encodeWithSelector(
                     this.recordWithdrawal.selector,
-                    _params[i].userAddress,
+                    _params[i].accountNumber,
                     _params[i].chainId,
                     _params[i].ticker,
                     _params[i].toAddress,
@@ -191,7 +203,7 @@ contract FundsHandlerUpgradeable is IFundsHandler, HandlerBase {
      * @dev Record withdraw info.
      */
     function recordWithdrawal(
-        address _userAddress,
+        uint32 _accountNumber,
         uint64 _chainId,
         bytes32 _ticker,
         string calldata _toAddress,
@@ -200,7 +212,7 @@ contract FundsHandlerUpgradeable is IFundsHandler, HandlerBase {
         bytes32, // _salt (not used)
         string calldata // _txHash (not used)
     ) external onlyRole(ENTRYPOINT_ROLE) validateAsset(_ticker, _chainId) {
-        withdrawals[keccak256(abi.encodePacked(_userAddress, _ticker, _chainId))].push(_amount);
+        withdrawals[keccak256(abi.encodePacked(_accountNumber, _ticker, _chainId))].push(_amount);
         totalValueLocked[_ticker] -= _amount;
         emit INIP20.NIP20TokenEvent_mintb(feeReceiver, _ticker, _withdrawFee);
     }

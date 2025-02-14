@@ -95,7 +95,6 @@ contract AssetHandlerUpgradeable is IAssetHandler, HandlerBase {
         tempNudexAsset.updatedTime = uint32(block.timestamp);
 
         // info from param
-        tempNudexAsset.assetType = _assetParam.assetType;
         tempNudexAsset.decimals = _assetParam.decimals;
         tempNudexAsset.depositEnabled = _assetParam.depositEnabled;
         tempNudexAsset.withdrawalEnabled = _assetParam.withdrawalEnabled;
@@ -160,7 +159,6 @@ contract AssetHandlerUpgradeable is IAssetHandler, HandlerBase {
         tempNudexAsset.updatedTime = uint32(block.timestamp);
 
         // info from param
-        tempNudexAsset.assetType = _assetParam.assetType;
         tempNudexAsset.decimals = _assetParam.decimals;
         tempNudexAsset.depositEnabled = _assetParam.depositEnabled;
         tempNudexAsset.withdrawalEnabled = _assetParam.withdrawalEnabled;

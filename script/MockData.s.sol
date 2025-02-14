@@ -14,6 +14,7 @@ import {IAccountHandler, AddressCategory} from "../src/interfaces/IAccountHandle
 
 // this contract is only used for contract testing
 contract MockData is Script {
+    uint32 public constant DEFAULT_ACCOUNT = 10001;
     uint64 public constant CHAIN_ID = 0;
     bytes32 public constant TICKER = "TOKEN_TICKER_18";
     bytes32 public constant FUNDS_ROLE = keccak256("FUNDS_ROLE");
@@ -79,7 +80,11 @@ contract MockData is Script {
             console.log("|AssetHandlerUpgradeable|", address(assetHandler));
 
             // deploy fundsHandler
-            fundsHandler = new FundsHandlerUpgradeable(address(assetHandler), address(taskManager));
+            fundsHandler = new FundsHandlerUpgradeable(
+                address(accountHandler),
+                address(assetHandler),
+                address(taskManager)
+            );
             // proxy = new NuvoProxy(address(fundsHandler), vm.envAddress("PARTICIPANT_2"));
             // fundsHandler = FundsHandlerUpgradeable(address(proxy));
             fundsHandler.initialize(deployer, deployer, deployer);
@@ -94,18 +99,18 @@ contract MockData is Script {
 
     function assetData() public {
         // asset
-        AssetParam memory assetParam = AssetParam(
-            AssetType.ERC20,
-            18,
-            true,
-            true,
-            1 ether,
-            1 ether,
-            "Token_Alias"
-        );
+        AssetParam memory assetParam = AssetParam(18, true, true, 1 ether, 1 ether, "Token_Alias");
         assetHandler.listNewAsset(TICKER, assetParam);
         TokenInfo[] memory testTokenInfo = new TokenInfo[](1);
-        testTokenInfo[0] = TokenInfo(CHAIN_ID, true, uint8(18), "0xContractAddress", "SYMBOL", 0);
+        testTokenInfo[0] = TokenInfo(
+            CHAIN_ID,
+            AssetType.ERC20,
+            true,
+            uint8(18),
+            "0xContractAddress",
+            "SYMBOL",
+            0
+        );
         assetHandler.linkToken(TICKER, testTokenInfo);
 
         assetHandler.tokenSwitch(TICKER, CHAIN_ID, false);
@@ -119,15 +124,25 @@ contract MockData is Script {
     function fundsData(bytes32 _ticker, uint64 _chainId) public {
         // deposit
         DepositParam[] memory depositInfos = new DepositParam[](1);
-        depositInfos[0] = DepositParam(deployer, _chainId, _ticker, 1 ether, "txHash", 0, 0);
+        depositInfos[0] = DepositParam(
+            DEFAULT_ACCOUNT,
+            _chainId,
+            AddressCategory.EVM,
+            _ticker,
+            1 ether,
+            "txHash",
+            0,
+            0
+        );
         fundsHandler.submitDepositTask(depositInfos);
-        fundsHandler.recordDeposit(deployer, _chainId, _ticker, 1 ether, "txHash");
+        fundsHandler.recordDeposit(DEFAULT_ACCOUNT, _chainId, _ticker, 1 ether, "txHash");
 
         // withdraw
         WithdrawalParam[] memory withdrawalInfos = new WithdrawalParam[](1);
         withdrawalInfos[0] = WithdrawalParam(
-            deployer,
+            DEFAULT_ACCOUNT,
             _chainId,
+            AddressCategory.EVM,
             _ticker,
             "124wd5urvxo4H3naXR6QACP1MGVpLeikeR",
             1 ether,
@@ -136,7 +151,7 @@ contract MockData is Script {
 
         fundsHandler.submitWithdrawTask(withdrawalInfos);
         fundsHandler.recordWithdrawal(
-            deployer,
+            DEFAULT_ACCOUNT,
             _chainId,
             _ticker,
             "124wd5urvxo4H3naXR6QACP1MGVpLeikeR",

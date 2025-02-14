@@ -35,7 +35,6 @@ contract AssetsTest is BaseTest {
 
         // list new asset and token
         AssetParam memory assetParam = AssetParam(
-            AssetType.ERC20,
             18,
             true,
             true,
@@ -45,7 +44,15 @@ contract AssetsTest is BaseTest {
         );
         assetHandler.listNewAsset(TICKER, assetParam);
         TokenInfo[] memory testTokenInfo = new TokenInfo[](1);
-        testTokenInfo[0] = TokenInfo(CHAIN_ID, true, uint8(18), "0xContractAddress", "SYMBOL", 0);
+        testTokenInfo[0] = TokenInfo(
+            CHAIN_ID,
+            AssetType.ERC20,
+            true,
+            uint8(18),
+            "0xContractAddress",
+            "SYMBOL",
+            0
+        );
         assetHandler.linkToken(TICKER, testTokenInfo);
         vm.stopPrank();
     }
@@ -55,29 +62,13 @@ contract AssetsTest is BaseTest {
         // list asset
         bytes32 assetBTicker = "TOKEN_TICKER_10";
         assertEq(assetHandler.getAllAssets().length, 1);
-        AssetParam memory assetParam = AssetParam(
-            AssetType.ERC20,
-            10,
-            false,
-            false,
-            0,
-            0,
-            "Token02"
-        );
+        AssetParam memory assetParam = AssetParam(10, false, false, 0, 0, "Token02");
         assetHandler.listNewAsset(assetBTicker, assetParam);
         assertEq(assetHandler.getAllAssets().length, 2);
 
         // update listed asset
         assertEq(assetHandler.getAssetDetails(TICKER).decimals, 18);
-        assetParam = AssetParam(
-            AssetType.ERC20,
-            10,
-            false,
-            true,
-            0,
-            MIN_WITHDRAW_AMOUNT,
-            "Token01"
-        );
+        assetParam = AssetParam(10, false, true, 0, MIN_WITHDRAW_AMOUNT, "Token01");
         assetHandler.updateAsset(TICKER, assetParam);
         assertEq(assetHandler.getAssetDetails(TICKER).decimals, 10);
 
@@ -108,6 +99,7 @@ contract AssetsTest is BaseTest {
         TokenInfo[] memory newTokens = new TokenInfo[](2);
         newTokens[0] = TokenInfo(
             uint64(0x02),
+            AssetType.ERC20,
             true,
             uint8(18),
             "0xNewTokenContractAddress",
@@ -116,6 +108,7 @@ contract AssetsTest is BaseTest {
         );
         newTokens[1] = TokenInfo(
             uint64(0x03),
+            AssetType.ERC20,
             true,
             uint8(18),
             "0xNewTokenContractAddress2",
@@ -129,6 +122,7 @@ contract AssetsTest is BaseTest {
         // update linked token
         TokenInfo memory tokenInfo = TokenInfo(
             uint64(0x01),
+            AssetType.ERC20,
             true,
             uint8(18),
             "0xNewTokenContractAddress",

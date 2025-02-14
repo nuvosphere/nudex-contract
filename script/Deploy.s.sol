@@ -120,7 +120,13 @@ contract Deploy is Script {
 
         // deploy fundsHandler
         fundsHandlerProxy = deployProxy(
-            address(new FundsHandlerUpgradeable(assetHandlerProxy, taskManagerProxy))
+            address(
+                new FundsHandlerUpgradeable(
+                    accountHandlerProxy,
+                    assetHandlerProxy,
+                    taskManagerProxy
+                )
+            )
         );
         FundsHandlerUpgradeable fundsHandler = FundsHandlerUpgradeable(fundsHandlerProxy);
         fundsHandler.initialize(daoContract, entryPointProxy, submitter);

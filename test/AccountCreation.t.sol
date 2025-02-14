@@ -122,14 +122,14 @@ contract AccountCreationTest is BaseTest {
         );
 
         // fail: registerNewAddress(): mismatch account
-        uint32 invalidAccount = DEFAULT_ACCOUNT + 1;
+        address invalidAddress = address(1);
         vm.expectRevert(
-            abi.encodeWithSelector(IAccountHandler.MismatchedAccount.selector, DEFAULT_ACCOUNT)
+            abi.encodeWithSelector(IAccountHandler.MismatchedAccount.selector, msgSender)
         );
         accountHandler.registerNewAddress(
-            msgSender,
-            invalidAccount,
-            AddressCategory.BTC,
+            invalidAddress,
+            DEFAULT_ACCOUNT,
+            AddressCategory.EVM,
             0,
             depositAddress
         );
@@ -148,13 +148,13 @@ contract AccountCreationTest is BaseTest {
 
         // fail: submitRegisterTask(): mismatch account
         taskParams[0] = AccountRegistrationTaskParam(
-            msgSender,
-            invalidAccount,
-            AddressCategory.BTC,
+            invalidAddress,
+            DEFAULT_ACCOUNT,
+            AddressCategory.EVM,
             0
         );
         vm.expectRevert(
-            abi.encodeWithSelector(IAccountHandler.MismatchedAccount.selector, DEFAULT_ACCOUNT)
+            abi.encodeWithSelector(IAccountHandler.MismatchedAccount.selector, msgSender)
         );
         accountHandler.submitRegisterTask(taskParams);
     }

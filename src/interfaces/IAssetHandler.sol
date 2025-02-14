@@ -21,7 +21,6 @@ enum PairType {
 }
 
 struct AssetParam {
-    AssetType assetType;
     uint8 decimals;
     bool depositEnabled;
     bool withdrawalEnabled;
@@ -32,7 +31,6 @@ struct AssetParam {
 
 struct NudexAsset {
     uint32 listIndex;
-    AssetType assetType;
     uint8 decimals;
     bool depositEnabled;
     bool withdrawalEnabled;
@@ -46,6 +44,7 @@ struct NudexAsset {
 
 struct TokenInfo {
     uint64 chainId; // Chain ID for EVM-based assets, or specific IDs for BTC/Ordinal
+    AssetType assetType;
     bool isActive;
     uint8 decimals;
     string contractAddress; // Address for ERC20, Inscription, or 0x0 for BTC/Ordinal/Native token

@@ -117,6 +117,7 @@ contract DeployTest is Script {
 
         // deploy fundsHandler
         FundsHandlerUpgradeable fundsHandler = new FundsHandlerUpgradeable(
+            address(accountHandler),
             address(assetHandler),
             address(taskManager)
         );

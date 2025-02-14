@@ -12,7 +12,7 @@ enum AddressCategory {
 struct AccountRegistrationTaskParam {
     address userAddr;
     uint32 account;
-    AddressCategory chain;
+    AddressCategory addressCategory;
     uint32 index;
 }
 
@@ -31,10 +31,11 @@ interface IAccountHandler {
     error InvalidUserAddress();
     error InvalidAccountNumber(uint32);
     error InvalidInput();
-    error MismatchedAccount(uint32);
+    error MismatchedAccount(address);
     error RegisteredAccount(uint256, string);
 
     function addressRecord(bytes32 _input) external view returns (string memory);
+    function userAddresses(uint32 _accountNumber) external view returns (address);
 
     function userMapping(
         string calldata _addr,
@@ -42,14 +43,14 @@ interface IAccountHandler {
     ) external view returns (address);
 
     function getAddressRecord(
-        uint32 _account,
+        uint32 _accountNumber,
         AddressCategory _chain,
         uint32 _index
     ) external view returns (string memory);
 
     function registerNewAddress(
         address _userAddr,
-        uint32 _account,
+        uint32 _accountNumber,
         AddressCategory _chain,
         uint32 _index,
         string calldata _address

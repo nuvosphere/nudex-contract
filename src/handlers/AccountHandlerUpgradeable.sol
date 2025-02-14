@@ -6,7 +6,7 @@ import {HandlerBase} from "./HandlerBase.sol";
 
 contract AccountHandlerUpgradeable is IAccountHandler, HandlerBase {
     mapping(bytes32 => string) public addressRecord;
-    mapping(address userAddress => uint32 userAccount) public userAccounts;
+    mapping(uint32 userAccount => address userAddress) public userAddresses;
     mapping(string depositAddress => mapping(AddressCategory => address account))
         public userMapping;
 
@@ -23,16 +23,16 @@ contract AccountHandlerUpgradeable is IAccountHandler, HandlerBase {
 
     /**
      * @dev Get registered address record.
-     * @param _account Account number, must be greater than 10000.
-     * @param _chain The chain type of the address.
+     * @param _accountNumber Account number, must be greater than 10000.
+     * @param _addressCategory The address category of the address.
      * @param _index The index of address.
      */
     function getAddressRecord(
-        uint32 _account,
-        AddressCategory _chain,
+        uint32 _accountNumber,
+        AddressCategory _addressCategory,
         uint32 _index
     ) external view returns (string memory) {
-        return addressRecord[keccak256(abi.encodePacked(_account, _chain, _index))];
+        return addressRecord[keccak256(abi.encodePacked(_accountNumber, _addressCategory, _index))];
     }
 
     /**
@@ -40,7 +40,7 @@ contract AccountHandlerUpgradeable is IAccountHandler, HandlerBase {
      * @param _params The task parameters
      * address userAddr The EVM address of the user.
      * uint32 account The account number, must be greater than 10000.
-     * AddressCategory chain The chain type of the address.
+     * AddressCategory addressCategory The addressCategory type of the address.
      * uint32 index The index of address.
      */
     function submitRegisterTask(
@@ -54,19 +54,24 @@ contract AccountHandlerUpgradeable is IAccountHandler, HandlerBase {
             require(param.userAddr != address(0), InvalidUserAddress());
             require(param.account > 10000, InvalidAccountNumber(param.account));
             require(
-                userAccounts[param.userAddr] == 0 || userAccounts[param.userAddr] == param.account,
-                MismatchedAccount(userAccounts[param.userAddr])
+                userAddresses[param.account] == address(0) ||
+                    userAddresses[param.account] == param.userAddr,
+                MismatchedAccount(userAddresses[param.account])
             );
             require(
                 bytes(
                     addressRecord[
-                        keccak256(abi.encodePacked(param.account, param.chain, param.index))
+                        keccak256(
+                            abi.encodePacked(param.account, param.addressCategory, param.index)
+                        )
                     ]
                 ).length == 0,
                 RegisteredAccount(
                     param.account,
                     addressRecord[
-                        keccak256(abi.encodePacked(param.account, param.chain, param.index))
+                        keccak256(
+                            abi.encodePacked(param.account, param.addressCategory, param.index)
+                        )
                     ]
                 )
             );
@@ -76,7 +81,7 @@ contract AccountHandlerUpgradeable is IAccountHandler, HandlerBase {
                     this.registerNewAddress.selector,
                     param.userAddr,
                     param.account,
-                    param.chain,
+                    param.addressCategory,
                     param.index,
                     uint256(160) // offset for address
                 )
@@ -88,36 +93,36 @@ contract AccountHandlerUpgradeable is IAccountHandler, HandlerBase {
     /**
      * @dev Register new deposit address for user account.
      * @param _userAddr The EVM address of the user.
-     * @param _account Account number, must be greater than 10000.
-     * @param _chain The chain type of the address.
+     * @param _accountNumber Account number, must be greater than 10000.
+     * @param _addressCategory The address category of the address.
      * @param _index The index of address.
      * @param _address The registering address.
      */
     function registerNewAddress(
         address _userAddr,
-        uint32 _account,
-        AddressCategory _chain,
+        uint32 _accountNumber,
+        AddressCategory _addressCategory,
         uint32 _index,
         string calldata _address
     ) external onlyRole(ENTRYPOINT_ROLE) {
         require(bytes(_address).length > 0, InvalidAddress());
-        bytes32 hash = keccak256(abi.encodePacked(_account, _chain, _index));
+        bytes32 hash = keccak256(abi.encodePacked(_accountNumber, _addressCategory, _index));
         require(
             bytes(addressRecord[hash]).length == 0,
-            RegisteredAccount(_account, addressRecord[hash])
+            RegisteredAccount(_accountNumber, addressRecord[hash])
         );
 
         // check user address => account binding
-        if (userAccounts[_userAddr] == 0) {
-            userAccounts[_userAddr] = _account;
+        if (userAddresses[_accountNumber] == address(0)) {
+            userAddresses[_accountNumber] = _userAddr;
         } else {
             require(
-                userAccounts[_userAddr] == _account,
-                MismatchedAccount(userAccounts[_userAddr])
+                userAddresses[_accountNumber] == _userAddr,
+                MismatchedAccount(userAddresses[_accountNumber])
             );
         }
 
         addressRecord[hash] = _address;
-        userMapping[_address][_chain] = _userAddr;
+        userMapping[_address][_addressCategory] = _userAddr;
     }
 }
