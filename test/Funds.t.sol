@@ -17,10 +17,10 @@ contract FundsTest is BaseTest {
     uint32 public constant DEFAULT_ACCOUNT = 10001;
     string public constant DEPOSIT_ADDRESS = "0xDepositAddress";
     bytes32 public constant TICKER = "TOKEN_TICKER_18";
-    uint256 public constant MIN_DEFAULT_AMOUNT = 50;
-    uint256 public constant MIN_WITHDRAW_AMOUNT = 50;
+    uint256 public constant MIN_DEPOSIT_AMOUNT = 0.1 ether;
+    uint256 public constant MIN_WITHDRAW_AMOUNT = 0.1 ether;
     uint256 public constant DEFAULT_AMOUNT = 1 ether;
-    uint256 public constant WITHDRAW_FEE = 0.1 ether;
+    uint256 public constant WITHDRAW_FEE = 0.3 ether;
 
     FundsHandlerUpgradeable public fundsHandler;
 
@@ -59,7 +59,7 @@ contract FundsTest is BaseTest {
             18,
             true,
             true,
-            MIN_DEFAULT_AMOUNT,
+            MIN_DEPOSIT_AMOUNT,
             MIN_WITHDRAW_AMOUNT,
             ""
         );
@@ -69,7 +69,7 @@ contract FundsTest is BaseTest {
             CHAIN_ID,
             AssetType.ERC20,
             true,
-            uint8(18),
+            uint8(6),
             "0xContractAddress",
             "SYMBOL",
             WITHDRAW_FEE
@@ -269,7 +269,7 @@ contract FundsTest is BaseTest {
 
     function testFuzz_DepositFuzz(uint256 _amount, string calldata _txHash) public {
         vm.startPrank(msgSender);
-        vm.assume(_amount > MIN_DEFAULT_AMOUNT);
+        vm.assume(_amount > MIN_DEPOSIT_AMOUNT);
         vm.assume(bytes(_txHash).length > 0);
         // setup deposit info
         uint256 depositIndex = fundsHandler.getDeposits(DEFAULT_ACCOUNT, TICKER, CHAIN_ID).length;
@@ -310,12 +310,7 @@ contract FundsTest is BaseTest {
         uint256 withdrawIndex = fundsHandler
             .getWithdrawals(DEFAULT_ACCOUNT, TICKER, CHAIN_ID)
             .length;
-        string
-            memory withdrawTxHash = "--------------------------------txHash--------------------------------";
         assertEq(withdrawIndex, 0);
-        fundsHandler.submitWithdrawTask(withdrawTaskParams);
-
-        // pending task
         taskOpts[0].state = State.Pending;
         taskOpts[0].initialCalldata = abi.encodeWithSelector(
             fundsHandler.recordWithdrawal.selector,
@@ -323,17 +318,27 @@ contract FundsTest is BaseTest {
             withdrawTaskParams[0].chainId,
             withdrawTaskParams[0].ticker,
             withdrawTaskParams[0].toAddress,
-            withdrawTaskParams[0].amount - WITHDRAW_FEE,
+            withdrawTaskParams[0].amount,
             WITHDRAW_FEE,
             bytes32(uint256(0)),
             uint256(320)
         );
+
+        uint256 tokenAmount = (DEFAULT_AMOUNT - WITHDRAW_FEE) / 10 ** 12; // decimal difference (18 - 6)
+        bytes32 dataHash = keccak256(taskOpts[0].initialCalldata);
+        vm.expectEmit();
+        emit IFundsHandler.WithdrawRequest(dataHash, tokenAmount, WITHDRAW_FEE);
+        fundsHandler.submitWithdrawTask(withdrawTaskParams);
+
+        // pending task
         signature = _generateOptSignature(taskOpts, tssKey);
         entryPoint.verifyAndCall(taskOpts, signature);
 
         // completed task
         taskOpts[0].state = State.Completed;
-        taskOpts[0].extraData = TestHelper.getPaddedString(withdrawTxHash);
+        taskOpts[0].extraData = TestHelper.getPaddedString(
+            "--------------------------------txHash--------------------------------"
+        );
         signature = _generateOptSignature(taskOpts, tssKey);
         // check event and result
         vm.expectEmit(true, true, true, true);
@@ -345,8 +350,11 @@ contract FundsTest is BaseTest {
             CHAIN_ID,
             withdrawIndex
         );
-        assertEq(DEFAULT_AMOUNT - WITHDRAW_FEE, withdrawAmount);
-        assertEq(fundsHandler.totalValueLocked(TICKER), DEFAULT_AMOUNT - withdrawAmount);
+        assertEq(withdrawAmount, withdrawTaskParams[0].amount);
+        assertEq(
+            fundsHandler.totalValueLocked(TICKER),
+            DEFAULT_AMOUNT - withdrawTaskParams[0].amount
+        );
         vm.stopPrank();
     }
 
@@ -405,7 +413,7 @@ contract FundsTest is BaseTest {
                     CHAIN_ID,
                     TICKER,
                     DEPOSIT_ADDRESS,
-                    amounts[i] - WITHDRAW_FEE,
+                    amounts[i],
                     WITHDRAW_FEE,
                     bytes32(uint256(i)),
                     uint256(320) + (32 * ((bytes(DEPOSIT_ADDRESS).length - 1) / 32))
@@ -443,7 +451,7 @@ contract FundsTest is BaseTest {
                 CHAIN_ID,
                 i
             );
-            assertEq(withdrawAmount, amounts[i] - WITHDRAW_FEE);
+            assertEq(withdrawAmount, amounts[i]);
         }
         vm.stopPrank();
     }
@@ -455,7 +463,7 @@ contract FundsTest is BaseTest {
         string calldata _txHash
     ) public {
         vm.assume(bytes(_toAddress).length > 0);
-        vm.assume(_amount > MIN_DEFAULT_AMOUNT);
+        vm.assume(_amount < type(uint192).max);
         vm.assume(_amount > WITHDRAW_FEE);
         vm.assume(bytes(_txHash).length > 0);
         vm.prank(entryPointProxy);
@@ -483,7 +491,7 @@ contract FundsTest is BaseTest {
             CHAIN_ID,
             TICKER,
             _toAddress,
-            _amount - WITHDRAW_FEE,
+            _amount,
             WITHDRAW_FEE,
             _salt,
             uint256(320) + (32 * ((bytes(_toAddress).length - 1) / 32))

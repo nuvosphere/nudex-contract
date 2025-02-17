@@ -4,7 +4,6 @@ pragma solidity ^0.8.26;
 enum AssetType {
     ERC20,
     Native,
-    BTC,
     Inscription,
     Ordinal
 }
@@ -49,7 +48,7 @@ struct TokenInfo {
     uint8 decimals;
     string contractAddress; // Address for ERC20, Inscription, or 0x0 for BTC/Ordinal/Native token
     string symbol;
-    uint256 withdrawFee; // constant value
+    uint256 withdrawFee; // constant value, 18 decimals (match Nudex asset's decimals)
 }
 
 struct Pair {

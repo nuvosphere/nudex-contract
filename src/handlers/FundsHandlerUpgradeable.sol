@@ -3,10 +3,10 @@ pragma solidity ^0.8.26;
 
 import {HandlerBase} from "./HandlerBase.sol";
 import {IAccountHandler} from "../interfaces/IAccountHandler.sol";
-import {IAssetHandler} from "../interfaces/IAssetHandler.sol";
+import {IAssetHandler, NudexAsset, TokenInfo} from "../interfaces/IAssetHandler.sol";
 import {IFundsHandler, AddressCategory, DepositParam, WithdrawalParam, TransferParam, ConsolidateTaskParam} from "../interfaces/IFundsHandler.sol";
 import {INIP20} from "../interfaces/INIP20.sol";
-// import {console} from "forge-std/console.sol";
+import {console} from "forge-std/console.sol";
 
 contract FundsHandlerUpgradeable is IFundsHandler, HandlerBase {
     address public immutable feeReceiver = address(0);
@@ -156,30 +156,34 @@ contract FundsHandlerUpgradeable is IFundsHandler, HandlerBase {
         require(_params.length > 0, "Empty input");
         taskIds = new uint64[](_params.length);
         bytes32[] memory dataHash = new bytes32[](_params.length);
+        NudexAsset memory nudexAsset;
+        TokenInfo memory tokenInfo;
         for (uint8 i; i < _params.length; i++) {
-            require(
-                _params[i].amount >=
-                    assetHandler.getAssetDetails(_params[i].ticker).minWithdrawAmount,
-                "Invalid amount"
-            );
+            nudexAsset = assetHandler.getAssetDetails(_params[i].ticker);
+
+            // check min withdraw amount
+            require(_params[i].amount >= nudexAsset.minWithdrawAmount, "Invalid amount");
+
+            // validate toAddress
             uint256 addrLength = bytes(_params[i].toAddress).length;
             require(addrLength > 0, "Invalid address");
-            uint256 withdrawFee = assetHandler
-                .getLinkedToken(_params[i].ticker, _params[i].chainId)
-                .withdrawFee;
+
+            // check fee
+            tokenInfo = assetHandler.getLinkedToken(_params[i].ticker, _params[i].chainId);
+            uint256 withdrawFee = tokenInfo.withdrawFee;
             require(withdrawFee < _params[i].amount, "Insufficient balance to pay fee");
-            // remove asset from user's account
+
+            // deduct asset balance from user's account
             emit INIP20.NIP20TokenEvent_burnb(
                 accountHandler.userAddresses(_params[i].accountNumber),
                 _params[i].ticker,
                 _params[i].amount
             );
-            emit WithdrawFee(
-                _params[i].accountNumber,
-                _params[i].chainId,
-                _params[i].ticker,
-                withdrawFee
-            );
+
+            // calculate the actual withdraw amount on target chain
+            uint256 tokenAmount = (((_params[i].amount - withdrawFee) *
+                (10 ** tokenInfo.decimals)) / (10 ** nudexAsset.decimals));
+
             dataHash[i] = keccak256(
                 abi.encodeWithSelector(
                     this.recordWithdrawal.selector,
@@ -187,7 +191,7 @@ contract FundsHandlerUpgradeable is IFundsHandler, HandlerBase {
                     _params[i].chainId,
                     _params[i].ticker,
                     _params[i].toAddress,
-                    _params[i].amount - withdrawFee,
+                    _params[i].amount,
                     withdrawFee,
                     _params[i].salt,
                     // offset for txHash
@@ -195,6 +199,7 @@ contract FundsHandlerUpgradeable is IFundsHandler, HandlerBase {
                     uint256(320) + (32 * ((addrLength - 1) / 32))
                 )
             );
+            emit WithdrawRequest(dataHash[i], tokenAmount, withdrawFee);
         }
         taskIds = taskManager.submitTask(dataHash);
     }
@@ -236,7 +241,6 @@ contract FundsHandlerUpgradeable is IFundsHandler, HandlerBase {
             uint256 fromAddrLength = bytes(_params[i].fromAddress).length;
             uint256 toAddrLength = bytes(_params[i].toAddress).length;
             require(fromAddrLength > 0 && toAddrLength > 0, "Invalid address");
-            // empty dataHash, no future on-chain operation
             dataHash[i] = keccak256(abi.encode(_params[i]));
         }
         taskIds = taskManager.submitTask(dataHash);
@@ -249,22 +253,28 @@ contract FundsHandlerUpgradeable is IFundsHandler, HandlerBase {
      * bytes32 ticker The asset ticker
      * uint64 chainId The chain id
      * uint64 chainIdTo The chain id of destination chain (if cross chain)
-     * uint256 amount The amount to deposit
+     * uint256 amount The amount to consolidate
      */
     function submitConsolidateTask(
         ConsolidateTaskParam[] calldata _params
     ) external onlyRole(SUBMITTER_ROLE) returns (uint64[] memory taskIds) {
         taskIds = new uint64[](_params.length);
         bytes32[] memory dataHash = new bytes32[](_params.length);
+        NudexAsset memory nudexAsset;
         for (uint8 i; i < _params.length; i++) {
+            nudexAsset = assetHandler.getAssetDetails(_params[i].ticker);
             require(
                 _params[i].amount >=
-                    assetHandler.getAssetDetails(_params[i].ticker).minDepositAmount,
+                    // convert the amount to match the token's decimals
+                    ((nudexAsset.minDepositAmount *
+                        (10 **
+                            assetHandler
+                                .getLinkedToken(_params[i].ticker, _params[i].chainIdFrom)
+                                .decimals)) / (10 ** nudexAsset.decimals)),
                 "Invalid amount"
             );
             uint256 addrLength = bytes(_params[i].fromAddress).length;
             require(addrLength > 0, "Invalid address");
-            // empty dataHash, no future on-chain operation
             dataHash[i] = keccak256(abi.encode(_params[i]));
         }
         taskIds = taskManager.submitTask(dataHash);

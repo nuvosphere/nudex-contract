@@ -11,6 +11,7 @@ contract AssetHandlerUpgradeable is IAssetHandler, HandlerBase {
     // Mapping from asset identifiers to their details
     bytes32[] public assetTickerList;
     mapping(bytes32 ticker => NudexAsset) public nudexAssets;
+
     mapping(bytes32 ticker => uint64[] chainIds) public linkedTokenList;
     mapping(bytes32 ticker => mapping(uint64 chainId => TokenInfo)) public linkedTokens;
 
