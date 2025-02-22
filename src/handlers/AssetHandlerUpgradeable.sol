@@ -144,10 +144,26 @@ contract AssetHandlerUpgradeable is IAssetHandler, HandlerBase {
         }
     }
 
+    function updatePair(
+        bytes32 _assetA,
+        bytes32 _assetB,
+        Pair calldata _pair
+    ) external onlyRole(DAO_ROLE) {
+        uint256 index = getPairIndex(_assetA, _assetB);
+        Pair storage pair = pairs[index];
+        pair.pairState = _pair.pairState;
+        pair.maxTradeBaseToken = _pair.maxTradeBaseToken;
+        pair.minTradeBaseToken = _pair.minTradeBaseToken;
+        pair.maxTradeQuoteToken = _pair.maxTradeQuoteToken;
+        pair.minTradeQuoteToken = _pair.minTradeQuoteToken;
+        emit PairUpdated(_pair, index);
+    }
+
     function removePair(bytes32 _assetA, bytes32 _assetB) external onlyRole(DAO_ROLE) {
         pairs[getPairIndex(_assetA, _assetB)] = pairs[pairs.length - 1];
         pairs.pop();
         assetPairIndex[_getPairHash(_assetA, _assetB)] = 0;
+        emit PairRemoved(_assetA, _assetB);
     }
 
     // Update listed asset

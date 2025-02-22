@@ -74,6 +74,8 @@ interface IAssetHandler {
     event AssetDelisted(bytes32 indexed ticker);
 
     event PairAdded(Pair pair, uint256 index);
+    event PairUpdated(Pair pair, uint256 index);
+    event PairRemoved(bytes32 assetA, bytes32 assetB);
 
     event LinkToken(bytes32 indexed ticker, TokenInfo[] tokens);
     event TokenUpdated(bytes32 indexed ticker, TokenInfo token);

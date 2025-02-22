@@ -59,7 +59,7 @@ contract Deploy is Script {
         setProxyAdmin(true);
         deployTopLevel(false);
         deployHandlers(true);
-        testSetting();
+        setConfig();
 
         vm.stopBroadcast();
     }
@@ -154,7 +154,7 @@ contract Deploy is Script {
         }
     }
 
-    function testSetting() public {
+    function setConfig() public {
         console.log("\nGranting DAO role to submitter", submitter);
         AssetHandlerUpgradeable assetHandler = AssetHandlerUpgradeable(assetHandlerProxy);
         assetHandler.grantRole(assetHandler.DAO_ROLE(), submitter);

@@ -47,7 +47,7 @@ participant 2 address: 0xf6D37CE75dB465DcDb4c7097bEB9c1D46b171037
 Tasks are initially submitted through `Handler` contracts, each of which has a whitelisted set of submitter addresses. The Handler contract provides two main functions for managing tasks:
 
 - **submit()**: This function is called by a whitelisted submitter address to submit a new task.
-- r**ecord()**: This function finalizes and records the task after it has been verified and executed.
+- **record()**: This function finalizes and records the task after it has been verified and executed.
 
 The submitted tasks are stored in the TaskManager as the following struct:
 
