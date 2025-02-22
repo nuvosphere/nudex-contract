@@ -6,7 +6,7 @@ import {IAccountHandler} from "../interfaces/IAccountHandler.sol";
 import {IAssetHandler, NudexAsset, TokenInfo} from "../interfaces/IAssetHandler.sol";
 import {IFundsHandler, AddressCategory, DepositParam, WithdrawalParam, TransferParam, ConsolidateTaskParam} from "../interfaces/IFundsHandler.sol";
 import {INIP20} from "../interfaces/INIP20.sol";
-import {console} from "forge-std/console.sol";
+// import {console} from "forge-std/console.sol";
 
 contract FundsHandlerUpgradeable is IFundsHandler, HandlerBase {
     address public immutable feeReceiver = address(0);
@@ -129,7 +129,7 @@ contract FundsHandlerUpgradeable is IFundsHandler, HandlerBase {
         uint64 _chainId,
         bytes32 _ticker,
         uint256 _amount,
-        string calldata // _txHash (not used)
+        string calldata _txHash // (not used)
     ) external onlyRole(ENTRYPOINT_ROLE) validateAsset(_ticker, _chainId) {
         deposits[keccak256(abi.encodePacked(_accountNumber, _ticker, _chainId))].push(_amount);
         totalValueLocked[_ticker] += _amount;
@@ -214,8 +214,8 @@ contract FundsHandlerUpgradeable is IFundsHandler, HandlerBase {
         string calldata _toAddress,
         uint256 _amount,
         uint256 _withdrawFee,
-        bytes32, // _salt (not used)
-        string calldata // _txHash (not used)
+        bytes32 _salt, // (not used)
+        string calldata _txHash // (not used)
     ) external onlyRole(ENTRYPOINT_ROLE) validateAsset(_ticker, _chainId) {
         withdrawals[keccak256(abi.encodePacked(_accountNumber, _ticker, _chainId))].push(_amount);
         totalValueLocked[_ticker] -= _amount;

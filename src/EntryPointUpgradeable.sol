@@ -181,10 +181,8 @@ contract EntryPointUpgradeable is IEntryPoint, Initializable, ReentrancyGuardUpg
     function verifyAndCall(
         TaskOperation[] calldata _operations,
         bytes calldata _signature
-    ) external {
-        // FIXME: testing only
-        // ) external onlyCurrentSubmitter nonReentrant {
-        // require(_verifyOperation(_operations, tssNonce++, _signature), InvalidSigner(msg.sender));
+    ) external onlyCurrentSubmitter nonReentrant {
+        require(_verifyOperation(_operations, tssNonce++, _signature), InvalidSigner(msg.sender));
         bool success;
         Task memory task;
         uint64[] memory taskIds = new uint64[](_operations.length);

@@ -39,7 +39,6 @@ contract Deploy is Script {
         initialParticipants.push(vm.envAddress("PARTICIPANT_1"));
         initialParticipants.push(vm.envAddress("PARTICIPANT_2"));
         initialParticipants.push(vm.envAddress("PARTICIPANT_3"));
-        // proxyAdminContract = address(new ProxyAdmin(daoContract));
 
         console.log("DAO contract addr: ", daoContract);
         console.log("TSS signer addr: ", tssSigner);
@@ -56,15 +55,24 @@ contract Deploy is Script {
         console.log("\n  Deployer address: ", deployer);
 
         vm.startBroadcast(deployerPrivateKey);
-        ProxyAdmin proxyAdmin = new ProxyAdmin(daoContract);
-        proxyAdminContract = address(proxyAdmin);
-        console.log("Proxy Admin", proxyAdminContract);
-        console.log("Proxy owner", proxyAdmin.owner());
 
+        setProxyAdmin(true);
         deployTopLevel(false);
         deployHandlers(true);
+        testSetting();
 
         vm.stopBroadcast();
+    }
+
+    function setProxyAdmin(bool _fromEnv) public {
+        if (_fromEnv) {
+            proxyAdminContract = vm.envAddress("PROXY_ADMIN");
+        } else {
+            ProxyAdmin proxyAdmin = new ProxyAdmin(daoContract);
+            proxyAdminContract = address(proxyAdmin);
+        }
+        console.log("Proxy Admin", proxyAdminContract);
+        console.log("Proxy owner", ProxyAdmin(proxyAdminContract).owner());
     }
 
     function deployTopLevel(bool _fromEnv) public {
@@ -144,6 +152,12 @@ contract Deploy is Script {
                 nuvoLockProxy // nuvoLock
             );
         }
+    }
+
+    function testSetting() public {
+        console.log("\nGranting DAO role to submitter", submitter);
+        AssetHandlerUpgradeable assetHandler = AssetHandlerUpgradeable(assetHandlerProxy);
+        assetHandler.grantRole(assetHandler.DAO_ROLE(), submitter);
     }
 
     function deployProxy(address _logic) internal returns (address) {
