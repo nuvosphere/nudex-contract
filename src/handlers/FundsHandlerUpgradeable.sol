@@ -34,11 +34,6 @@ contract FundsHandlerUpgradeable is IFundsHandler, HandlerBase {
         __HandlerBase_init(_owner, _entryPoint, _submitter);
     }
 
-    modifier validateAsset(bytes32 _ticker, uint64 _chainId) {
-        require(assetHandler.isAssetAllowed(_ticker, _chainId), "Not allowed");
-        _;
-    }
-
     /**
      * @dev Get all deposit records of user.
      */
@@ -101,21 +96,17 @@ contract FundsHandlerUpgradeable is IFundsHandler, HandlerBase {
         taskIds = new uint64[](_params.length);
         bytes32[] memory dataHash = new bytes32[](_params.length);
         for (uint8 i; i < _params.length; i++) {
-            // TODO: do we check for asset state here?
+            require(
+                assetHandler.isAssetAllowed(_params[i].ticker, _params[i].chainId),
+                "Asset not allowed"
+            );
             require(
                 _params[i].amount >=
                     assetHandler.getAssetDetails(_params[i].ticker).minDepositAmount,
                 "Invalid amount"
             );
             dataHash[i] = keccak256(
-                abi.encodeWithSelector(
-                    this.recordDeposit.selector,
-                    _params[i].accountNumber,
-                    _params[i].chainId,
-                    _params[i].ticker,
-                    _params[i].amount,
-                    _params[i].txHash
-                )
+                abi.encodeWithSelector(this.recordDeposit.selector, _params[i])
             );
         }
         taskIds = taskManager.submitTask(dataHash);
@@ -124,19 +115,15 @@ contract FundsHandlerUpgradeable is IFundsHandler, HandlerBase {
     /**
      * @dev Record deposit info.
      */
-    function recordDeposit(
-        uint32 _accountNumber,
-        uint64 _chainId,
-        bytes32 _ticker,
-        uint256 _amount,
-        string calldata _txHash // (not used)
-    ) external onlyRole(ENTRYPOINT_ROLE) validateAsset(_ticker, _chainId) {
-        deposits[keccak256(abi.encodePacked(_accountNumber, _ticker, _chainId))].push(_amount);
-        totalValueLocked[_ticker] += _amount;
+    function recordDeposit(DepositParam calldata _param) external onlyRole(ENTRYPOINT_ROLE) {
+        require(assetHandler.isAssetAllowed(_param.ticker, _param.chainId), "Asset not allowed");
+        deposits[keccak256(abi.encodePacked(_param.accountNumber, _param.ticker, _param.chainId))]
+            .push(_param.amount);
+        totalValueLocked[_param.ticker] += _param.amount;
         emit INIP20.NIP20TokenEvent_mintb(
-            accountHandler.userAddresses(_accountNumber),
-            _ticker,
-            _amount
+            accountHandler.userAddresses(_param.accountNumber),
+            _param.ticker,
+            _param.amount
         );
     }
 
@@ -159,6 +146,10 @@ contract FundsHandlerUpgradeable is IFundsHandler, HandlerBase {
         NudexAsset memory nudexAsset;
         TokenInfo memory tokenInfo;
         for (uint8 i; i < _params.length; i++) {
+            require(
+                assetHandler.isAssetAllowed(_params[i].ticker, _params[i].chainId),
+                "Asset not allowed"
+            );
             nudexAsset = assetHandler.getAssetDetails(_params[i].ticker);
 
             // check min withdraw amount
@@ -216,7 +207,8 @@ contract FundsHandlerUpgradeable is IFundsHandler, HandlerBase {
         uint256 _withdrawFee,
         bytes32 _salt, // (not used)
         string calldata _txHash // (not used)
-    ) external onlyRole(ENTRYPOINT_ROLE) validateAsset(_ticker, _chainId) {
+    ) external onlyRole(ENTRYPOINT_ROLE) {
+        require(assetHandler.isAssetAllowed(_ticker, _chainId), "Asset not allowed");
         withdrawals[keccak256(abi.encodePacked(_accountNumber, _ticker, _chainId))].push(_amount);
         totalValueLocked[_ticker] -= _amount;
         emit INIP20.NIP20TokenEvent_mintb(feeReceiver, _ticker, _withdrawFee);

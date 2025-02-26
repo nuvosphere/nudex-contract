@@ -127,11 +127,7 @@ contract FundsTest is BaseTest {
         fundsHandler.submitDepositTask(depositTaskParams);
         taskOpts[0].initialCalldata = abi.encodeWithSelector(
             fundsHandler.recordDeposit.selector,
-            depositTaskParams[0].accountNumber,
-            depositTaskParams[0].chainId,
-            depositTaskParams[0].ticker,
-            depositTaskParams[0].amount,
-            depositTaskParams[0].txHash
+            depositTaskParams[0]
         );
         signature = _generateOptSignature(taskOpts, tssKey);
         // check event and result
@@ -161,11 +157,7 @@ contract FundsTest is BaseTest {
         taskOpts[0].taskId++;
         taskOpts[0].initialCalldata = abi.encodeWithSelector(
             fundsHandler.recordDeposit.selector,
-            depositTaskParams[0].accountNumber,
-            depositTaskParams[0].chainId,
-            depositTaskParams[0].ticker,
-            depositTaskParams[0].amount,
-            depositTaskParams[0].txHash
+            depositTaskParams[0]
         );
         signature = _generateOptSignature(taskOpts, tssKey);
 
@@ -228,11 +220,7 @@ contract FundsTest is BaseTest {
                 State.Pending,
                 abi.encodeWithSelector(
                     fundsHandler.recordDeposit.selector,
-                    DEFAULT_ACCOUNT,
-                    CHAIN_ID,
-                    TICKER,
-                    amounts[i],
-                    string(abi.encodePacked("txHash ", i))
+                    batchDepositTaskParams[i]
                 ),
                 ""
             );
@@ -279,11 +267,7 @@ contract FundsTest is BaseTest {
 
         taskOpts[0].initialCalldata = abi.encodeWithSelector(
             fundsHandler.recordDeposit.selector,
-            depositTaskParams[0].accountNumber,
-            depositTaskParams[0].chainId,
-            depositTaskParams[0].ticker,
-            depositTaskParams[0].amount,
-            depositTaskParams[0].txHash
+            depositTaskParams[0]
         );
         signature = _generateOptSignature(taskOpts, tssKey);
 
@@ -303,7 +287,7 @@ contract FundsTest is BaseTest {
 
     function test_Withdraw() public {
         vm.prank(entryPointProxy);
-        fundsHandler.recordDeposit(DEFAULT_ACCOUNT, CHAIN_ID, TICKER, DEFAULT_AMOUNT, "txHash");
+        fundsHandler.recordDeposit(depositTaskParams[0]);
         vm.startPrank(msgSender);
         assertEq(fundsHandler.totalValueLocked(TICKER), DEFAULT_AMOUNT);
         // setup withdrawal info
@@ -385,8 +369,9 @@ contract FundsTest is BaseTest {
     }
 
     function test_WithdrawBatch() public {
+        depositTaskParams[0].amount = type(uint256).max;
         vm.prank(entryPointProxy);
-        fundsHandler.recordDeposit(DEFAULT_ACCOUNT, CHAIN_ID, TICKER, type(uint256).max, "txHash");
+        fundsHandler.recordDeposit(depositTaskParams[0]);
         vm.startPrank(msgSender);
         uint8 batchSize = 20;
         // setup withdraw info
@@ -467,7 +452,8 @@ contract FundsTest is BaseTest {
         vm.assume(_amount > WITHDRAW_FEE);
         vm.assume(bytes(_txHash).length > 0);
         vm.prank(entryPointProxy);
-        fundsHandler.recordDeposit(DEFAULT_ACCOUNT, CHAIN_ID, TICKER, type(uint256).max, "txHash");
+        depositTaskParams[0].amount = type(uint256).max;
+        fundsHandler.recordDeposit(depositTaskParams[0]);
 
         vm.startPrank(msgSender);
         // setup withdrawal info

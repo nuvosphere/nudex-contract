@@ -135,7 +135,7 @@ contract MockData is Script {
             0
         );
         fundsHandler.submitDepositTask(depositInfos);
-        fundsHandler.recordDeposit(DEFAULT_ACCOUNT, _chainId, _ticker, 1 ether, "txHash");
+        fundsHandler.recordDeposit(depositInfos[0]);
 
         // withdraw
         WithdrawalParam[] memory withdrawalInfos = new WithdrawalParam[](1);
