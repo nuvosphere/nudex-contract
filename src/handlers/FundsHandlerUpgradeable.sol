@@ -9,6 +9,7 @@ import {INIP20} from "../interfaces/INIP20.sol";
 // import {console} from "forge-std/console.sol";
 
 contract FundsHandlerUpgradeable is IFundsHandler, HandlerBase {
+    // FIXME: change feeReceiver to the actual address
     address public immutable feeReceiver = address(0);
     IAccountHandler public immutable accountHandler;
     IAssetHandler public immutable assetHandler;
@@ -94,7 +95,7 @@ contract FundsHandlerUpgradeable is IFundsHandler, HandlerBase {
     ) external onlyRole(SUBMITTER_ROLE) returns (uint64[] memory taskIds) {
         require(_params.length > 0, "Empty input");
         taskIds = new uint64[](_params.length);
-        bytes32[] memory dataHash = new bytes32[](_params.length);
+        bytes32[] memory dataHashes = new bytes32[](_params.length);
         for (uint8 i; i < _params.length; i++) {
             require(
                 assetHandler.isAssetAllowed(_params[i].ticker, _params[i].chainId),
@@ -105,11 +106,11 @@ contract FundsHandlerUpgradeable is IFundsHandler, HandlerBase {
                     assetHandler.getAssetDetails(_params[i].ticker).minDepositAmount,
                 "Invalid amount"
             );
-            dataHash[i] = keccak256(
+            dataHashes[i] = keccak256(
                 abi.encodeWithSelector(this.recordDeposit.selector, _params[i])
             );
         }
-        taskIds = taskManager.submitTask(dataHash);
+        taskIds = taskManager.submitTask(dataHashes);
     }
 
     /**
@@ -142,7 +143,9 @@ contract FundsHandlerUpgradeable is IFundsHandler, HandlerBase {
     ) external onlyRole(SUBMITTER_ROLE) returns (uint64[] memory taskIds) {
         require(_params.length > 0, "Empty input");
         taskIds = new uint64[](_params.length);
-        bytes32[] memory dataHash = new bytes32[](_params.length);
+        bytes32[] memory dataHashes = new bytes32[](_params.length);
+        uint256[] memory tokenAmounts = new uint256[](_params.length);
+        uint256[] memory withdrawFees = new uint256[](_params.length);
         NudexAsset memory nudexAsset;
         TokenInfo memory tokenInfo;
         for (uint8 i; i < _params.length; i++) {
@@ -161,8 +164,8 @@ contract FundsHandlerUpgradeable is IFundsHandler, HandlerBase {
 
             // check fee
             tokenInfo = assetHandler.getLinkedToken(_params[i].ticker, _params[i].chainId);
-            uint256 withdrawFee = tokenInfo.withdrawFee;
-            require(withdrawFee < _params[i].amount, "Insufficient balance to pay fee");
+            withdrawFees[i] = tokenInfo.withdrawFee;
+            require(withdrawFees[i] < _params[i].amount, "Insufficient balance to pay fee");
 
             // deduct asset balance from user's account
             emit INIP20.NIP20TokenEvent_burnb(
@@ -172,10 +175,10 @@ contract FundsHandlerUpgradeable is IFundsHandler, HandlerBase {
             );
 
             // calculate the actual withdraw amount on target chain
-            uint256 tokenAmount = (((_params[i].amount - withdrawFee) *
+            tokenAmounts[i] = (((_params[i].amount - withdrawFees[i]) *
                 (10 ** tokenInfo.decimals)) / (10 ** nudexAsset.decimals));
 
-            dataHash[i] = keccak256(
+            dataHashes[i] = keccak256(
                 abi.encodeWithSelector(
                     this.recordWithdrawal.selector,
                     _params[i].accountNumber,
@@ -183,16 +186,16 @@ contract FundsHandlerUpgradeable is IFundsHandler, HandlerBase {
                     _params[i].ticker,
                     _params[i].toAddress,
                     _params[i].amount,
-                    withdrawFee,
+                    withdrawFees[i],
                     _params[i].salt,
                     // offset for txHash
                     // @dev "-1" if it is exact 32 bytes it does not take one extra slot
                     uint256(320) + (32 * ((addrLength - 1) / 32))
                 )
             );
-            emit WithdrawRequest(dataHash[i], tokenAmount, withdrawFee);
         }
-        taskIds = taskManager.submitTask(dataHash);
+        taskIds = taskManager.submitTask(dataHashes);
+        emit WithdrawRequest(dataHashes, tokenAmounts, withdrawFees);
     }
 
     /**
@@ -227,15 +230,15 @@ contract FundsHandlerUpgradeable is IFundsHandler, HandlerBase {
         TransferParam[] calldata _params
     ) external onlyRole(SUBMITTER_ROLE) returns (uint64[] memory taskIds) {
         taskIds = new uint64[](_params.length);
-        bytes32[] memory dataHash = new bytes32[](_params.length);
+        bytes32[] memory dataHashes = new bytes32[](_params.length);
         for (uint8 i; i < _params.length; i++) {
             require(_params[i].amount > 0, "Invalid amount");
             uint256 fromAddrLength = bytes(_params[i].fromAddress).length;
             uint256 toAddrLength = bytes(_params[i].toAddress).length;
             require(fromAddrLength > 0 && toAddrLength > 0, "Invalid address");
-            dataHash[i] = keccak256(abi.encode(_params[i]));
+            dataHashes[i] = keccak256(abi.encode(_params[i]));
         }
-        taskIds = taskManager.submitTask(dataHash);
+        taskIds = taskManager.submitTask(dataHashes);
     }
 
     /**
@@ -251,7 +254,7 @@ contract FundsHandlerUpgradeable is IFundsHandler, HandlerBase {
         ConsolidateTaskParam[] calldata _params
     ) external onlyRole(SUBMITTER_ROLE) returns (uint64[] memory taskIds) {
         taskIds = new uint64[](_params.length);
-        bytes32[] memory dataHash = new bytes32[](_params.length);
+        bytes32[] memory dataHashes = new bytes32[](_params.length);
         NudexAsset memory nudexAsset;
         for (uint8 i; i < _params.length; i++) {
             nudexAsset = assetHandler.getAssetDetails(_params[i].ticker);
@@ -267,8 +270,8 @@ contract FundsHandlerUpgradeable is IFundsHandler, HandlerBase {
             );
             uint256 addrLength = bytes(_params[i].fromAddress).length;
             require(addrLength > 0, "Invalid address");
-            dataHash[i] = keccak256(abi.encode(_params[i]));
+            dataHashes[i] = keccak256(abi.encode(_params[i]));
         }
-        taskIds = taskManager.submitTask(dataHash);
+        taskIds = taskManager.submitTask(dataHashes);
     }
 }

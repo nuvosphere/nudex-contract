@@ -308,10 +308,14 @@ contract FundsTest is BaseTest {
             uint256(320)
         );
 
-        uint256 tokenAmount = (DEFAULT_AMOUNT - WITHDRAW_FEE) / 10 ** 12; // decimal difference (18 - 6)
-        bytes32 dataHash = keccak256(taskOpts[0].initialCalldata);
+        bytes32[] memory dataHash = new bytes32[](1);
+        dataHash[0] = keccak256(taskOpts[0].initialCalldata);
+        uint256[] memory tokenAmount = new uint256[](1);
+        tokenAmount[0] = (DEFAULT_AMOUNT - WITHDRAW_FEE) / 10 ** 12; // decimal difference (18 - 6)
+        uint256[] memory withdrawFee = new uint256[](1);
+        withdrawFee[0] = WITHDRAW_FEE; // decimal difference (18 - 6)
         vm.expectEmit();
-        emit IFundsHandler.WithdrawRequest(dataHash, tokenAmount, WITHDRAW_FEE);
+        emit IFundsHandler.WithdrawRequest(dataHash, tokenAmount, withdrawFee);
         fundsHandler.submitWithdrawTask(withdrawTaskParams);
 
         // pending task

@@ -67,11 +67,11 @@ contract ParticipantHandlerUpgradeable is IParticipantHandler, HandlerBase {
         require(!isParticipant[_newParticipant], AlreadyParticipant(_newParticipant));
         require(nuvoLock.lockedBalanceOf(_newParticipant) > 0, NotEligible(_newParticipant));
         taskIds = new uint64[](1);
-        bytes32[] memory dataHash = new bytes32[](1);
-        dataHash[0] = keccak256(
+        bytes32[] memory dataHashes = new bytes32[](1);
+        dataHashes[0] = keccak256(
             abi.encodeWithSelector(this.addParticipant.selector, _newParticipant, _salt)
         );
-        taskIds = taskManager.submitTask(dataHash);
+        taskIds = taskManager.submitTask(dataHashes);
     }
 
     /**
@@ -102,11 +102,11 @@ contract ParticipantHandlerUpgradeable is IParticipantHandler, HandlerBase {
         require(participants.length > 3, NotEnoughParticipant());
         require(isParticipant[_participant], NotParticipant(_participant));
         taskIds = new uint64[](1);
-        bytes32[] memory dataHash = new bytes32[](1);
-        dataHash[0] = keccak256(
+        bytes32[] memory dataHashes = new bytes32[](1);
+        dataHashes[0] = keccak256(
             abi.encodeWithSelector(this.removeParticipant.selector, _participant, _salt)
         );
-        taskIds = taskManager.submitTask(dataHash);
+        taskIds = taskManager.submitTask(dataHashes);
     }
 
     /**
@@ -142,11 +142,11 @@ contract ParticipantHandlerUpgradeable is IParticipantHandler, HandlerBase {
     ) external onlyRole(SUBMITTER_ROLE) returns (uint64[] memory taskIds) {
         require(_newParticipants.length > 2, NotEnoughParticipant());
         taskIds = new uint64[](1);
-        bytes32[] memory dataHash = new bytes32[](1);
-        dataHash[0] = keccak256(
+        bytes32[] memory dataHashes = new bytes32[](1);
+        dataHashes[0] = keccak256(
             abi.encodeWithSelector(this.resetParticipants.selector, _newParticipants, _salt)
         );
-        taskIds = taskManager.submitTask(dataHash);
+        taskIds = taskManager.submitTask(dataHashes);
     }
 
     /**
