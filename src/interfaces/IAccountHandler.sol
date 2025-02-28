@@ -35,7 +35,7 @@ interface IAccountHandler {
     error RegisteredAccount(uint256, string);
 
     function addressRecord(bytes32 _input) external view returns (string memory);
-    function userAddresses(uint32 _accountNumber) external view returns (address);
+    function getUserAddress(uint32 _accountNumber) external view returns (address);
 
     function userMapping(
         string calldata _addr,

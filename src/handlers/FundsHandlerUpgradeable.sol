@@ -122,7 +122,7 @@ contract FundsHandlerUpgradeable is IFundsHandler, HandlerBase {
             .push(_param.amount);
         totalValueLocked[_param.ticker] += _param.amount;
         emit INIP20.NIP20TokenEvent_mintb(
-            accountHandler.userAddresses(_param.accountNumber),
+            accountHandler.getUserAddress(_param.accountNumber),
             _param.ticker,
             _param.amount
         );
@@ -169,7 +169,7 @@ contract FundsHandlerUpgradeable is IFundsHandler, HandlerBase {
 
             // deduct asset balance from user's account
             emit INIP20.NIP20TokenEvent_burnb(
-                accountHandler.userAddresses(_params[i].accountNumber),
+                accountHandler.getUserAddress(_params[i].accountNumber),
                 _params[i].ticker,
                 _params[i].amount
             );

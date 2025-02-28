@@ -5,8 +5,9 @@ import {IAccountHandler, AddressCategory, AccountRegistrationTaskParam} from "..
 import {HandlerBase} from "./HandlerBase.sol";
 
 contract AccountHandlerUpgradeable is IAccountHandler, HandlerBase {
+    mapping(uint32 userAccount => address userAddress) private userAddresses;
+
     mapping(bytes32 => string) public addressRecord;
-    mapping(uint32 userAccount => address userAddress) public userAddresses;
     mapping(string depositAddress => mapping(AddressCategory => address account))
         public userMapping;
 
@@ -33,6 +34,16 @@ contract AccountHandlerUpgradeable is IAccountHandler, HandlerBase {
         uint32 _index
     ) external view returns (string memory) {
         return addressRecord[keccak256(abi.encodePacked(_accountNumber, _addressCategory, _index))];
+    }
+
+    /**
+     * @dev Get user address by account number.
+     * @param _accountNumber Account number.
+     * @notice Revert if the account number is not registered.
+     */
+    function getUserAddress(uint32 _accountNumber) external view returns (address) {
+        require(userAddresses[_accountNumber] != address(0), "Unregistered account");
+        return userAddresses[_accountNumber];
     }
 
     /**
