@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
+import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 import {IAssetHandler, AssetParam, NudexAsset, Pair, PairState, PairType, TokenInfo} from "../interfaces/IAssetHandler.sol";
-import {HandlerBase} from "./HandlerBase.sol";
 
-contract AssetHandlerUpgradeable is IAssetHandler, HandlerBase {
+contract AssetHandlerUpgradeable is IAssetHandler, AccessControlUpgradeable {
     bytes32 public constant DAO_ROLE = keccak256("DAO_ROLE");
 
     mapping(bytes32 pauseType => bool isPaused) public pauseState;
@@ -23,15 +23,10 @@ contract AssetHandlerUpgradeable is IAssetHandler, HandlerBase {
         _;
     }
 
-    constructor(address _taskManager) HandlerBase(_taskManager) {}
-
     // _owner: EntryPoint contract
-    function initialize(
-        address _owner,
-        address _entryPoint,
-        address _submitter
-    ) public initializer {
-        __HandlerBase_init(_owner, _entryPoint, _submitter);
+    function initialize(address _owner) public initializer {
+        __AccessControl_init();
+        _grantRole(DEFAULT_ADMIN_ROLE, _owner);
         _grantRole(DAO_ROLE, _owner);
 
         // push empty pair, reserving index 0 for empty pair

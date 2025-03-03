@@ -9,7 +9,6 @@ import {ITaskManager, Task} from "../src/interfaces/ITaskManager.sol";
 
 contract AssetsTest is BaseTest {
     bytes32 public constant TICKER = "TOKEN_TICKER_18";
-    bytes32 public constant FUNDS_ROLE = keccak256("FUNDS_ROLE");
     uint64 public constant CHAIN_ID = 1;
     uint256 public constant MIN_DEPOSIT_AMOUNT = 50;
     uint256 public constant MIN_WITHDRAW_AMOUNT = 50;
@@ -21,15 +20,15 @@ contract AssetsTest is BaseTest {
 
         // setup assetHandler
         address assetHandlerProxy = _deployProxy(
-            address(new AssetHandlerUpgradeable(address(taskManager))),
+            address(new AssetHandlerUpgradeable()),
             daoContract
         );
         assetHandler = AssetHandlerUpgradeable(assetHandlerProxy);
-        assetHandler.initialize(daoContract, entryPointProxy, msgSender);
+        assetHandler.initialize(daoContract);
 
         // assign handlers
         vm.startPrank(daoContract);
-        assetHandler.grantRole(FUNDS_ROLE, msgSender);
+        assetHandler.grantRole(assetHandler.DAO_ROLE(), msgSender);
         handlers.push(assetHandlerProxy);
         taskManager.initialize(daoContract, entryPointProxy, handlers);
 

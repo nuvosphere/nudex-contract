@@ -49,12 +49,9 @@ contract FundsTest is BaseTest {
         );
 
         // setup assetHandler
-        address ahProxy = _deployProxy(
-            address(new AssetHandlerUpgradeable(address(taskManager))),
-            daoContract
-        );
+        address ahProxy = _deployProxy(address(new AssetHandlerUpgradeable()), daoContract);
         AssetHandlerUpgradeable assetHandler = AssetHandlerUpgradeable(ahProxy);
-        assetHandler.initialize(thisAddr, thisAddr, msgSender);
+        assetHandler.initialize(thisAddr);
         AssetParam memory assetParam = AssetParam(
             18,
             true,

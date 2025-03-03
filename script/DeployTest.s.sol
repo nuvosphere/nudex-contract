@@ -109,9 +109,9 @@ contract DeployTest is Script {
         handlers.push(address(accountHandler));
         console.log("|AccountHandler|", address(accountHandler));
 
-        // deploy accountHandler
-        AssetHandlerUpgradeable assetHandler = new AssetHandlerUpgradeable(address(taskManager));
-        assetHandler.initialize(daoContract, address(entryPoint), submitter);
+        // deploy assetHandler
+        AssetHandlerUpgradeable assetHandler = new AssetHandlerUpgradeable();
+        assetHandler.initialize(daoContract);
         handlers.push(address(assetHandler));
         console.log("|AssetHandler|", address(assetHandler));
 

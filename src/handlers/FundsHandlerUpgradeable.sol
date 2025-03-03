@@ -164,7 +164,7 @@ contract FundsHandlerUpgradeable is IFundsHandler, HandlerBase {
 
             // check fee
             tokenInfo = assetHandler.getLinkedToken(_params[i].ticker, _params[i].chainId);
-            withdrawFees[i] = tokenInfo.withdrawFee;
+            withdrawFees[i] = tokenInfo.withdrawFee; // nudex decimals
             require(withdrawFees[i] < _params[i].amount, "Insufficient balance to pay fee");
 
             // deduct asset balance from user's account

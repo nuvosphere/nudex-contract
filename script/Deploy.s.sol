@@ -119,10 +119,10 @@ contract Deploy is Script {
         handlers.push(accountHandlerProxy);
         console.log("|AccountHandler|", accountHandlerProxy);
 
-        // deploy accountHandler
-        assetHandlerProxy = deployProxy(address(new AssetHandlerUpgradeable(taskManagerProxy)));
+        // deploy assetHandler
+        assetHandlerProxy = deployProxy(address(new AssetHandlerUpgradeable()));
         AssetHandlerUpgradeable assetHandler = AssetHandlerUpgradeable(assetHandlerProxy);
-        assetHandler.initialize(daoContract, entryPointProxy, submitter);
+        assetHandler.initialize(daoContract);
         handlers.push(assetHandlerProxy);
         console.log("|AssetHandler|", assetHandlerProxy);
 

@@ -72,10 +72,10 @@ contract MockData is Script {
             console.log("|AccountHandler|", address(accountHandler));
 
             // deploy assetHandler
-            assetHandler = new AssetHandlerUpgradeable(address(taskManager));
+            assetHandler = new AssetHandlerUpgradeable();
             // proxy = new NuvoProxy(address(assetHandler), vm.envAddress("PARTICIPANT_2"));
             // assetHandler = AssetHandlerUpgradeable(address(proxy));
-            assetHandler.initialize(deployer, deployer, deployer);
+            assetHandler.initialize(deployer);
             handlers.push(address(assetHandler));
             console.log("|AssetHandlerUpgradeable|", address(assetHandler));
 
