@@ -16,6 +16,7 @@ import {NuvoProxy} from "../src/proxies/NuvoProxy.sol";
 contract Deploy is Script {
     address nuvoToken;
     address daoContract;
+    address feeReceiver;
     address tssSigner;
     address submitter;
     address[] initialParticipants;
@@ -27,12 +28,13 @@ contract Deploy is Script {
     address participantHandlerProxy;
     address taskManagerProxy;
     address accountHandlerProxy;
-    address assetHandlerProxy;
+    address assetManagerProxy;
     address fundsHandlerProxy;
 
     function setUp() public {
         // TODO: temporary dao contract
         daoContract = vm.envAddress("DAO_CONTRACT_ADDR");
+        feeReceiver = vm.envAddress("FEE_RECEIVER_ADDR");
         nuvoToken = vm.envAddress("NUVO_TOKEN_ADDR");
         tssSigner = vm.envAddress("TSS_SIGNER_ADDR");
         submitter = vm.envAddress("SUBMITTER_ADDR");
@@ -119,25 +121,25 @@ contract Deploy is Script {
         handlers.push(accountHandlerProxy);
         console.log("|AccountHandler|", accountHandlerProxy);
 
-        // deploy assetHandler
-        assetHandlerProxy = deployProxy(address(new AssetManagerUpgradeable()));
-        AssetManagerUpgradeable assetHandler = AssetManagerUpgradeable(assetHandlerProxy);
-        assetHandler.initialize(daoContract);
-        handlers.push(assetHandlerProxy);
-        console.log("|AssetManager|", assetHandlerProxy);
+        // deploy assetManager
+        assetManagerProxy = deployProxy(address(new AssetManagerUpgradeable()));
+        AssetManagerUpgradeable assetManager = AssetManagerUpgradeable(assetManagerProxy);
+        assetManager.initialize(daoContract);
+        handlers.push(assetManagerProxy);
+        console.log("|AssetManager|", assetManagerProxy);
 
         // deploy fundsHandler
         fundsHandlerProxy = deployProxy(
             address(
                 new FundsHandlerUpgradeable(
                     accountHandlerProxy,
-                    assetHandlerProxy,
+                    assetManagerProxy,
                     taskManagerProxy
                 )
             )
         );
         FundsHandlerUpgradeable fundsHandler = FundsHandlerUpgradeable(fundsHandlerProxy);
-        fundsHandler.initialize(daoContract, entryPointProxy, submitter);
+        fundsHandler.initialize(daoContract, entryPointProxy, submitter, feeReceiver);
         handlers.push(fundsHandlerProxy);
         console.log("|FundsHandler|", fundsHandlerProxy);
 
@@ -156,8 +158,8 @@ contract Deploy is Script {
 
     function setConfig() public {
         console.log("\nGranting DAO role to submitter", submitter);
-        AssetManagerUpgradeable assetHandler = AssetManagerUpgradeable(assetHandlerProxy);
-        assetHandler.grantRole(assetHandler.DAO_ROLE(), submitter);
+        AssetManagerUpgradeable assetManager = AssetManagerUpgradeable(assetManagerProxy);
+        assetManager.grantRole(assetManager.DAO_ROLE(), submitter);
     }
 
     function deployProxy(address _logic) internal returns (address) {

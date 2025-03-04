@@ -9,11 +9,10 @@ import {INIP20} from "../interfaces/INIP20.sol";
 // import {console} from "forge-std/console.sol";
 
 contract FundsHandlerUpgradeable is IFundsHandler, HandlerBase {
-    // FIXME: change feeReceiver to the actual address
-    address public immutable feeReceiver = address(0);
     IAccountHandler public immutable accountHandler;
     IAssetManager public immutable assetHandler;
 
+    address public feeReceiver;
     mapping(bytes32 => uint256) public totalValueLocked;
     mapping(bytes32 userHash => uint256[] depositAmounts) private deposits;
     mapping(bytes32 userHash => uint256[] withdrawAmounts) private withdrawals;
@@ -30,9 +29,11 @@ contract FundsHandlerUpgradeable is IFundsHandler, HandlerBase {
     function initialize(
         address _owner,
         address _entryPoint,
-        address _submitter
+        address _submitter,
+        address _feeReceiver
     ) public initializer {
         __HandlerBase_init(_owner, _entryPoint, _submitter);
+        feeReceiver = _feeReceiver;
     }
 
     /**
@@ -79,6 +80,15 @@ contract FundsHandlerUpgradeable is IFundsHandler, HandlerBase {
         uint256 _index
     ) external view returns (uint256) {
         return withdrawals[keccak256(abi.encodePacked(_accountNumber, _ticker, _chainId))][_index];
+    }
+
+    /**
+     * @dev Set the fee receiver address.
+     */
+    function setFeeReceiver(address _feeReceiver) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        require(_feeReceiver != address(0), "Invalid address");
+        feeReceiver = _feeReceiver;
+        emit FeeReceiverUpdated(_feeReceiver);
     }
 
     /**
