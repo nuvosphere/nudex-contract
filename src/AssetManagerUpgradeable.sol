@@ -2,9 +2,9 @@
 pragma solidity ^0.8.26;
 
 import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
-import {IAssetHandler, AssetParam, NudexAsset, Pair, PairState, PairType, TokenInfo} from "../interfaces/IAssetHandler.sol";
+import {IAssetManager, AssetParam, NudexAsset, Pair, PairState, PairType, TokenInfo} from "./interfaces/IAssetManager.sol";
 
-contract AssetHandlerUpgradeable is IAssetHandler, AccessControlUpgradeable {
+contract AssetManagerUpgradeable is IAssetManager, AccessControlUpgradeable {
     bytes32 public constant DAO_ROLE = keccak256("DAO_ROLE");
 
     mapping(bytes32 pauseType => bool isPaused) public pauseState;

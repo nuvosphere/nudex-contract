@@ -6,8 +6,8 @@ import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 
 import {NuvoProxy, ITransparentUpgradeableProxy} from "../src/proxies/NuvoProxy.sol";
 import {AccountHandlerUpgradeable} from "../src/handlers/AccountHandlerUpgradeable.sol";
-import {AssetHandlerUpgradeable} from "../src/handlers/AssetHandlerUpgradeable.sol";
-import {AssetType, AssetParam, TokenInfo} from "../src/interfaces/IAssetHandler.sol";
+import {AssetManagerUpgradeable} from "../src/AssetManagerUpgradeable.sol";
+import {AssetType, AssetParam, TokenInfo} from "../src/interfaces/IAssetManager.sol";
 import {FundsHandlerUpgradeable, DepositParam, WithdrawalParam, ConsolidateTaskParam} from "../src/handlers/FundsHandlerUpgradeable.sol";
 import {TaskManagerUpgradeable, State} from "../src/TaskManagerUpgradeable.sol";
 import {IAccountHandler, AddressCategory} from "../src/interfaces/IAccountHandler.sol";
@@ -25,7 +25,7 @@ contract MockData is Script {
 
     TaskManagerUpgradeable taskManager;
     AccountHandlerUpgradeable accountHandler;
-    AssetHandlerUpgradeable assetHandler;
+    AssetManagerUpgradeable assetManager;
     FundsHandlerUpgradeable fundsHandler;
 
     address[] public handlers;
@@ -52,12 +52,12 @@ contract MockData is Script {
         if (_fromEnv) {
             taskManager = TaskManagerUpgradeable(vm.envAddress("TASK_MANAGER"));
             accountHandler = AccountHandlerUpgradeable(vm.envAddress("ACCOUNT_HANDLER"));
-            assetHandler = AssetHandlerUpgradeable(vm.envAddress("ASSET_HANDLER"));
+            assetManager = AssetManagerUpgradeable(vm.envAddress("ASSET_HANDLER"));
             fundsHandler = FundsHandlerUpgradeable(vm.envAddress("FUNDS_HANDLER"));
             // grant role to deployer
             taskManager.grantRole(ENTRYPOINT_ROLE, deployer);
             accountHandler.grantRole(ENTRYPOINT_ROLE, deployer);
-            assetHandler.grantRole(ENTRYPOINT_ROLE, deployer);
+            assetManager.grantRole(ENTRYPOINT_ROLE, deployer);
             fundsHandler.grantRole(ENTRYPOINT_ROLE, deployer);
         } else {
             taskManager = new TaskManagerUpgradeable();
@@ -71,25 +71,25 @@ contract MockData is Script {
             handlers.push(address(accountHandler));
             console.log("|AccountHandler|", address(accountHandler));
 
-            // deploy assetHandler
-            assetHandler = new AssetHandlerUpgradeable();
-            // proxy = new NuvoProxy(address(assetHandler), vm.envAddress("PARTICIPANT_2"));
-            // assetHandler = AssetHandlerUpgradeable(address(proxy));
-            assetHandler.initialize(deployer);
-            handlers.push(address(assetHandler));
-            console.log("|AssetHandlerUpgradeable|", address(assetHandler));
+            // deploy assetManager
+            assetManager = new AssetManagerUpgradeable();
+            // proxy = new NuvoProxy(address(assetManager), vm.envAddress("PARTICIPANT_2"));
+            // assetManager = AssetManagerUpgradeable(address(proxy));
+            assetManager.initialize(deployer);
+            handlers.push(address(assetManager));
+            console.log("|AssetManagerUpgradeable|", address(assetManager));
 
             // deploy fundsHandler
             fundsHandler = new FundsHandlerUpgradeable(
                 address(accountHandler),
-                address(assetHandler),
+                address(assetManager),
                 address(taskManager)
             );
             // proxy = new NuvoProxy(address(fundsHandler), vm.envAddress("PARTICIPANT_2"));
             // fundsHandler = FundsHandlerUpgradeable(address(proxy));
             fundsHandler.initialize(deployer, deployer, deployer);
             handlers.push(address(fundsHandler));
-            assetHandler.grantRole(FUNDS_ROLE, address(fundsHandler));
+            assetManager.grantRole(FUNDS_ROLE, address(fundsHandler));
             console.log("|FundsHandlerUpgradeable|", address(fundsHandler));
 
             taskManager.initialize(deployer, deployer, handlers);
@@ -100,7 +100,7 @@ contract MockData is Script {
     function assetData() public {
         // asset
         AssetParam memory assetParam = AssetParam(18, true, true, 1 ether, 1 ether, "Token_Alias");
-        assetHandler.listNewAsset(TICKER, assetParam);
+        assetManager.listNewAsset(TICKER, assetParam);
         TokenInfo[] memory testTokenInfo = new TokenInfo[](1);
         testTokenInfo[0] = TokenInfo(
             CHAIN_ID,
@@ -111,14 +111,14 @@ contract MockData is Script {
             "SYMBOL",
             0
         );
-        assetHandler.linkToken(TICKER, testTokenInfo);
+        assetManager.linkToken(TICKER, testTokenInfo);
 
-        assetHandler.tokenSwitch(TICKER, CHAIN_ID, false);
-        assetHandler.tokenSwitch(TICKER, CHAIN_ID, true);
+        assetManager.tokenSwitch(TICKER, CHAIN_ID, false);
+        assetManager.tokenSwitch(TICKER, CHAIN_ID, true);
 
         // pause
-        assetHandler.setPauseState(TICKER, false);
-        assetHandler.setPauseState(bytes32(uint256(CHAIN_ID)), false);
+        assetManager.setPauseState(TICKER, false);
+        assetManager.setPauseState(bytes32(uint256(CHAIN_ID)), false);
     }
 
     function fundsData(bytes32 _ticker, uint64 _chainId) public {

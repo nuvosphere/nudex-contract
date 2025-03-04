@@ -4,8 +4,8 @@ import "./BaseTest.sol";
 import {TestHelper} from "./utils/TestHelper.sol";
 
 import {AccountHandlerUpgradeable, AddressCategory} from "../src/handlers/AccountHandlerUpgradeable.sol";
-import {AssetHandlerUpgradeable} from "../src/handlers/AssetHandlerUpgradeable.sol";
-import {AssetType, AssetParam, TokenInfo} from "../src/interfaces/IAssetHandler.sol";
+import {AssetManagerUpgradeable} from "../src/AssetManagerUpgradeable.sol";
+import {AssetType, AssetParam, TokenInfo} from "../src/interfaces/IAssetManager.sol";
 import {FundsHandlerUpgradeable} from "../src/handlers/FundsHandlerUpgradeable.sol";
 import {IFundsHandler, DepositParam, WithdrawalParam, ConsolidateTaskParam, TransferParam} from "../src/interfaces/IFundsHandler.sol";
 import {ITaskManager, State} from "../src/interfaces/ITaskManager.sol";
@@ -48,10 +48,10 @@ contract FundsTest is BaseTest {
             DEPOSIT_ADDRESS
         );
 
-        // setup assetHandler
-        address ahProxy = _deployProxy(address(new AssetHandlerUpgradeable()), daoContract);
-        AssetHandlerUpgradeable assetHandler = AssetHandlerUpgradeable(ahProxy);
-        assetHandler.initialize(thisAddr);
+        // setup assetManager
+        address ahProxy = _deployProxy(address(new AssetManagerUpgradeable()), daoContract);
+        AssetManagerUpgradeable assetManager = AssetManagerUpgradeable(ahProxy);
+        assetManager.initialize(thisAddr);
         AssetParam memory assetParam = AssetParam(
             18,
             true,
@@ -60,7 +60,7 @@ contract FundsTest is BaseTest {
             MIN_WITHDRAW_AMOUNT,
             ""
         );
-        assetHandler.listNewAsset(TICKER, assetParam);
+        assetManager.listNewAsset(TICKER, assetParam);
         TokenInfo[] memory testTokenInfo = new TokenInfo[](1);
         testTokenInfo[0] = TokenInfo(
             CHAIN_ID,
@@ -71,7 +71,7 @@ contract FundsTest is BaseTest {
             "SYMBOL",
             WITHDRAW_FEE
         );
-        assetHandler.linkToken(TICKER, testTokenInfo);
+        assetManager.linkToken(TICKER, testTokenInfo);
         // deploy fundsHandler
         address fundsHandlerProxy = _deployProxy(
             address(
@@ -84,7 +84,7 @@ contract FundsTest is BaseTest {
         assertTrue(fundsHandler.hasRole(ENTRYPOINT_ROLE, entryPointProxy));
 
         // assign handlers
-        assetHandler.grantRole(FUNDS_ROLE, fundsHandlerProxy);
+        assetManager.grantRole(FUNDS_ROLE, fundsHandlerProxy);
         handlers.push(fundsHandlerProxy);
         taskManager.initialize(daoContract, entryPointProxy, handlers);
 

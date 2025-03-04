@@ -7,7 +7,7 @@ import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/Messa
 import {MockNuvoToken} from "../src/mocks/MockNuvoToken.sol";
 
 import {AccountHandlerUpgradeable} from "../src/handlers/AccountHandlerUpgradeable.sol";
-import {AssetHandlerUpgradeable} from "../src/handlers/AssetHandlerUpgradeable.sol";
+import {AssetManagerUpgradeable} from "../src/AssetManagerUpgradeable.sol";
 import {FundsHandlerUpgradeable} from "../src/handlers/FundsHandlerUpgradeable.sol";
 import {NuvoLockUpgradeable} from "../src/NuvoLockUpgradeable.sol";
 import {TaskManagerUpgradeable} from "../src/TaskManagerUpgradeable.sol";
@@ -109,16 +109,16 @@ contract DeployTest is Script {
         handlers.push(address(accountHandler));
         console.log("|AccountHandler|", address(accountHandler));
 
-        // deploy assetHandler
-        AssetHandlerUpgradeable assetHandler = new AssetHandlerUpgradeable();
-        assetHandler.initialize(daoContract);
-        handlers.push(address(assetHandler));
-        console.log("|AssetHandler|", address(assetHandler));
+        // deploy assetManager
+        AssetManagerUpgradeable assetManager = new AssetManagerUpgradeable();
+        assetManager.initialize(daoContract);
+        handlers.push(address(assetManager));
+        console.log("|AssetManager|", address(assetManager));
 
         // deploy fundsHandler
         FundsHandlerUpgradeable fundsHandler = new FundsHandlerUpgradeable(
             address(accountHandler),
-            address(assetHandler),
+            address(assetManager),
             address(taskManager)
         );
         fundsHandler.initialize(daoContract, address(entryPoint), submitter);

@@ -3,7 +3,7 @@ pragma solidity ^0.8.26;
 
 import {HandlerBase} from "./HandlerBase.sol";
 import {IAccountHandler} from "../interfaces/IAccountHandler.sol";
-import {IAssetHandler, NudexAsset, TokenInfo} from "../interfaces/IAssetHandler.sol";
+import {IAssetManager, NudexAsset, TokenInfo} from "../interfaces/IAssetManager.sol";
 import {IFundsHandler, AddressCategory, DepositParam, WithdrawalParam, TransferParam, ConsolidateTaskParam} from "../interfaces/IFundsHandler.sol";
 import {INIP20} from "../interfaces/INIP20.sol";
 // import {console} from "forge-std/console.sol";
@@ -12,7 +12,7 @@ contract FundsHandlerUpgradeable is IFundsHandler, HandlerBase {
     // FIXME: change feeReceiver to the actual address
     address public immutable feeReceiver = address(0);
     IAccountHandler public immutable accountHandler;
-    IAssetHandler public immutable assetHandler;
+    IAssetManager public immutable assetHandler;
 
     mapping(bytes32 => uint256) public totalValueLocked;
     mapping(bytes32 userHash => uint256[] depositAmounts) private deposits;
@@ -24,7 +24,7 @@ contract FundsHandlerUpgradeable is IFundsHandler, HandlerBase {
         address _taskManager
     ) HandlerBase(_taskManager) {
         accountHandler = IAccountHandler(_accountHandler);
-        assetHandler = IAssetHandler(_assetHandler);
+        assetHandler = IAssetManager(_assetHandler);
     }
 
     function initialize(

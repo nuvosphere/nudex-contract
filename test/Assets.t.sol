@@ -3,8 +3,8 @@ pragma solidity ^0.8.0;
 import "./BaseTest.sol";
 import {TestHelper} from "./utils/TestHelper.sol";
 
-import {AssetHandlerUpgradeable} from "../src/handlers/AssetHandlerUpgradeable.sol";
-import {IAssetHandler, AssetType, AssetParam, Pair, PairState, PairType, TokenInfo} from "../src/interfaces/IAssetHandler.sol";
+import {AssetManagerUpgradeable} from "../src/AssetManagerUpgradeable.sol";
+import {IAssetManager, AssetType, AssetParam, Pair, PairState, PairType, TokenInfo} from "../src/interfaces/IAssetManager.sol";
 import {ITaskManager, Task} from "../src/interfaces/ITaskManager.sol";
 
 contract AssetsTest is BaseTest {
@@ -13,23 +13,23 @@ contract AssetsTest is BaseTest {
     uint256 public constant MIN_DEPOSIT_AMOUNT = 50;
     uint256 public constant MIN_WITHDRAW_AMOUNT = 50;
 
-    AssetHandlerUpgradeable public assetHandler;
+    AssetManagerUpgradeable public assetManager;
 
     function setUp() public override {
         super.setUp();
 
-        // setup assetHandler
-        address assetHandlerProxy = _deployProxy(
-            address(new AssetHandlerUpgradeable()),
+        // setup assetManager
+        address assetManagerProxy = _deployProxy(
+            address(new AssetManagerUpgradeable()),
             daoContract
         );
-        assetHandler = AssetHandlerUpgradeable(assetHandlerProxy);
-        assetHandler.initialize(daoContract);
+        assetManager = AssetManagerUpgradeable(assetManagerProxy);
+        assetManager.initialize(daoContract);
 
         // assign handlers
         vm.startPrank(daoContract);
-        assetHandler.grantRole(assetHandler.DAO_ROLE(), msgSender);
-        handlers.push(assetHandlerProxy);
+        assetManager.grantRole(assetManager.DAO_ROLE(), msgSender);
+        handlers.push(assetManagerProxy);
         taskManager.initialize(daoContract, entryPointProxy, handlers);
 
         // list new asset and token
@@ -41,7 +41,7 @@ contract AssetsTest is BaseTest {
             MIN_WITHDRAW_AMOUNT,
             ""
         );
-        assetHandler.listNewAsset(TICKER, assetParam);
+        assetManager.listNewAsset(TICKER, assetParam);
         TokenInfo[] memory testTokenInfo = new TokenInfo[](1);
         testTokenInfo[0] = TokenInfo(
             CHAIN_ID,
@@ -52,7 +52,7 @@ contract AssetsTest is BaseTest {
             "SYMBOL",
             0
         );
-        assetHandler.linkToken(TICKER, testTokenInfo);
+        assetManager.linkToken(TICKER, testTokenInfo);
         vm.stopPrank();
     }
 
@@ -60,16 +60,16 @@ contract AssetsTest is BaseTest {
         vm.startPrank(daoContract);
         // list asset
         bytes32 assetBTicker = "TOKEN_TICKER_10";
-        assertEq(assetHandler.getAllAssets().length, 1);
+        assertEq(assetManager.getAllAssets().length, 1);
         AssetParam memory assetParam = AssetParam(10, false, false, 0, 0, "Token02");
-        assetHandler.listNewAsset(assetBTicker, assetParam);
-        assertEq(assetHandler.getAllAssets().length, 2);
+        assetManager.listNewAsset(assetBTicker, assetParam);
+        assertEq(assetManager.getAllAssets().length, 2);
 
         // update listed asset
-        assertEq(assetHandler.getAssetDetails(TICKER).decimals, 18);
+        assertEq(assetManager.getAssetDetails(TICKER).decimals, 18);
         assetParam = AssetParam(10, false, true, 0, MIN_WITHDRAW_AMOUNT, "Token01");
-        assetHandler.updateAsset(TICKER, assetParam);
-        assertEq(assetHandler.getAssetDetails(TICKER).decimals, 10);
+        assetManager.updateAsset(TICKER, assetParam);
+        assertEq(assetManager.getAssetDetails(TICKER).decimals, 10);
 
         // add pair
         Pair[] memory pairs = new Pair[](1);
@@ -87,12 +87,12 @@ contract AssetsTest is BaseTest {
             30 ether,
             10 ether
         );
-        assetHandler.addPair(pairs);
+        assetManager.addPair(pairs);
         // check index, should match 1 both ways
-        assertEq(assetHandler.getPairIndex(TICKER, assetBTicker), 1);
-        assertEq(assetHandler.getPairIndex(assetBTicker, TICKER), 1);
-        assertEq(assetHandler.getPairInfo(assetBTicker, TICKER).listedTime, block.timestamp);
-        assertEq(assetHandler.getPairInfo(assetBTicker, TICKER).activeTime, block.timestamp);
+        assertEq(assetManager.getPairIndex(TICKER, assetBTicker), 1);
+        assertEq(assetManager.getPairIndex(assetBTicker, TICKER), 1);
+        assertEq(assetManager.getPairInfo(assetBTicker, TICKER).listedTime, block.timestamp);
+        assertEq(assetManager.getPairInfo(assetBTicker, TICKER).activeTime, block.timestamp);
 
         // link new token
         TokenInfo[] memory newTokens = new TokenInfo[](2);
@@ -114,9 +114,9 @@ contract AssetsTest is BaseTest {
             "TOKEN_SYMBOL2",
             5 ether
         );
-        assetHandler.linkToken(TICKER, newTokens);
-        assertEq(assetHandler.getAllLinkedTokens(TICKER).length, 3);
-        assertEq(assetHandler.linkedTokenList(TICKER, 2), uint64(0x03));
+        assetManager.linkToken(TICKER, newTokens);
+        assertEq(assetManager.getAllLinkedTokens(TICKER).length, 3);
+        assertEq(assetManager.linkedTokenList(TICKER, 2), uint64(0x03));
 
         // update linked token
         TokenInfo memory tokenInfo = TokenInfo(
@@ -128,37 +128,37 @@ contract AssetsTest is BaseTest {
             "TOKEN_SYMBOL",
             2 ether
         );
-        assetHandler.updateToken(TICKER, tokenInfo);
-        assertEq(assetHandler.getLinkedToken(TICKER, CHAIN_ID).withdrawFee, 2 ether);
+        assetManager.updateToken(TICKER, tokenInfo);
+        assertEq(assetManager.getLinkedToken(TICKER, CHAIN_ID).withdrawFee, 2 ether);
         // fail case: update non-existing token
         tokenInfo.chainId = uint64(0x99);
         vm.expectRevert("Token not linked");
-        assetHandler.updateToken(TICKER, tokenInfo);
+        assetManager.updateToken(TICKER, tokenInfo);
 
         // deactive token
-        assertTrue(assetHandler.getLinkedToken(TICKER, CHAIN_ID).isActive);
-        assetHandler.tokenSwitch(TICKER, CHAIN_ID, false);
-        assertFalse(assetHandler.getLinkedToken(TICKER, CHAIN_ID).isActive);
+        assertTrue(assetManager.getLinkedToken(TICKER, CHAIN_ID).isActive);
+        assetManager.tokenSwitch(TICKER, CHAIN_ID, false);
+        assertFalse(assetManager.getLinkedToken(TICKER, CHAIN_ID).isActive);
 
         // unlink tokens
-        assetHandler.resetLinkedToken(TICKER);
+        assetManager.resetLinkedToken(TICKER);
         signature = _generateOptSignature(taskOpts, tssKey);
-        assertFalse(assetHandler.getLinkedToken(TICKER, CHAIN_ID).isActive);
+        assertFalse(assetManager.getLinkedToken(TICKER, CHAIN_ID).isActive);
 
         // delist asset
-        assertTrue(assetHandler.isAssetListed(TICKER));
-        assetHandler.delistAsset(TICKER);
-        vm.expectRevert(abi.encodeWithSelector(IAssetHandler.AssetNotListed.selector, TICKER));
-        assetHandler.getAssetDetails(TICKER);
-        assertFalse(assetHandler.isAssetListed(TICKER));
+        assertTrue(assetManager.isAssetListed(TICKER));
+        assetManager.delistAsset(TICKER);
+        vm.expectRevert(abi.encodeWithSelector(IAssetManager.AssetNotListed.selector, TICKER));
+        assetManager.getAssetDetails(TICKER);
+        assertFalse(assetManager.isAssetListed(TICKER));
 
         vm.stopPrank();
     }
 
     function test_Pause() public {
-        assertFalse(assetHandler.pauseState(TICKER));
+        assertFalse(assetManager.pauseState(TICKER));
         vm.prank(daoContract);
-        assetHandler.setPauseState(TICKER, true);
-        assertTrue(assetHandler.pauseState(TICKER));
+        assetManager.setPauseState(TICKER, true);
+        assertTrue(assetManager.pauseState(TICKER));
     }
 }

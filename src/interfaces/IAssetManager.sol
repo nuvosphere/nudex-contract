@@ -66,7 +66,7 @@ struct Pair {
     uint256 minTradeQuoteToken;
 }
 
-interface IAssetHandler {
+interface IAssetManager {
     // events
     event NewPauseState(bytes32 indexed condition, bool indexed newState);
     event AssetListed(bytes32 indexed ticker, AssetParam assetParam);

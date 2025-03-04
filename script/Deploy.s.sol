@@ -5,7 +5,7 @@ import {Script, console} from "forge-std/Script.sol";
 import {ProxyAdmin} from "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
 
 import {AccountHandlerUpgradeable} from "../src/handlers/AccountHandlerUpgradeable.sol";
-import {AssetHandlerUpgradeable} from "../src/handlers/AssetHandlerUpgradeable.sol";
+import {AssetManagerUpgradeable} from "../src/AssetManagerUpgradeable.sol";
 import {FundsHandlerUpgradeable} from "../src/handlers/FundsHandlerUpgradeable.sol";
 import {NuvoLockUpgradeable} from "../src/NuvoLockUpgradeable.sol";
 import {TaskManagerUpgradeable} from "../src/TaskManagerUpgradeable.sol";
@@ -120,11 +120,11 @@ contract Deploy is Script {
         console.log("|AccountHandler|", accountHandlerProxy);
 
         // deploy assetHandler
-        assetHandlerProxy = deployProxy(address(new AssetHandlerUpgradeable()));
-        AssetHandlerUpgradeable assetHandler = AssetHandlerUpgradeable(assetHandlerProxy);
+        assetHandlerProxy = deployProxy(address(new AssetManagerUpgradeable()));
+        AssetManagerUpgradeable assetHandler = AssetManagerUpgradeable(assetHandlerProxy);
         assetHandler.initialize(daoContract);
         handlers.push(assetHandlerProxy);
-        console.log("|AssetHandler|", assetHandlerProxy);
+        console.log("|AssetManager|", assetHandlerProxy);
 
         // deploy fundsHandler
         fundsHandlerProxy = deployProxy(
@@ -156,7 +156,7 @@ contract Deploy is Script {
 
     function setConfig() public {
         console.log("\nGranting DAO role to submitter", submitter);
-        AssetHandlerUpgradeable assetHandler = AssetHandlerUpgradeable(assetHandlerProxy);
+        AssetManagerUpgradeable assetHandler = AssetManagerUpgradeable(assetHandlerProxy);
         assetHandler.grantRole(assetHandler.DAO_ROLE(), submitter);
     }
 
