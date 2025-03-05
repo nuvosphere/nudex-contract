@@ -20,6 +20,8 @@ contract Deploy is Script {
     address tssSigner;
     address submitter;
     address tracker;
+    address participantTaskSubmitter;
+
     address[] initialParticipants;
     address[] handlers;
     address proxyAdminContract;
@@ -40,6 +42,8 @@ contract Deploy is Script {
         tssSigner = vm.envAddress("TSS_SIGNER_ADDR");
         submitter = vm.envAddress("SUBMITTER_ADDR");
         tracker = vm.envAddress("TRACKER_ADDR");
+        participantTaskSubmitter = vm.envAddress("PARTICIPANT_TASK_SUBMITTER");
+
         initialParticipants.push(vm.envAddress("PARTICIPANT_1"));
         initialParticipants.push(vm.envAddress("PARTICIPANT_2"));
         initialParticipants.push(vm.envAddress("PARTICIPANT_3"));
@@ -111,7 +115,12 @@ contract Deploy is Script {
         ParticipantHandlerUpgradeable participantHandler = ParticipantHandlerUpgradeable(
             participantHandlerProxy
         );
-        participantHandler.initialize(daoContract, entryPointProxy, submitter, initialParticipants);
+        participantHandler.initialize(
+            daoContract,
+            entryPointProxy,
+            participantTaskSubmitter,
+            initialParticipants
+        );
         handlers.push(participantHandlerProxy);
         handlers.push(address(participantHandler));
         console.log("|ParticipantHandler|", participantHandlerProxy);
