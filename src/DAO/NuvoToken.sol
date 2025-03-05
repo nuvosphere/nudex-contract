@@ -6,7 +6,9 @@ import {ERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20P
 import {Nonces} from "@openzeppelin/contracts/utils/Nonces.sol";
 
 contract NuvoToken is ERC20Votes, ERC20Permit {
-    constructor() ERC20("Nuvo Token", "NVT") ERC20Permit("NuvoToken") {}
+    constructor(address _initialHolder) ERC20("NUBI", "NUBI") ERC20Permit("NuvoToken") {
+        _mint(_initialHolder, 1_000_000_000 * 10 ** decimals());
+    }
 
     function _update(address from, address to, uint256 value) internal override(ERC20, ERC20Votes) {
         super._update(from, to, value);
