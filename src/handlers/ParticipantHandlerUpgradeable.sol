@@ -120,7 +120,7 @@ contract ParticipantHandlerUpgradeable is IParticipantHandler, HandlerBase {
         require(participants.length > 3, NotEnoughParticipant());
         require(isParticipant[_participant], NotParticipant(_participant));
         isParticipant[_participant] = false;
-        for (uint8 i; i < participants.length; i++) {
+        for (uint256 i; i < participants.length; i++) {
             if (participants[i] == _participant) {
                 participants[i] = participants[participants.length - 1];
                 participants.pop();
@@ -158,11 +158,11 @@ contract ParticipantHandlerUpgradeable is IParticipantHandler, HandlerBase {
         bytes32
     ) external onlyRole(ENTRYPOINT_ROLE) {
         // remove old participants
-        for (uint8 i; i < participants.length; i++) {
+        for (uint256 i; i < participants.length; i++) {
             isParticipant[participants[i]] = false;
         }
         // add new participants
-        for (uint8 i; i < _newParticipants.length; ++i) {
+        for (uint256 i; i < _newParticipants.length; ++i) {
             require(
                 nuvoLock.lockedBalanceOf(_newParticipants[i]) > 0,
                 NotEligible(_newParticipants[i])

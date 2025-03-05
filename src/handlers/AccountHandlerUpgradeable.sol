@@ -60,7 +60,7 @@ contract AccountHandlerUpgradeable is IAccountHandler, HandlerBase {
         taskIds = new uint64[](_params.length);
         bytes32[] memory dataHashes = new bytes32[](_params.length);
         AccountRegistrationTaskParam memory param;
-        for (uint8 i; i < _params.length; i++) {
+        for (uint256 i; i < _params.length; i++) {
             param = _params[i];
             require(param.userAddr != address(0), InvalidUserAddress());
             require(param.account > 10000, InvalidAccountNumber(param.account));

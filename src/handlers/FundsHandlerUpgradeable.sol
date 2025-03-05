@@ -110,7 +110,7 @@ contract FundsHandlerUpgradeable is IFundsHandler, HandlerBase {
         require(_params.length > 0, "Empty input");
         taskIds = new uint64[](_params.length);
         bytes32[] memory dataHashes = new bytes32[](_params.length);
-        for (uint8 i; i < _params.length; i++) {
+        for (uint256 i; i < _params.length; i++) {
             require(
                 assetHandler.isAssetAllowed(_params[i].ticker, _params[i].chainId),
                 "Asset not allowed"
@@ -162,7 +162,7 @@ contract FundsHandlerUpgradeable is IFundsHandler, HandlerBase {
         uint256[] memory withdrawFees = new uint256[](_params.length);
         NudexAsset memory nudexAsset;
         TokenInfo memory tokenInfo;
-        for (uint8 i; i < _params.length; i++) {
+        for (uint256 i; i < _params.length; i++) {
             require(
                 assetHandler.isAssetAllowed(_params[i].ticker, _params[i].chainId),
                 "Asset not allowed"
@@ -245,7 +245,7 @@ contract FundsHandlerUpgradeable is IFundsHandler, HandlerBase {
     ) external onlyRole(SUBMITTER_ROLE) returns (uint64[] memory taskIds) {
         taskIds = new uint64[](_params.length);
         bytes32[] memory dataHashes = new bytes32[](_params.length);
-        for (uint8 i; i < _params.length; i++) {
+        for (uint256 i; i < _params.length; i++) {
             require(_params[i].amount > 0, "Invalid amount");
             uint256 fromAddrLength = bytes(_params[i].fromAddress).length;
             uint256 toAddrLength = bytes(_params[i].toAddress).length;
@@ -270,7 +270,7 @@ contract FundsHandlerUpgradeable is IFundsHandler, HandlerBase {
         taskIds = new uint64[](_params.length);
         bytes32[] memory dataHashes = new bytes32[](_params.length);
         NudexAsset memory nudexAsset;
-        for (uint8 i; i < _params.length; i++) {
+        for (uint256 i; i < _params.length; i++) {
             nudexAsset = assetHandler.getAssetDetails(_params[i].ticker);
             require(
                 _params[i].amount >=

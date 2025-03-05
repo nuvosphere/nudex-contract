@@ -121,7 +121,7 @@ contract AssetManagerUpgradeable is IAssetManager, AccessControlUpgradeable {
     }
 
     function addPair(Pair[] memory _pairs) external onlyRole(DAO_ROLE) {
-        for (uint8 i; i < _pairs.length; i++) {
+        for (uint256 i; i < _pairs.length; i++) {
             require(nudexAssets[_pairs[i].assetA].isListed, AssetNotListed(_pairs[i].assetA));
             require(nudexAssets[_pairs[i].assetB].isListed, AssetNotListed(_pairs[i].assetB));
 
@@ -199,7 +199,7 @@ contract AssetManagerUpgradeable is IAssetManager, AccessControlUpgradeable {
         bytes32 _ticker,
         TokenInfo[] calldata _tokenInfos
     ) external onlyRole(DAO_ROLE) checkListing(_ticker) {
-        for (uint8 i; i < _tokenInfos.length; ++i) {
+        for (uint256 i; i < _tokenInfos.length; ++i) {
             uint64 chainId = _tokenInfos[i].chainId;
             require(linkedTokens[_ticker][chainId].chainId == 0, "Linked Token");
             linkedTokens[_ticker][chainId] = _tokenInfos[i];

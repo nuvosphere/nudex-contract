@@ -20,7 +20,7 @@ contract TaskManagerUpgradeable is ITaskManager, AccessControlUpgradeable {
     ) public initializer {
         _grantRole(DEFAULT_ADMIN_ROLE, _owner);
         _grantRole(ENTRYPOINT_ROLE, _entryPoint);
-        for (uint8 i; i < _taskHandlers.length; ++i) {
+        for (uint256 i; i < _taskHandlers.length; ++i) {
             _grantRole(HANDLER_ROLE, _taskHandlers[i]);
         }
 
@@ -76,7 +76,7 @@ contract TaskManagerUpgradeable is ITaskManager, AccessControlUpgradeable {
     ) external onlyRole(HANDLER_ROLE) returns (uint64[] memory taskIds) {
         require(_dataHashes.length <= MAX_BATCH_SIZE, "Exceed max batch size");
         taskIds = new uint64[](_dataHashes.length);
-        for (uint8 i; i < _dataHashes.length; ++i) {
+        for (uint256 i; i < _dataHashes.length; ++i) {
             require(taskHashes[_dataHashes[i]] == 0, "Duplicate task");
             taskIds[i] = nextTaskId++;
             tasks[taskIds[i]] = Task({
@@ -94,7 +94,7 @@ contract TaskManagerUpgradeable is ITaskManager, AccessControlUpgradeable {
         State[] calldata _states
     ) external onlyRole(ENTRYPOINT_ROLE) {
         Task storage task;
-        for (uint8 i; i < _taskIds.length; ++i) {
+        for (uint256 i; i < _taskIds.length; ++i) {
             task = tasks[_taskIds[i]];
             require(task.state != State.Completed && task.state != State.Failed, "Task finalized");
             task.state = _states[i];

@@ -187,7 +187,7 @@ contract EntryPointUpgradeable is IEntryPoint, Initializable, ReentrancyGuardUpg
         Task memory task;
         uint64[] memory taskIds = new uint64[](_operations.length);
         State[] memory states = new State[](_operations.length);
-        for (uint8 i; i < _operations.length; ++i) {
+        for (uint256 i; i < _operations.length; ++i) {
             taskIds[i] = _operations[i].taskId;
             task = taskManager.getTask(_operations[i].taskId);
             // only override task state if initialCalldata is empty
