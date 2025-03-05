@@ -28,7 +28,6 @@ contract DeployTest is Script {
     NuvoLockUpgradeable nuvoLock;
 
     address daoContract;
-    address feeReceiver;
     address tssSigner;
     address deployer;
     address submitter;
@@ -38,7 +37,6 @@ contract DeployTest is Script {
     function setUp() public {
         // TODO: temporary dao contract
         daoContract = vm.envAddress("DAO_CONTRACT_ADDR");
-        feeReceiver = vm.envAddress("FEE_RECEIVER_ADDR");
         console.log("DAO contract addr: ", daoContract);
         tssSigner = vm.envAddress("TSS_SIGNER_ADDR");
         console.log("TSS signer addr: ", tssSigner);
@@ -123,7 +121,13 @@ contract DeployTest is Script {
             address(assetManager),
             address(taskManager)
         );
-        fundsHandler.initialize(daoContract, address(entryPoint), submitter, feeReceiver);
+        fundsHandler.initialize(
+            daoContract,
+            address(entryPoint),
+            submitter,
+            submitter,
+            daoContract
+        );
         handlers.push(address(fundsHandler));
         console.log("|FundsHandler|", address(fundsHandler));
 

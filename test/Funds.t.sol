@@ -80,7 +80,7 @@ contract FundsTest is BaseTest {
             daoContract
         );
         fundsHandler = FundsHandlerUpgradeable(fundsHandlerProxy);
-        fundsHandler.initialize(daoContract, entryPointProxy, msgSender, daoContract);
+        fundsHandler.initialize(daoContract, entryPointProxy, msgSender, msgSender, daoContract);
         assertTrue(fundsHandler.hasRole(ENTRYPOINT_ROLE, entryPointProxy));
 
         // assign handlers

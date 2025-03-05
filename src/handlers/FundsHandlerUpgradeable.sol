@@ -9,6 +9,8 @@ import {INIP20} from "../interfaces/INIP20.sol";
 // import {console} from "forge-std/console.sol";
 
 contract FundsHandlerUpgradeable is IFundsHandler, HandlerBase {
+    bytes32 public constant WITHDRAW_SUMITTER_ROLE = keccak256("WITHDRAW_SUMITTER_ROLE");
+
     IAccountHandler public immutable accountHandler;
     IAssetManager public immutable assetHandler;
 
@@ -30,9 +32,11 @@ contract FundsHandlerUpgradeable is IFundsHandler, HandlerBase {
         address _owner,
         address _entryPoint,
         address _submitter,
+        address _withdrawSubmitter,
         address _feeReceiver
     ) public initializer {
         __HandlerBase_init(_owner, _entryPoint, _submitter);
+        _grantRole(WITHDRAW_SUMITTER_ROLE, _withdrawSubmitter);
         feeReceiver = _feeReceiver;
     }
 
@@ -150,7 +154,7 @@ contract FundsHandlerUpgradeable is IFundsHandler, HandlerBase {
      */
     function submitWithdrawTask(
         WithdrawalParam[] calldata _params
-    ) external onlyRole(SUBMITTER_ROLE) returns (uint64[] memory taskIds) {
+    ) external onlyRole(WITHDRAW_SUMITTER_ROLE) returns (uint64[] memory taskIds) {
         require(_params.length > 0, "Empty input");
         taskIds = new uint64[](_params.length);
         bytes32[] memory dataHashes = new bytes32[](_params.length);

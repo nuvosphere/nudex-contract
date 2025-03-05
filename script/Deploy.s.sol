@@ -19,6 +19,7 @@ contract Deploy is Script {
     address feeReceiver;
     address tssSigner;
     address submitter;
+    address tracker;
     address[] initialParticipants;
     address[] handlers;
     address proxyAdminContract;
@@ -38,6 +39,7 @@ contract Deploy is Script {
         nuvoToken = vm.envAddress("NUVO_TOKEN_ADDR");
         tssSigner = vm.envAddress("TSS_SIGNER_ADDR");
         submitter = vm.envAddress("SUBMITTER_ADDR");
+        tracker = vm.envAddress("TRACKER_ADDR");
         initialParticipants.push(vm.envAddress("PARTICIPANT_1"));
         initialParticipants.push(vm.envAddress("PARTICIPANT_2"));
         initialParticipants.push(vm.envAddress("PARTICIPANT_3"));
@@ -139,7 +141,7 @@ contract Deploy is Script {
             )
         );
         FundsHandlerUpgradeable fundsHandler = FundsHandlerUpgradeable(fundsHandlerProxy);
-        fundsHandler.initialize(daoContract, entryPointProxy, submitter, feeReceiver);
+        fundsHandler.initialize(daoContract, entryPointProxy, submitter, tracker, feeReceiver);
         handlers.push(fundsHandlerProxy);
         console.log("|FundsHandler|", fundsHandlerProxy);
 
