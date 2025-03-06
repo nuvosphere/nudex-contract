@@ -4,7 +4,39 @@ Smart contracts used by nuDex deposits and withdraw
 
 ## Deployed Contracts
 
-> Goat Testnet
+> Goat Mainnet (production)
+
+| Contract           | Address                                    |
+| ------------------ | ------------------------------------------ |
+| NuvoToken          | 0x01c36030282b247A9ce9954B1CedF69b7947f754 |
+| EntryPoint         | 0xe57B81AFdfC1d9851bfD4217D0C321A7Cdd37f36 |
+| NuvoLock           | 0x29F50302ebaa860a77b3A6ACe60F6835Af91aAA5 |
+| TaskManager        | 0x33b82a4FdbC915298551212443aD16f4c9fbF154 |
+| ParticipantHandler | 0x189334cFbb33BC7C2eDB45C2f84e049fFf66DE67 |
+| AccountHandler     | 0xc2c9F2442B93ea38d661E4DFd8a0276acCdd1347 |
+| AssetManager       | 0x2117dF43b088d9B525396b20591d9Ec273A63838 |
+| FundsHandler       | 0x06Bd0eC86aB9fC28eAa9C09E457C6c75d1421127 |
+| NudexAuthorize     | 0xd2b22A5557adF344184eBCF36768922a1631B2d6 |
+
+> Goat Testnet (dev)
+
+| Contract           | Address                                    |
+| ------------------ | ------------------------------------------ |
+| NuvoToken          | 0xb1de22C4DAAcB986d8bD39Fb0FCC9D54C511002E |
+| EntryPoint         | 0x41fE471e8A62b62D12582b9068a8c848eba5C833 |
+| NuvoLock           | 0x90D9e5b8B644e4BEEc3C60f59F4dF3116108c4Ed |
+| TaskManager        | 0x4F8d9fB22c404A34502aD9fe6f7667055485FF41 |
+| ParticipantHandler | 0x77acDbaFb570F66a2C73d9d20403e1a24B311649 |
+| AccountHandler     | 0x63D1722Bc288d72277274C8B1B1379Db3Af3FbcC |
+| AssetHandler       | 0x67307896F71CCa4ed6B24927c833589eDdD6d392 |
+| FundsHandler       | 0x585A0eE04a42258D57ABC939238c54A78412c46C |
+
+submitter: 0x1D2cd50A3cF3c55a7982AD54F9f364C1e953Bc57  
+participant 0 address: 0x3a818294ca1F3C27d7588b123Ec43F2546fa07f4  
+participant 1 address: 0x04d9389Cf937b1e6F2258d842e7237E955d6ab04  
+participant 2 address: 0xf6D37CE75dB465DcDb4c7097bEB9c1D46b171037
+
+> Goat Testnet (test)
 
 | Contract           | Address                                    |
 | ------------------ | ------------------------------------------ |
@@ -24,20 +56,7 @@ participant 0 address: 0x331B67539cF7eD49E39F743Ae74e2D152111F7E9
 participant 1 address: 0xA80DEAdd39f82981b194AB0e4BFB30190C36dA80
 participant 2 address: 0xB6d1f0d7a80b76d03810e3814f3B5a17Aaa3a83c
 
-> Goat Testnet (test environment)
-
-| Contract           | Address                                    |
-| ------------------ | ------------------------------------------ |
-| NuvoToken          | 0xE4D4d103C5E4BA35FA75Cd8c1CB1576b813c1dE4 |
-| EntryPoint         | 0x6AB289CDb97ED7B72FC737e7C7A38458930BcD58 |
-| NuvoLock           | 0x6CD32e4dE8e16665c4B50DfD56071A6A97961963 |
-| TaskManager        | 0xB79D976d993591cC0bAcB7D0C50E118a3d78f21b |
-| ParticipantHandler | 0x4051EF5d9c78F335C2F6666BF692C130db6810cf |
-| AccountHandler     | 0x74F6037090Af84679631349b662B7898AdA35442 |
-| AssetManager       | 0x6E2ab301D2A180eE256f0873cb88CbB6e3d7CaD2 |
-| FundsHandler       | 0x1795C5Bbe34B11F108280FAF63CAD12526666193 |
-
-## Workflow
+## Task Workflow
 
 1. Task Submission via Handler Contracts
 
@@ -80,3 +99,27 @@ After off-chain verification, a randomly selected TSS participant will execute t
 4. Random Selection of TSS Participants
 
 After each task execution, the TSS participant will receive a bonus point for successfully executing the task. A new TSS participant will be randomly selected from the participant pool to execute subsequent tasks.
+
+## Becoming a Valid Participant
+
+To become a valid participant, a user must lock **NUBI** tokens into the **NuvoLock** contract. This can be done using one of the following methods:
+
+1. `lock(uint256 _amount, uint32 _period)`
+
+Locks **NUBI** tokens in the contract.
+
+- \_amount: The amount of NUBI tokens to lock. Must be greater than `minLockAmount`.
+- \_period: The locking period in seconds. Must be greater than `minLockPeriod`.
+
+Before calling this function, the user must first approve the NuvoLock contract to spend at least \_amount of NUBI tokens.
+
+2. `lockWithPermit(address _owner, uint256 _amount, uint32 _period, uint8 _v, bytes32 _r, bytes32 _s)`
+
+Locks **NUBI** tokens using an off-chain signature, allowing the user to skip the approval step.
+
+- \_owner: The address of the user locking the tokens.
+- \_amount: The amount of NUBI tokens to lock (must be greater than minLockAmount).
+- \_period: The locking period in seconds (must be greater than minLockPeriod).
+- \_v, \_r, \_s: The signature parameters generated according to the ERC20Permit standard.
+
+This function enables gasless approval using the ERC20Permit mechanism, reducing the number of transactions required.

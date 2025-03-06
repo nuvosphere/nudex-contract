@@ -118,7 +118,7 @@ contract Deploy is Script {
             // deploy nuvoLock
             nuvoLockProxy = deployProxy(address(new NuvoLockUpgradeable(nuvoToken)));
             NuvoLockUpgradeable nuvoLock = NuvoLockUpgradeable(nuvoLockProxy);
-            nuvoLock.initialize(daoContract, daoContract, entryPointProxy, 1 ether, 1 days);
+            nuvoLock.initialize(nuvoTokenHolder, daoContract, entryPointProxy, 1 ether, 1 days);
         }
 
         console.log("\n  |NuvoToken|", nuvoToken);

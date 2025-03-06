@@ -18,7 +18,8 @@ via_ir = true
 [rpc_endpoints]
 sepolia = "${SEPOLIA_RPC_URL}"
 localhost = "${LOCALHOST_RPC_URL}"
-goatTestnet = "${GOAT_TESTNET_RPC_URL}"
+goatMainnet = "https://rpc.goat.network"
+goatTestnet = "https://rpc.testnet3.goat.network"
 bscTestnet = "${BSC_TESTNET_RPC_URL}"
 
 [etherscan]
