@@ -17,6 +17,7 @@ interface INuvoLock {
     event RewardsAccumulated(address indexed user, uint256 rewards);
     event RewardsClaimed(address indexed user, uint256 rewards);
     event RewardPerPeriodUpdated(uint256 indexed newRewardPerPeriod, uint256 period);
+    event RewardSourceUpdated(address newRewardSource);
     event DemeritPointsIncreased(address indexed submitter, uint256 points);
 
     error AlreadyLocked(address user);

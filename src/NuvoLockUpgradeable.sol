@@ -68,6 +68,12 @@ contract NuvoLockUpgradeable is INuvoLock, AccessControlUpgradeable {
         return block.timestamp - locks[_userAddr].startTime;
     }
 
+    function setRewardSource(address _newRewardSource) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        require(_newRewardSource != address(0), "Invalid reward source");
+        rewardSource = _newRewardSource;
+        emit RewardSourceUpdated(_newRewardSource);
+    }
+
     /**
      * @dev Set minimum lock threshold.
      * @param _minLockAmount New min lock amount.
