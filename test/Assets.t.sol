@@ -24,11 +24,11 @@ contract AssetsTest is BaseTest {
             daoContract
         );
         assetManager = AssetManagerUpgradeable(assetManagerProxy);
-        assetManager.initialize(daoContract);
+        assetManager.initialize(daoContract, daoContract);
 
         // assign handlers
         vm.startPrank(daoContract);
-        assetManager.grantRole(assetManager.DAO_ROLE(), msgSender);
+        assetManager.grantRole(assetManager.ADMIN_ROLE(), msgSender);
         handlers.push(assetManagerProxy);
         taskManager.initialize(daoContract, entryPointProxy, handlers);
 

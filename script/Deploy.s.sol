@@ -8,6 +8,7 @@ import {AccountHandlerUpgradeable} from "../src/handlers/AccountHandlerUpgradeab
 import {AssetManagerUpgradeable} from "../src/AssetManagerUpgradeable.sol";
 import {FundsHandlerUpgradeable} from "../src/handlers/FundsHandlerUpgradeable.sol";
 import {NuvoLockUpgradeable} from "../src/NuvoLockUpgradeable.sol";
+import {NuvoToken} from "../src/dao/NuvoToken.sol";
 import {TaskManagerUpgradeable} from "../src/TaskManagerUpgradeable.sol";
 import {ParticipantHandlerUpgradeable} from "../src/handlers/ParticipantHandlerUpgradeable.sol";
 import {EntryPointUpgradeable} from "../src/EntryPointUpgradeable.sol";
@@ -15,7 +16,9 @@ import {NuvoProxy} from "../src/proxies/NuvoProxy.sol";
 
 contract Deploy is Script {
     address nuvoToken;
+    address proxyAdminOwner;
     address daoContract;
+    address nuvoTokenHolder;
     address feeReceiver;
     address tssSigner;
     address submitter;
@@ -36,9 +39,10 @@ contract Deploy is Script {
 
     function setUp() public {
         // TODO: temporary dao contract
+        proxyAdminOwner = vm.envAddress("PROXY_ADMIN_OWNER");
         daoContract = vm.envAddress("DAO_CONTRACT_ADDR");
+        nuvoTokenHolder = vm.envAddress("NUVO_TOKEN_HOLDER");
         feeReceiver = vm.envAddress("FEE_RECEIVER_ADDR");
-        nuvoToken = vm.envAddress("NUVO_TOKEN_ADDR");
         tssSigner = vm.envAddress("TSS_SIGNER_ADDR");
         submitter = vm.envAddress("SUBMITTER_ADDR");
         tracker = vm.envAddress("TRACKER_ADDR");
@@ -48,9 +52,14 @@ contract Deploy is Script {
         initialParticipants.push(vm.envAddress("PARTICIPANT_2"));
         initialParticipants.push(vm.envAddress("PARTICIPANT_3"));
 
+        console.log("Proxy admin addr: ", proxyAdminOwner);
         console.log("DAO contract addr: ", daoContract);
+        console.log("Nuvo token holder addr: ", nuvoTokenHolder);
+        console.log("Fee receiver addr: ", feeReceiver);
         console.log("TSS signer addr: ", tssSigner);
         console.log("Submitter", submitter);
+        console.log("Tracker", tracker);
+        console.log("Participant task submitter", participantTaskSubmitter);
         for (uint8 i; i < initialParticipants.length; ++i) {
             console.log("participant", i, " address: ", initialParticipants[i]);
         }
@@ -63,11 +72,11 @@ contract Deploy is Script {
         console.log("\n  Deployer address: ", deployer);
 
         vm.startBroadcast(deployerPrivateKey);
+        setProxyAdmin(false);
 
-        setProxyAdmin(true);
+        setNuvoToken(false);
         deployTopLevel(false);
         deployHandlers(true);
-        setConfig();
 
         vm.stopBroadcast();
     }
@@ -76,11 +85,26 @@ contract Deploy is Script {
         if (_fromEnv) {
             proxyAdminContract = vm.envAddress("PROXY_ADMIN");
         } else {
-            ProxyAdmin proxyAdmin = new ProxyAdmin(daoContract);
+            ProxyAdmin proxyAdmin = new ProxyAdmin(proxyAdminOwner);
             proxyAdminContract = address(proxyAdmin);
         }
         console.log("Proxy Admin", proxyAdminContract);
         console.log("Proxy owner", ProxyAdmin(proxyAdminContract).owner());
+    }
+
+    function setNuvoToken(bool _fromEnv) public {
+        if (_fromEnv) {
+            nuvoToken = vm.envAddress("NUVO_TOKEN_ADDR");
+        } else {
+            NuvoToken nuvoTokenContract = new NuvoToken(nuvoTokenHolder);
+            nuvoToken = address(nuvoTokenContract);
+            console.log(
+                "NuvoToken holder",
+                nuvoTokenHolder,
+                nuvoTokenContract.balanceOf(nuvoTokenHolder)
+            );
+        }
+        console.log("|NuvoToken|", nuvoToken);
     }
 
     function deployTopLevel(bool _fromEnv) public {
@@ -135,7 +159,7 @@ contract Deploy is Script {
         // deploy assetManager
         assetManagerProxy = deployProxy(address(new AssetManagerUpgradeable()));
         AssetManagerUpgradeable assetManager = AssetManagerUpgradeable(assetManagerProxy);
-        assetManager.initialize(daoContract);
+        assetManager.initialize(daoContract, submitter);
         handlers.push(assetManagerProxy);
         console.log("|AssetManager|", assetManagerProxy);
 
@@ -165,12 +189,6 @@ contract Deploy is Script {
                 nuvoLockProxy // nuvoLock
             );
         }
-    }
-
-    function setConfig() public {
-        console.log("\nGranting DAO role to submitter", submitter);
-        AssetManagerUpgradeable assetManager = AssetManagerUpgradeable(assetManagerProxy);
-        assetManager.grantRole(assetManager.DAO_ROLE(), submitter);
     }
 
     function deployProxy(address _logic) internal returns (address) {

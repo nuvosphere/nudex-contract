@@ -35,9 +35,6 @@ contract DeployTest is Script {
     address[] handlers;
 
     function setUp() public {
-        // TODO: temporary dao contract
-        daoContract = vm.envAddress("DAO_CONTRACT_ADDR");
-        console.log("DAO contract addr: ", daoContract);
         tssSigner = vm.envAddress("TSS_SIGNER_ADDR");
         console.log("TSS signer addr: ", tssSigner);
     }
@@ -45,6 +42,7 @@ contract DeployTest is Script {
     function run() public {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         deployer = vm.createWallet(deployerPrivateKey).addr;
+        daoContract = deployer;
         console.log("Deployer address: ", deployer);
 
         vm.startBroadcast(deployerPrivateKey);
@@ -111,7 +109,7 @@ contract DeployTest is Script {
 
         // deploy assetManager
         AssetManagerUpgradeable assetManager = new AssetManagerUpgradeable();
-        assetManager.initialize(daoContract);
+        assetManager.initialize(daoContract, daoContract);
         handlers.push(address(assetManager));
         console.log("|AssetManager|", address(assetManager));
 

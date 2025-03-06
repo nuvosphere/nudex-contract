@@ -75,7 +75,7 @@ contract MockData is Script {
             assetManager = new AssetManagerUpgradeable();
             // proxy = new NuvoProxy(address(assetManager), vm.envAddress("PARTICIPANT_2"));
             // assetManager = AssetManagerUpgradeable(address(proxy));
-            assetManager.initialize(deployer);
+            assetManager.initialize(deployer, deployer);
             handlers.push(address(assetManager));
             console.log("|AssetManagerUpgradeable|", address(assetManager));
 

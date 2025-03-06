@@ -51,7 +51,7 @@ contract FundsTest is BaseTest {
         // setup assetManager
         address ahProxy = _deployProxy(address(new AssetManagerUpgradeable()), daoContract);
         AssetManagerUpgradeable assetManager = AssetManagerUpgradeable(ahProxy);
-        assetManager.initialize(thisAddr);
+        assetManager.initialize(thisAddr, thisAddr);
         AssetParam memory assetParam = AssetParam(
             18,
             true,

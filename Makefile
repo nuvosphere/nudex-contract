@@ -11,10 +11,10 @@ install:
 
 # To deploy and verify our contract
 deploy:
-	forge script --chain sepolia script/Deploy.s.sol:Deploy --rpc-url sepolia --broadcast --verify -vvvv
+	forge script script/Deploy.s.sol:Deploy --rpc-url goatMainnet --broadcast --verify -vvvv --verifier blockscout --verifier-url https://explorer.goat.network/api/
 
 deployTest:
-	forge script --chain 48816 script/DeployTest.s.sol:DeployTest --rpc-url goatTestnet --broadcast -vvvv --verify --verifier blockscout --verifier-url https://explorer.testnet3.goat.network/api/
+	forge script script/DeployTest.s.sol:DeployTest --rpc-url goatTestnet --broadcast -vvvv --verify --verifier blockscout --verifier-url https://explorer.testnet3.goat.network/api/
 
 deployDev:
 	forge script --rpc-url localhost script/DeployTest.s.sol:DeployTest --broadcast -vvvv

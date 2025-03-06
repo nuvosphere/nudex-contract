@@ -5,7 +5,7 @@ import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/acce
 import {IAssetManager, AssetParam, NudexAsset, Pair, PairState, PairType, TokenInfo} from "./interfaces/IAssetManager.sol";
 
 contract AssetManagerUpgradeable is IAssetManager, AccessControlUpgradeable {
-    bytes32 public constant DAO_ROLE = keccak256("DAO_ROLE");
+    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
 
     mapping(bytes32 pauseType => bool isPaused) public pauseState;
     // Mapping from asset identifiers to their details
@@ -24,10 +24,10 @@ contract AssetManagerUpgradeable is IAssetManager, AccessControlUpgradeable {
     }
 
     // _owner: EntryPoint contract
-    function initialize(address _owner) public initializer {
+    function initialize(address _owner, address _admin) public initializer {
         __AccessControl_init();
         _grantRole(DEFAULT_ADMIN_ROLE, _owner);
-        _grantRole(DAO_ROLE, _owner);
+        _grantRole(ADMIN_ROLE, _admin);
 
         // push empty pair, reserving index 0 for empty pair
         pairs.push(Pair(0, 0, PairState.Inactive, PairType.Spot, 0, 0, 0, 0, 0, 0, 0, 0));
@@ -72,7 +72,7 @@ contract AssetManagerUpgradeable is IAssetManager, AccessControlUpgradeable {
         return linkedTokens[_ticker][_chainId];
     }
 
-    function setPauseState(bytes32 _condition, bool _newState) external onlyRole(DAO_ROLE) {
+    function setPauseState(bytes32 _condition, bool _newState) external onlyRole(ADMIN_ROLE) {
         pauseState[_condition] = _newState;
         emit NewPauseState(_condition, _newState);
     }
@@ -81,7 +81,7 @@ contract AssetManagerUpgradeable is IAssetManager, AccessControlUpgradeable {
     function listNewAsset(
         bytes32 _ticker,
         AssetParam calldata _assetParam
-    ) external onlyRole(DAO_ROLE) {
+    ) external onlyRole(ADMIN_ROLE) {
         require(!nudexAssets[_ticker].isListed, "Asset already listed");
         NudexAsset storage tempNudexAsset = nudexAssets[_ticker];
         // update listed assets
@@ -120,7 +120,7 @@ contract AssetManagerUpgradeable is IAssetManager, AccessControlUpgradeable {
         return keccak256(abi.encodePacked(_assetB, _assetA));
     }
 
-    function addPair(Pair[] memory _pairs) external onlyRole(DAO_ROLE) {
+    function addPair(Pair[] memory _pairs) external onlyRole(ADMIN_ROLE) {
         for (uint256 i; i < _pairs.length; i++) {
             require(nudexAssets[_pairs[i].assetA].isListed, AssetNotListed(_pairs[i].assetA));
             require(nudexAssets[_pairs[i].assetB].isListed, AssetNotListed(_pairs[i].assetB));
@@ -143,7 +143,7 @@ contract AssetManagerUpgradeable is IAssetManager, AccessControlUpgradeable {
         bytes32 _assetA,
         bytes32 _assetB,
         Pair calldata _pair
-    ) external onlyRole(DAO_ROLE) {
+    ) external onlyRole(ADMIN_ROLE) {
         uint256 index = getPairIndex(_assetA, _assetB);
         Pair storage pair = pairs[index];
         pair.pairState = _pair.pairState;
@@ -154,7 +154,7 @@ contract AssetManagerUpgradeable is IAssetManager, AccessControlUpgradeable {
         emit PairUpdated(_pair, index);
     }
 
-    function removePair(bytes32 _assetA, bytes32 _assetB) external onlyRole(DAO_ROLE) {
+    function removePair(bytes32 _assetA, bytes32 _assetB) external onlyRole(ADMIN_ROLE) {
         pairs[getPairIndex(_assetA, _assetB)] = pairs[pairs.length - 1];
         pairs.pop();
         assetPairIndex[_getPairHash(_assetA, _assetB)] = 0;
@@ -165,7 +165,7 @@ contract AssetManagerUpgradeable is IAssetManager, AccessControlUpgradeable {
     function updateAsset(
         bytes32 _ticker,
         AssetParam calldata _assetParam
-    ) external onlyRole(DAO_ROLE) checkListing(_ticker) {
+    ) external onlyRole(ADMIN_ROLE) checkListing(_ticker) {
         NudexAsset storage tempNudexAsset = nudexAssets[_ticker];
         // update listed assets
         tempNudexAsset.updatedTime = uint32(block.timestamp);
@@ -182,7 +182,7 @@ contract AssetManagerUpgradeable is IAssetManager, AccessControlUpgradeable {
     }
 
     // Delist an existing asset
-    function delistAsset(bytes32 _ticker) external onlyRole(DAO_ROLE) checkListing(_ticker) {
+    function delistAsset(bytes32 _ticker) external onlyRole(ADMIN_ROLE) checkListing(_ticker) {
         NudexAsset storage tempNudexAsset = nudexAssets[_ticker];
         uint32 listIndex = tempNudexAsset.listIndex;
         resetLinkedToken(_ticker);
@@ -198,7 +198,7 @@ contract AssetManagerUpgradeable is IAssetManager, AccessControlUpgradeable {
     function linkToken(
         bytes32 _ticker,
         TokenInfo[] calldata _tokenInfos
-    ) external onlyRole(DAO_ROLE) checkListing(_ticker) {
+    ) external onlyRole(ADMIN_ROLE) checkListing(_ticker) {
         for (uint256 i; i < _tokenInfos.length; ++i) {
             uint64 chainId = _tokenInfos[i].chainId;
             require(linkedTokens[_ticker][chainId].chainId == 0, "Linked Token");
@@ -211,7 +211,7 @@ contract AssetManagerUpgradeable is IAssetManager, AccessControlUpgradeable {
     function updateToken(
         bytes32 _ticker,
         TokenInfo calldata _tokenInfo
-    ) external onlyRole(DAO_ROLE) checkListing(_ticker) {
+    ) external onlyRole(ADMIN_ROLE) checkListing(_ticker) {
         uint64 chainId = _tokenInfo.chainId;
         require(linkedTokens[_ticker][chainId].chainId != 0, "Token not linked");
         linkedTokens[_ticker][chainId] = _tokenInfo;
@@ -219,7 +219,7 @@ contract AssetManagerUpgradeable is IAssetManager, AccessControlUpgradeable {
     }
 
     // delete all linked tokens
-    function resetLinkedToken(bytes32 _ticker) public onlyRole(DAO_ROLE) checkListing(_ticker) {
+    function resetLinkedToken(bytes32 _ticker) public onlyRole(ADMIN_ROLE) checkListing(_ticker) {
         uint64[] memory chainIds = linkedTokenList[_ticker];
         delete linkedTokenList[_ticker];
         for (uint32 i; i < chainIds.length; ++i) {
@@ -233,7 +233,7 @@ contract AssetManagerUpgradeable is IAssetManager, AccessControlUpgradeable {
         bytes32 _ticker,
         uint64 _chainId,
         bool _isActive
-    ) external onlyRole(DAO_ROLE) checkListing(_ticker) {
+    ) external onlyRole(ADMIN_ROLE) checkListing(_ticker) {
         linkedTokens[_ticker][_chainId].isActive = _isActive;
         emit TokenSwitch(_ticker, _chainId, _isActive);
     }
