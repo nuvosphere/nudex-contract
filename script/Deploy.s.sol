@@ -20,7 +20,7 @@ contract Deploy is Script {
     address daoContract;
     address nuvoTokenHolder;
     address feeReceiver;
-    address tssSigner;
+    // address tssSigner;
     address submitter;
     address tracker;
     address participantTaskSubmitter;
@@ -43,7 +43,7 @@ contract Deploy is Script {
         daoContract = vm.envAddress("DAO_CONTRACT_ADDR");
         nuvoTokenHolder = vm.envAddress("NUVO_TOKEN_HOLDER");
         feeReceiver = vm.envAddress("FEE_RECEIVER_ADDR");
-        tssSigner = vm.envAddress("TSS_SIGNER_ADDR");
+        // tssSigner = vm.envAddress("TSS_SIGNER_ADDR");
         submitter = vm.envAddress("SUBMITTER_ADDR");
         tracker = vm.envAddress("TRACKER_ADDR");
         participantTaskSubmitter = vm.envAddress("PARTICIPANT_TASK_SUBMITTER");
@@ -56,7 +56,7 @@ contract Deploy is Script {
         console.log("DAO contract addr: ", daoContract);
         console.log("Nuvo token holder addr: ", nuvoTokenHolder);
         console.log("Fee receiver addr: ", feeReceiver);
-        console.log("TSS signer addr: ", tssSigner);
+        // console.log("TSS signer addr: ", tssSigner);
         console.log("Submitter", submitter);
         console.log("Tracker", tracker);
         console.log("Participant task submitter", participantTaskSubmitter);
@@ -76,7 +76,7 @@ contract Deploy is Script {
 
         setNuvoToken(false);
         deployTopLevel(false);
-        deployHandlers(true);
+        deployHandlers(false);
 
         vm.stopBroadcast();
     }
@@ -181,13 +181,13 @@ contract Deploy is Script {
         // initialize entryPoint link to all contracts
         taskManager.initialize(daoContract, entryPointProxy, handlers);
         if (_entryPointInit) {
-            EntryPointUpgradeable entryPoint = EntryPointUpgradeable(entryPointProxy);
-            entryPoint.initialize(
-                tssSigner, // tssSigner
-                participantHandlerProxy, // participantHandler
-                taskManagerProxy, // taskManager
-                nuvoLockProxy // nuvoLock
-            );
+            // EntryPointUpgradeable entryPoint = EntryPointUpgradeable(entryPointProxy);
+            // entryPoint.initialize(
+            //     tssSigner, // tssSigner
+            //     participantHandlerProxy, // participantHandler
+            //     taskManagerProxy, // taskManager
+            //     nuvoLockProxy // nuvoLock
+            // );
         }
     }
 
