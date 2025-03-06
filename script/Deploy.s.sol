@@ -83,7 +83,7 @@ contract Deploy is Script {
 
     function setProxyAdmin(bool _fromEnv) public {
         if (_fromEnv) {
-            proxyAdminContract = vm.envAddress("PROXY_ADMIN");
+            proxyAdminContract = vm.envAddress("PROXY_ADMIN_CONTRACT");
         } else {
             ProxyAdmin proxyAdmin = new ProxyAdmin(proxyAdminOwner);
             proxyAdminContract = address(proxyAdmin);

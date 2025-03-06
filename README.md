@@ -8,19 +8,21 @@ Smart contracts used by nuDex deposits and withdraw
 
 | Contract           | Address                                    |
 | ------------------ | ------------------------------------------ |
-| NuvoToken          | 0xb1de22C4DAAcB986d8bD39Fb0FCC9D54C511002E |
-| EntryPoint         | 0x41fE471e8A62b62D12582b9068a8c848eba5C833 |
-| NuvoLock           | 0x90D9e5b8B644e4BEEc3C60f59F4dF3116108c4Ed |
-| TaskManager        | 0x4F8d9fB22c404A34502aD9fe6f7667055485FF41 |
-| ParticipantHandler | 0x77acDbaFb570F66a2C73d9d20403e1a24B311649 |
-| AccountHandler     | 0x63D1722Bc288d72277274C8B1B1379Db3Af3FbcC |
-| AssetHandler       | 0x67307896F71CCa4ed6B24927c833589eDdD6d392 |
-| FundsHandler       | 0x585A0eE04a42258D57ABC939238c54A78412c46C |
+| NuvoToken          | 0x9221A8793B9B1333D1FA0a37210652eb5579c677 |
+| EntryPoint         | 0x41b26163f1670129b3F5A35C8672c7A87c253467 |
+| NuvoLock           | 0x05b0cc53156d66A63eD9870AD6609ac85dF04408 |
+| TaskManager        | 0xda8940A59A2cf02957Fed2d5FbcFC13C9c8d5068 |
+| ParticipantHandler | 0x0D667283D7fe928611DE49e813546037b44eaC34 |
+| AccountHandler     | 0x86a77bdFcAFF7435e1f1DF06A95304D35B112bA8 |
+| AssetManager       | 0x35804c8de17Ff6eA7A2681c81935e227fF2133e2 |
+| FundsHandler       | 0x5e05e3ef9A37c4D51a76b7CFa1c2546D02912Eaa |
 
-submitter: 0x1D2cd50A3cF3c55a7982AD54F9f364C1e953Bc57  
-participant 0 address: 0x3a818294ca1F3C27d7588b123Ec43F2546fa07f4  
-participant 1 address: 0x04d9389Cf937b1e6F2258d842e7237E955d6ab04  
-participant 2 address: 0xf6D37CE75dB465DcDb4c7097bEB9c1D46b171037
+Submitter 0x5623136461EECE9a0A6BC084084b1D1F373AC04f
+Tracker 0xA1D927e9B6f7FED90a2763F66eE78FbFBa710Fc7
+Participant task submitter 0xA1D927e9B6f7FED90a2763F66eE78FbFBa710Fc7
+participant 0 address: 0x331B67539cF7eD49E39F743Ae74e2D152111F7E9
+participant 1 address: 0xA80DEAdd39f82981b194AB0e4BFB30190C36dA80
+participant 2 address: 0xB6d1f0d7a80b76d03810e3814f3B5a17Aaa3a83c
 
 > Goat Testnet (test environment)
 

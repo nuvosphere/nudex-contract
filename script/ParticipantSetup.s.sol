@@ -48,7 +48,7 @@ contract ParticipantSetup is Script {
     ) internal returns (uint8 v, bytes32 r, bytes32 s) {
         address owner = vm.createWallet(_privateKey).addr;
         console.log("Locking for: ", owner);
-        nuvoToken.mint(owner, _value);
+        nuvoToken.transfer(owner, _value);
         bytes32 structHash = keccak256(
             abi.encode(
                 PERMIT_TYPEHASH,
