@@ -58,41 +58,22 @@ contract AssetsTest is BaseTest {
 
     function test_AssetOperations() public {
         vm.startPrank(daoContract);
-        // list asset
-        bytes32 assetBTicker = "TOKEN_TICKER_10";
-        assertEq(assetManager.getAllAssets().length, 1);
-        AssetParam memory assetParam = AssetParam(10, false, false, 0, 0, "Token02");
-        assetManager.listNewAsset(assetBTicker, assetParam);
-        assertEq(assetManager.getAllAssets().length, 2);
+        // fail: asset already listed
+        AssetParam memory assetParam = AssetParam(
+            10,
+            false,
+            true,
+            0,
+            MIN_WITHDRAW_AMOUNT,
+            "Token01"
+        );
+        vm.expectRevert("Asset already listed");
+        assetManager.listNewAsset(TICKER, assetParam);
 
         // update listed asset
         assertEq(assetManager.getAssetDetails(TICKER).decimals, 18);
-        assetParam = AssetParam(10, false, true, 0, MIN_WITHDRAW_AMOUNT, "Token01");
         assetManager.updateAsset(TICKER, assetParam);
         assertEq(assetManager.getAssetDetails(TICKER).decimals, 10);
-
-        // add pair
-        Pair[] memory pairs = new Pair[](1);
-        pairs[0] = Pair(
-            TICKER,
-            assetBTicker,
-            PairState.Active,
-            PairType.Spot,
-            18,
-            18,
-            0,
-            0,
-            3 ether,
-            1 ether,
-            30 ether,
-            10 ether
-        );
-        assetManager.addPair(pairs);
-        // check index, should match 1 both ways
-        assertEq(assetManager.getPairIndex(TICKER, assetBTicker), 1);
-        assertEq(assetManager.getPairIndex(assetBTicker, TICKER), 1);
-        assertEq(assetManager.getPairInfo(assetBTicker, TICKER).listedTime, block.timestamp);
-        assertEq(assetManager.getPairInfo(assetBTicker, TICKER).activeTime, block.timestamp);
 
         // link new token
         TokenInfo[] memory newTokens = new TokenInfo[](2);
@@ -151,6 +132,51 @@ contract AssetsTest is BaseTest {
         vm.expectRevert(abi.encodeWithSelector(IAssetManager.AssetNotListed.selector, TICKER));
         assetManager.getAssetDetails(TICKER);
         assertFalse(assetManager.isAssetListed(TICKER));
+
+        vm.stopPrank();
+    }
+
+    function test_Pair() public {
+        vm.startPrank(daoContract);
+        // list second asset
+        bytes32 assetBTicker = "TOKEN_TICKER_10";
+        assertEq(assetManager.getAllAssets().length, 1);
+        AssetParam memory assetParam = AssetParam(10, false, false, 0, 0, "Token02");
+        assetManager.listNewAsset(assetBTicker, assetParam);
+
+        // add pair
+        Pair[] memory pairs = new Pair[](1);
+        pairs[0] = Pair(
+            TICKER,
+            assetBTicker,
+            PairState.Active,
+            PairType.Spot,
+            18,
+            18,
+            0,
+            0,
+            3 ether,
+            1 ether,
+            30 ether,
+            10 ether
+        );
+        assetManager.addPair(pairs);
+        // check index, should match 1 both ways
+        assertEq(assetManager.getPairIndex(TICKER, assetBTicker), 1);
+        assertEq(assetManager.getPairIndex(assetBTicker, TICKER), 1);
+        assertEq(assetManager.getPairInfo(assetBTicker, TICKER).listedTime, block.timestamp);
+        assertEq(assetManager.getPairInfo(assetBTicker, TICKER).activeTime, block.timestamp);
+
+        // update pair
+        pairs[0].maxTradeBaseToken = 5 ether;
+        assetManager.updatePair(TICKER, assetBTicker, pairs[0]);
+        assertEq(assetManager.getPairInfo(assetBTicker, TICKER).maxTradeBaseToken, 5 ether);
+
+        // remove pair
+        assetManager.removePair(TICKER, assetBTicker);
+        vm.expectRevert("Pair not found");
+        assetManager.getPairIndex(TICKER, assetBTicker);
+        // assertEq(assetManager.getPairIndex(TICKER, assetBTicker), 0);
 
         vm.stopPrank();
     }

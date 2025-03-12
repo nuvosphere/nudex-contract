@@ -106,11 +106,9 @@ contract AssetManagerUpgradeable is IAssetManager, AccessControlUpgradeable {
         return pairs[getPairIndex(_assetA, _assetB)];
     }
 
-    function getPairIndex(bytes32 _assetA, bytes32 _assetB) public view returns (uint256) {
-        if (_assetA < _assetB) {
-            return assetPairIndex[_getPairHash(_assetA, _assetB)];
-        }
-        return assetPairIndex[_getPairHash(_assetB, _assetA)];
+    function getPairIndex(bytes32 _assetA, bytes32 _assetB) public view returns (uint256 index) {
+        index = assetPairIndex[_getPairHash(_assetB, _assetA)];
+        require(index != 0, "Pair not found");
     }
 
     function _getPairHash(bytes32 _assetA, bytes32 _assetB) internal pure returns (bytes32) {
@@ -124,13 +122,11 @@ contract AssetManagerUpgradeable is IAssetManager, AccessControlUpgradeable {
         for (uint256 i; i < _pairs.length; i++) {
             require(nudexAssets[_pairs[i].assetA].isListed, AssetNotListed(_pairs[i].assetA));
             require(nudexAssets[_pairs[i].assetB].isListed, AssetNotListed(_pairs[i].assetB));
+            bytes32 pairHash = _getPairHash(_pairs[i].assetA, _pairs[i].assetB);
+            require(assetPairIndex[pairHash] == 0, "Pair already exists");
 
             uint256 index = pairs.length;
-            if (_pairs[i].assetA < _pairs[i].assetB) {
-                assetPairIndex[_getPairHash(_pairs[i].assetA, _pairs[i].assetB)] = index;
-            } else {
-                assetPairIndex[_getPairHash(_pairs[i].assetB, _pairs[i].assetA)] = index;
-            }
+            assetPairIndex[pairHash] = index;
 
             _pairs[i].listedTime = uint32(block.timestamp);
             _pairs[i].activeTime = uint32(block.timestamp);
