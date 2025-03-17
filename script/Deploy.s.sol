@@ -20,7 +20,7 @@ contract Deploy is Script {
     address daoContract;
     address nuvoTokenHolder;
     address feeReceiver;
-    // address tssSigner;
+    address tssSigner;
     address submitter;
     address tracker;
     address participantTaskSubmitter;
@@ -43,7 +43,7 @@ contract Deploy is Script {
         daoContract = vm.envAddress("DAO_CONTRACT_ADDR");
         nuvoTokenHolder = vm.envAddress("NUVO_TOKEN_HOLDER");
         feeReceiver = vm.envAddress("FEE_RECEIVER_ADDR");
-        // tssSigner = vm.envAddress("TSS_SIGNER_ADDR");
+        tssSigner = vm.envAddress("TSS_SIGNER_ADDR");
         submitter = vm.envAddress("SUBMITTER_ADDR");
         tracker = vm.envAddress("TRACKER_ADDR");
         participantTaskSubmitter = vm.envAddress("PARTICIPANT_TASK_SUBMITTER");
@@ -56,7 +56,7 @@ contract Deploy is Script {
         console.log("DAO contract addr: ", daoContract);
         console.log("Nuvo token holder addr: ", nuvoTokenHolder);
         console.log("Fee receiver addr: ", feeReceiver);
-        // console.log("TSS signer addr: ", tssSigner);
+        console.log("TSS signer addr: ", tssSigner);
         console.log("Submitter", submitter);
         console.log("Tracker", tracker);
         console.log("Participant task submitter", participantTaskSubmitter);
@@ -74,9 +74,9 @@ contract Deploy is Script {
         vm.startBroadcast(deployerPrivateKey);
         setProxyAdmin(false);
 
-        setNuvoToken(false);
+        setNuvoToken(true);
         deployTopLevel(false);
-        deployHandlers(false);
+        deployHandlers(true);
 
         vm.stopBroadcast();
     }
@@ -104,7 +104,6 @@ contract Deploy is Script {
                 nuvoTokenContract.balanceOf(nuvoTokenHolder)
             );
         }
-        console.log("|NuvoToken|", nuvoToken);
     }
 
     function deployTopLevel(bool _fromEnv) public {
@@ -119,11 +118,17 @@ contract Deploy is Script {
             nuvoLockProxy = deployProxy(address(new NuvoLockUpgradeable(nuvoToken)));
             NuvoLockUpgradeable nuvoLock = NuvoLockUpgradeable(nuvoLockProxy);
             nuvoLock.initialize(nuvoTokenHolder, daoContract, entryPointProxy, 1 ether, 1 days);
+
+            // deploy assetManager
+            assetManagerProxy = deployProxy(address(new AssetManagerUpgradeable()));
+            AssetManagerUpgradeable assetManager = AssetManagerUpgradeable(assetManagerProxy);
+            assetManager.initialize(daoContract, submitter);
         }
 
         console.log("\n  |NuvoToken|", nuvoToken);
         console.log("|EntryPoint| ", entryPointProxy);
         console.log("|NuvoLock|", nuvoLockProxy);
+        console.log("|AssetManager|", assetManagerProxy);
     }
 
     function deployHandlers(bool _entryPointInit) public {
@@ -156,13 +161,6 @@ contract Deploy is Script {
         handlers.push(accountHandlerProxy);
         console.log("|AccountHandler|", accountHandlerProxy);
 
-        // deploy assetManager
-        assetManagerProxy = deployProxy(address(new AssetManagerUpgradeable()));
-        AssetManagerUpgradeable assetManager = AssetManagerUpgradeable(assetManagerProxy);
-        assetManager.initialize(daoContract, submitter);
-        handlers.push(assetManagerProxy);
-        console.log("|AssetManager|", assetManagerProxy);
-
         // deploy fundsHandler
         fundsHandlerProxy = deployProxy(
             address(
@@ -181,13 +179,13 @@ contract Deploy is Script {
         // initialize entryPoint link to all contracts
         taskManager.initialize(daoContract, entryPointProxy, handlers);
         if (_entryPointInit) {
-            // EntryPointUpgradeable entryPoint = EntryPointUpgradeable(entryPointProxy);
-            // entryPoint.initialize(
-            //     tssSigner, // tssSigner
-            //     participantHandlerProxy, // participantHandler
-            //     taskManagerProxy, // taskManager
-            //     nuvoLockProxy // nuvoLock
-            // );
+            EntryPointUpgradeable entryPoint = EntryPointUpgradeable(entryPointProxy);
+            entryPoint.initialize(
+                tssSigner, // tssSigner
+                participantHandlerProxy, // participantHandler
+                taskManagerProxy, // taskManager
+                nuvoLockProxy // nuvoLock
+            );
         }
     }
 
