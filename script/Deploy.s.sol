@@ -72,7 +72,7 @@ contract Deploy is Script {
         console.log("\n  Deployer address: ", deployer);
 
         vm.startBroadcast(deployerPrivateKey);
-        setProxyAdmin(false);
+        setProxyAdmin(true);
 
         setNuvoToken(true);
         deployTopLevel(false);

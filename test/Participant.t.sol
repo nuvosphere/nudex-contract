@@ -197,6 +197,53 @@ contract ParticipantTest is BaseTest {
         assertEq(participantHandler.getParticipants().length, 3);
     }
 
+    function test_resetParticipants() public {
+        vm.startPrank(msgSender);
+        address[] memory newParticipants = new address[](2);
+        newParticipants[0] = address(1);
+        newParticipants[1] = participant1;
+        vm.expectRevert(IParticipantHandler.NotEnoughParticipant.selector);
+        participantHandler.submitResetParticipantsTask(newParticipants, bytes32(uint256(0)));
+
+        newParticipants = new address[](3);
+        newParticipants[0] = address(1);
+        newParticipants[1] = participant1;
+        newParticipants[2] = participant2;
+        participantHandler.submitResetParticipantsTask(newParticipants, bytes32(uint256(0)));
+        vm.stopPrank();
+
+        taskOpts[0].taskId = taskManager.nextTaskId() - 1;
+        taskOpts[0].initialCalldata = abi.encodeWithSelector(
+            participantHandler.resetParticipants.selector,
+            newParticipants,
+            bytes32(uint256(0))
+        );
+        signature = _generateOptSignature(taskOpts, tssKey);
+        vm.prank(entryPoint.nextSubmitter());
+        entryPoint.verifyAndCall(taskOpts, signature);
+
+        vm.prank(entryPointProxy);
+        vm.expectRevert(
+            abi.encodeWithSelector(IParticipantHandler.NotEligible.selector, address(1))
+        );
+        participantHandler.resetParticipants(newParticipants, bytes32(uint256(0)));
+
+        newParticipants[0] = address(msgSender);
+        vm.prank(msgSender);
+        participantHandler.submitResetParticipantsTask(newParticipants, bytes32(uint256(1)));
+        taskOpts[0].taskId = taskManager.nextTaskId() - 1;
+        taskOpts[0].initialCalldata = abi.encodeWithSelector(
+            participantHandler.resetParticipants.selector,
+            newParticipants,
+            bytes32(uint256(1))
+        );
+        signature = _generateOptSignature(taskOpts, tssKey);
+        vm.expectEmit(true, true, true, true);
+        emit IParticipantHandler.ParticipantsReset(newParticipants);
+        vm.prank(entryPoint.nextSubmitter());
+        entryPoint.verifyAndCall(taskOpts, signature);
+    }
+
     function _addParticipant(address _newParticipant) internal returns (address) {
         _lockFor(_newParticipant);
         // add new user through entryPoint

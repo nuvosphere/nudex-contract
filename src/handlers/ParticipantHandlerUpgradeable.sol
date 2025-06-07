@@ -152,10 +152,11 @@ contract ParticipantHandlerUpgradeable is IParticipantHandler, HandlerBase {
     /**
      * @dev Reset the whole participants.
      * @param _newParticipants The new participant list.
+     * @param _salt Salt for randomness (not used).
      */
     function resetParticipants(
         address[] calldata _newParticipants,
-        bytes32
+        bytes32 _salt
     ) external onlyRole(ENTRYPOINT_ROLE) {
         // remove old participants
         for (uint256 i; i < participants.length; i++) {
