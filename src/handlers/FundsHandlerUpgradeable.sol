@@ -10,6 +10,7 @@ import {INIP20} from "../interfaces/INIP20.sol";
 
 contract FundsHandlerUpgradeable is IFundsHandler, HandlerBase {
     bytes32 public constant TRACKER_ROLE = keccak256("TRACKER_ROLE");
+    bytes32 public constant VOTER_ROLE = keccak256("VOTER_ROLE");
 
     IAccountHandler public immutable accountHandler;
     IAssetManager public immutable assetHandler;
@@ -18,6 +19,7 @@ contract FundsHandlerUpgradeable is IFundsHandler, HandlerBase {
     mapping(bytes32 => uint256) public totalValueLocked;
     mapping(bytes32 userHash => uint256[] depositAmounts) private deposits;
     mapping(bytes32 userHash => uint256[] withdrawAmounts) private withdrawals;
+    mapping(uint64 parentTaskId => uint64 childTaskId) public parentToChildTasks;
 
     constructor(
         address _accountHandler,
@@ -242,7 +244,7 @@ contract FundsHandlerUpgradeable is IFundsHandler, HandlerBase {
      */
     function submitTransferTask(
         TransferParam[] calldata _params
-    ) external onlyRole(SUBMITTER_ROLE) returns (uint64[] memory taskIds) {
+    ) external onlyRole(VOTER_ROLE) returns (uint64[] memory taskIds) {
         taskIds = new uint64[](_params.length);
         bytes32[] memory dataHashes = new bytes32[](_params.length);
         for (uint256 i; i < _params.length; i++) {
@@ -250,9 +252,16 @@ contract FundsHandlerUpgradeable is IFundsHandler, HandlerBase {
             uint256 fromAddrLength = bytes(_params[i].fromAddress).length;
             uint256 toAddrLength = bytes(_params[i].toAddress).length;
             require(fromAddrLength > 0 && toAddrLength > 0, "Invalid address");
+            require(parentToChildTasks[_params[i].parentTaskId] == 0, "Parent task id not allowed");
             dataHashes[i] = keccak256(abi.encode(_params[i]));
         }
         taskIds = taskManager.submitTask(dataHashes);
+        for (uint256 i; i < taskIds.length; i++) {
+            // link the parent task id to child task id
+            if (_params[i].parentTaskId > 0) {
+                parentToChildTasks[_params[i].parentTaskId] = taskIds[i];
+            }
+        }
     }
 
     /**

@@ -32,6 +32,7 @@ struct TransferParam {
     uint256 amount;
     bytes32 salt;
     bytes optionalData;
+    uint64 parentTaskId;
 }
 
 struct ConsolidateTaskParam {

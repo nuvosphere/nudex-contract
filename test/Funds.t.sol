@@ -81,6 +81,10 @@ contract FundsTest is BaseTest {
         );
         fundsHandler = FundsHandlerUpgradeable(fundsHandlerProxy);
         fundsHandler.initialize(daoContract, entryPointProxy, msgSender, msgSender, daoContract);
+        vm.startPrank(daoContract);
+        fundsHandler.grantRole(fundsHandler.VOTER_ROLE(), msgSender);
+        vm.stopPrank();
+        assertTrue(fundsHandler.hasRole(fundsHandler.DEFAULT_ADMIN_ROLE(), daoContract));
         assertTrue(fundsHandler.hasRole(ENTRYPOINT_ROLE, entryPointProxy));
 
         // assign handlers
@@ -553,7 +557,21 @@ contract FundsTest is BaseTest {
         string memory toAddr = "0xToAddress";
         uint256 amount = 1 ether;
         string memory txHash = "transfer_txHash";
+        bytes memory optionalData = "optional data";
         TransferParam[] memory transferParams = new TransferParam[](1);
+
+        // create a consolidate task parent task
+        ConsolidateTaskParam[] memory consolidateParams = new ConsolidateTaskParam[](1);
+        consolidateParams[0] = ConsolidateTaskParam(
+            fromAddr,
+            TICKER,
+            CHAIN_ID,
+            CHAIN_ID,
+            amount,
+            bytes32(uint256(0))
+        );
+        uint64[] memory taskIds = fundsHandler.submitConsolidateTask(consolidateParams);
+        uint64 parentTaskId = taskIds[0];
 
         // empty from address
         transferParams[0] = TransferParam(
@@ -562,7 +580,9 @@ contract FundsTest is BaseTest {
             TICKER,
             CHAIN_ID,
             amount,
-            bytes32(uint256(0))
+            bytes32(uint256(0)),
+            optionalData,
+            parentTaskId
         );
         vm.expectRevert("Invalid address");
         fundsHandler.submitTransferTask(transferParams);
@@ -574,7 +594,9 @@ contract FundsTest is BaseTest {
             TICKER,
             CHAIN_ID,
             amount,
-            bytes32(uint256(1))
+            bytes32(uint256(1)),
+            optionalData,
+            parentTaskId
         );
         vm.expectRevert("Invalid address");
         fundsHandler.submitTransferTask(transferParams);
@@ -586,7 +608,9 @@ contract FundsTest is BaseTest {
             TICKER,
             CHAIN_ID,
             0,
-            bytes32(uint256(2))
+            bytes32(uint256(2)),
+            optionalData,
+            parentTaskId
         );
         vm.expectRevert("Invalid amount");
         fundsHandler.submitTransferTask(transferParams);
@@ -598,7 +622,9 @@ contract FundsTest is BaseTest {
             TICKER,
             CHAIN_ID,
             amount,
-            bytes32(uint256(3))
+            bytes32(uint256(3)),
+            optionalData,
+            parentTaskId
         );
         fundsHandler.submitTransferTask(transferParams);
         taskOpts[0].extraData = TestHelper.getPaddedString(txHash);
