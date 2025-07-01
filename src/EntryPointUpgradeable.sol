@@ -25,6 +25,8 @@ contract EntryPointUpgradeable is IEntryPoint, Initializable, ReentrancyGuardUpg
     address public tssSigner;
     address public nextSubmitter;
 
+    mapping(uint64 taskId => bytes extraData) public taskExtraData;
+
     modifier onlyCurrentSubmitter() {
         require(msg.sender == nextSubmitter, IncorrectSubmitter(msg.sender, nextSubmitter));
         _;
@@ -145,6 +147,25 @@ contract EntryPointUpgradeable is IEntryPoint, Initializable, ReentrancyGuardUpg
     }
 
     /**
+     * @dev Clear task extra data.
+     * @param _taskId The id of the task.
+     * @param _signature The signature for verification.
+     */
+    function clearTaskExtraData(
+        uint64 _taskId,
+        bytes calldata _signature
+    ) external onlyCurrentSubmitter {
+        require(
+            _verifySignature(
+                keccak256(abi.encodePacked(_taskId, tssNonce++, block.chainid)),
+                _signature
+            ),
+            InvalidSigner(msg.sender)
+        );
+        delete taskExtraData[_taskId];
+    }
+
+    /**
      * @dev Pick new random submitter if the current submitter is inactive for too long.
      * @param _signature The signature for verification.
      */
@@ -212,6 +233,13 @@ contract EntryPointUpgradeable is IEntryPoint, Initializable, ReentrancyGuardUpg
             }
             // pending task
             else if (_operations[i].state == State.Pending) {
+                if (_operations[i].extraData.length > 0) {
+                    require(
+                        taskExtraData[taskIds[i]].length == 0,
+                        "Task extra data already set"
+                    );
+                    taskExtraData[taskIds[i]] = _operations[i].extraData;
+                } 
                 states[i] = State.Pending;
             }
         }

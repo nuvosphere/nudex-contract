@@ -96,7 +96,7 @@ contract TaskManagerUpgradeable is ITaskManager, AccessControlUpgradeable {
         Task storage task;
         for (uint256 i; i < _taskIds.length; ++i) {
             task = tasks[_taskIds[i]];
-            require(uint8(_states[i]) > uint8(task.state), "Task finalized");
+            require(task.state != State.Completed && task.state != State.Failed, "Task finalized");
             task.state = _states[i];
             // TODO: reset dataHash if task failed?
             // if (_state == State.Failed) {
