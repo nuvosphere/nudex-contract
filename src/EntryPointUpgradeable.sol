@@ -231,15 +231,17 @@ contract EntryPointUpgradeable is IEntryPoint, Initializable, ReentrancyGuardUpg
                     states[i] = State.Failed;
                 }
             }
+            // processing task
+            else if (_operations[i].state == State.Processing) {
+                if (_operations[i].extraData.length > 0) {
+                    require(taskExtraData[taskIds[i]].length == 0, "Task extra data already set");
+                    taskExtraData[taskIds[i]] = _operations[i].extraData;
+                }
+                states[i] = State.Processing;
+            }
             // pending task
             else if (_operations[i].state == State.Pending) {
-                if (_operations[i].extraData.length > 0) {
-                    require(
-                        taskExtraData[taskIds[i]].length == 0,
-                        "Task extra data already set"
-                    );
-                    taskExtraData[taskIds[i]] = _operations[i].extraData;
-                } 
+                delete taskExtraData[taskIds[i]];
                 states[i] = State.Pending;
             }
         }

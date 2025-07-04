@@ -218,7 +218,7 @@ contract FundsTest is BaseTest {
             );
             taskOperations[i] = TaskOperation(
                 i + 1,
-                State.Pending,
+                State.Processing,
                 abi.encodeWithSelector(
                     fundsHandler.recordDeposit.selector,
                     batchDepositTaskParams[i]
@@ -239,7 +239,7 @@ contract FundsTest is BaseTest {
         for (uint16 i; i < batchSize; ++i) {
             assertEq(
                 uint8(taskManager.getTaskState(taskOperations[i].taskId)),
-                uint8(State.Pending)
+                uint8(State.Processing)
             );
             taskOperations[i].state = State.Completed;
         }
@@ -296,7 +296,7 @@ contract FundsTest is BaseTest {
             .getWithdrawals(DEFAULT_ACCOUNT, TICKER, CHAIN_ID)
             .length;
         assertEq(withdrawIndex, 0);
-        taskOpts[0].state = State.Pending;
+        taskOpts[0].state = State.Processing;
         taskOpts[0].initialCalldata = abi.encodeWithSelector(
             fundsHandler.recordWithdrawal.selector,
             withdrawTaskParams[0].accountNumber,
@@ -319,7 +319,7 @@ contract FundsTest is BaseTest {
         emit IFundsHandler.WithdrawRequest(dataHash, tokenAmount, withdrawFee);
         fundsHandler.submitWithdrawTask(withdrawTaskParams);
 
-        // pending task
+        // processing task
         signature = _generateOptSignature(taskOpts, tssKey);
         entryPoint.verifyAndCall(taskOpts, signature);
 
@@ -396,7 +396,7 @@ contract FundsTest is BaseTest {
             );
             taskOperations[i] = TaskOperation(
                 i + 1,
-                State.Pending,
+                State.Processing,
                 abi.encodeWithSelector(
                     fundsHandler.recordWithdrawal.selector,
                     DEFAULT_ACCOUNT,
@@ -423,7 +423,7 @@ contract FundsTest is BaseTest {
         for (uint16 i; i < batchSize; ++i) {
             assertEq(
                 uint8(taskManager.getTaskState(taskOperations[i].taskId)),
-                uint8(State.Pending)
+                uint8(State.Processing)
             );
             taskOperations[i].state = State.Completed;
             taskOperations[i].extraData = TestHelper.getPaddedString("txHash");
@@ -474,8 +474,8 @@ contract FundsTest is BaseTest {
         );
         fundsHandler.submitWithdrawTask(tempWithdrawTaskParams);
 
-        // pending task
-        taskOpts[0].state = State.Pending;
+        // processing task
+        taskOpts[0].state = State.Processing;
         taskOpts[0].initialCalldata = abi.encodeWithSelector(
             fundsHandler.recordWithdrawal.selector,
             DEFAULT_ACCOUNT,
