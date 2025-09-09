@@ -124,6 +124,7 @@ contract DeployTest is Script {
             address(entryPoint),
             submitter,
             submitter,
+            submitter,
             daoContract
         );
         handlers.push(address(fundsHandler));

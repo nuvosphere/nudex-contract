@@ -10,10 +10,14 @@ import {INIP20} from "../interfaces/INIP20.sol";
 
 contract FundsHandlerUpgradeable is IFundsHandler, HandlerBase {
     bytes32 public constant TRACKER_ROLE = keccak256("TRACKER_ROLE");
-    bytes32 public constant VOTER_ROLE = keccak256("VOTER_ROLE");
+    bytes32 public constant TRANSFER_ROLE = keccak256("TRANSFER_ROLE");
 
     IAccountHandler public immutable accountHandler;
     IAssetManager public immutable assetHandler;
+
+    // Pending withdrawals are stored as a queue using a start index to avoid costly shifts
+    bytes32[] private pendingWithdrawalHashes;
+    uint256 private pendingWithdrawalStart;
 
     address public feeReceiver;
     mapping(bytes32 => uint256) public totalValueLocked;
@@ -35,10 +39,12 @@ contract FundsHandlerUpgradeable is IFundsHandler, HandlerBase {
         address _entryPoint,
         address _submitter,
         address _trackerAddress,
+        address _transferAddress,
         address _feeReceiver
     ) public initializer {
         __HandlerBase_init(_owner, _entryPoint, _submitter);
         _grantRole(TRACKER_ROLE, _trackerAddress);
+        _grantRole(TRANSFER_ROLE, _transferAddress);
         feeReceiver = _feeReceiver;
     }
 
@@ -158,43 +164,59 @@ contract FundsHandlerUpgradeable is IFundsHandler, HandlerBase {
         WithdrawalParam[] calldata _params
     ) external onlyRole(SUBMITTER_ROLE) returns (uint64[] memory taskIds) {
         require(_params.length > 0, "Empty input");
-        taskIds = new uint64[](_params.length);
-        bytes32[] memory dataHashes = new bytes32[](_params.length);
-        uint256[] memory tokenAmounts = new uint256[](_params.length);
-        uint256[] memory withdrawFees = new uint256[](_params.length);
-        NudexAsset memory nudexAsset;
-        TokenInfo memory tokenInfo;
+
+        // First pass: validate basic conditions and count eligible submissions (not requiring review)
+        uint256 eligibleCount;
         for (uint256 i; i < _params.length; i++) {
             require(
                 assetHandler.isAssetAllowed(_params[i].ticker, _params[i].chainId),
                 "Asset not allowed"
             );
-            nudexAsset = assetHandler.getAssetDetails(_params[i].ticker);
+
+            NudexAsset memory assetInfoFirstPass = assetHandler.getAssetDetails(_params[i].ticker);
 
             // check min withdraw amount
-            require(_params[i].amount >= nudexAsset.minWithdrawAmount, "Invalid amount");
+            require(_params[i].amount >= assetInfoFirstPass.minWithdrawAmount, "Invalid amount");
 
             // validate toAddress
+            require(bytes(_params[i].toAddress).length > 0, "Invalid address");
+
+            // count only those not exceeding review threshold (0 disables review)
+            if (
+                assetInfoFirstPass.withdrawReviewThreshold == 0 ||
+                _params[i].amount <= assetInfoFirstPass.withdrawReviewThreshold
+            ) {
+                unchecked {
+                    eligibleCount++;
+                }
+            }
+        }
+
+        // Allocate arrays sized to the number of eligible submissions
+        taskIds = new uint64[](eligibleCount);
+        bytes32[] memory dataHashes = new bytes32[](eligibleCount);
+        uint256[] memory tokenAmounts = new uint256[](eligibleCount);
+        uint256[] memory withdrawFees = new uint256[](eligibleCount);
+
+        // Second pass: build tasks or enqueue pending withdrawals for review
+        uint256 writeIndex;
+        for (uint256 i; i < _params.length; i++) {
+            NudexAsset memory nudexAsset = assetHandler.getAssetDetails(_params[i].ticker);
+
+            // validate toAddress and compute its length for txHash offset
             uint256 addrLength = bytes(_params[i].toAddress).length;
             require(addrLength > 0, "Invalid address");
 
-            // check fee
-            tokenInfo = assetHandler.getLinkedToken(_params[i].ticker, _params[i].chainId);
-            withdrawFees[i] = tokenInfo.withdrawFee; // nudex decimals
-            require(withdrawFees[i] < _params[i].amount, "Insufficient balance to pay fee");
-
-            // deduct asset balance from user's account
-            emit INIP20.NIP20TokenEvent_burnb(
-                accountHandler.getUserAddress(_params[i].accountNumber),
+            // fetch token info and fee
+            TokenInfo memory tokenInfo = assetHandler.getLinkedToken(
                 _params[i].ticker,
-                _params[i].amount
+                _params[i].chainId
             );
+            uint256 feeAmount = tokenInfo.withdrawFee; // nudex decimals
+            require(feeAmount < _params[i].amount, "Insufficient balance to pay fee");
 
-            // calculate the actual withdraw amount on target chain
-            tokenAmounts[i] = (((_params[i].amount - withdrawFees[i]) *
-                (10 ** tokenInfo.decimals)) / (10 ** nudexAsset.decimals));
-
-            dataHashes[i] = keccak256(
+            // prepare data hash
+            bytes32 dh = keccak256(
                 abi.encodeWithSelector(
                     this.recordWithdrawal.selector,
                     _params[i].accountNumber,
@@ -202,16 +224,79 @@ contract FundsHandlerUpgradeable is IFundsHandler, HandlerBase {
                     _params[i].ticker,
                     _params[i].toAddress,
                     _params[i].amount,
-                    withdrawFees[i],
+                    feeAmount,
                     _params[i].salt,
                     // offset for txHash
                     // @dev "-1" if it is exact 32 bytes it does not take one extra slot
                     uint256(320) + (32 * ((addrLength - 1) / 32))
                 )
             );
+
+            // deduct asset balance from user's account only for submitted tasks
+            emit INIP20.NIP20TokenEvent_burnb(
+                accountHandler.getUserAddress(_params[i].accountNumber),
+                _params[i].ticker,
+                _params[i].amount
+            );
+
+            uint256 tokenAmount = (((_params[i].amount - feeAmount) * (10 ** tokenInfo.decimals)) /
+                (10 ** nudexAsset.decimals));
+            // If amount exceeds review threshold (and threshold enabled), enqueue to pending and skip submission
+            if (
+                nudexAsset.withdrawReviewThreshold > 0 &&
+                _params[i].amount > nudexAsset.withdrawReviewThreshold
+            ) {
+                pendingWithdrawalHashes.push(dh);
+                emit PendingWithdrawal(dh, tokenAmount, feeAmount);
+                continue;
+            }
+
+            // calculate the actual withdraw amount on target chain
+            tokenAmounts[writeIndex] = tokenAmount;
+
+            withdrawFees[writeIndex] = feeAmount;
+            dataHashes[writeIndex] = dh;
+            unchecked {
+                writeIndex++;
+            }
         }
+
+        if (eligibleCount > 0) {
+            taskIds = taskManager.submitTask(dataHashes);
+            emit WithdrawRequest(dataHashes, tokenAmounts, withdrawFees);
+        }
+    }
+
+    /**
+     * @dev Submit pending withdrawals to the task manager.
+     * @param _expectedPendingCount If non-zero, the current pending count
+     * must equal this value, otherwise the call reverts. This helps avoid unexpectedly including
+     * newly enqueued items because of mempool reordering.
+     */
+    function submitPendingWithdrawals(
+        uint256 _expectedPendingCount
+    ) external onlyRole(SUBMITTER_ROLE) returns (uint64[] memory taskIds) {
+        uint256 currentCount = pendingWithdrawalHashes.length - pendingWithdrawalStart;
+        require(currentCount > 0, "No pending withdrawals");
+        uint256 toSubmit = _expectedPendingCount == 0 ? currentCount : _expectedPendingCount;
+        if (_expectedPendingCount != 0) {
+            require(currentCount == _expectedPendingCount, "Pending size changed");
+        }
+
+        bytes32[] memory dataHashes = new bytes32[](toSubmit);
+        for (uint256 j; j < toSubmit; j++) {
+            dataHashes[j] = pendingWithdrawalHashes[pendingWithdrawalStart + j];
+        }
+
         taskIds = taskManager.submitTask(dataHashes);
-        emit WithdrawRequest(dataHashes, tokenAmounts, withdrawFees);
+        emit PendingWithdrawalsSubmitted(dataHashes);
+
+        // advance the start index and optionally compact storage
+        pendingWithdrawalStart += toSubmit;
+        if (pendingWithdrawalStart == pendingWithdrawalHashes.length) {
+            delete pendingWithdrawalHashes;
+            pendingWithdrawalStart = 0;
+        }
     }
 
     /**
@@ -244,7 +329,7 @@ contract FundsHandlerUpgradeable is IFundsHandler, HandlerBase {
      */
     function submitTransferTask(
         TransferParam[] calldata _params
-    ) external onlyRole(VOTER_ROLE) returns (uint64[] memory taskIds) {
+    ) external onlyRole(TRANSFER_ROLE) returns (uint64[] memory taskIds) {
         taskIds = new uint64[](_params.length);
         bytes32[] memory dataHashes = new bytes32[](_params.length);
         for (uint256 i; i < _params.length; i++) {

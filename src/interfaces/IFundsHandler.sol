@@ -47,7 +47,8 @@ struct ConsolidateTaskParam {
 interface IFundsHandler {
     event FeeReceiverUpdated(address newFeeReceiver);
     event WithdrawRequest(bytes32[] dataHashes, uint256[] tokenAmount, uint256[] feeAmount);
-
+    event PendingWithdrawal(bytes32 dataHash, uint256 amount, uint256 feeAmount);
+    event PendingWithdrawalsSubmitted(bytes32[] dataHashes);
     event RequestTransfer(uint64[] taskIds, TransferParam[] params);
     event Transfer(
         bytes32 indexed ticker,

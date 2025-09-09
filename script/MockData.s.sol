@@ -87,7 +87,7 @@ contract MockData is Script {
             );
             // proxy = new NuvoProxy(address(fundsHandler), vm.envAddress("PARTICIPANT_2"));
             // fundsHandler = FundsHandlerUpgradeable(address(proxy));
-            fundsHandler.initialize(deployer, deployer, deployer, deployer, deployer);
+            fundsHandler.initialize(deployer, deployer, deployer, deployer, deployer, deployer);
             handlers.push(address(fundsHandler));
             assetManager.grantRole(FUNDS_ROLE, address(fundsHandler));
             console.log("|FundsHandlerUpgradeable|", address(fundsHandler));

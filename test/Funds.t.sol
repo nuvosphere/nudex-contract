@@ -80,9 +80,16 @@ contract FundsTest is BaseTest {
             daoContract
         );
         fundsHandler = FundsHandlerUpgradeable(fundsHandlerProxy);
-        fundsHandler.initialize(daoContract, entryPointProxy, msgSender, msgSender, daoContract);
+        fundsHandler.initialize(
+            daoContract,
+            entryPointProxy,
+            msgSender,
+            msgSender,
+            msgSender,
+            daoContract
+        );
         vm.startPrank(daoContract);
-        fundsHandler.grantRole(fundsHandler.VOTER_ROLE(), msgSender);
+        // fundsHandler.grantRole(fundsHandler.VOTER_ROLE(), msgSender);
         vm.stopPrank();
         assertTrue(fundsHandler.hasRole(fundsHandler.DEFAULT_ADMIN_ROLE(), daoContract));
         assertTrue(fundsHandler.hasRole(ENTRYPOINT_ROLE, entryPointProxy));

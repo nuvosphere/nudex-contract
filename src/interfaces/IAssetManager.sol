@@ -38,6 +38,7 @@ struct NudexAsset {
     uint32 updatedTime;
     uint256 minDepositAmount;
     uint256 minWithdrawAmount;
+    uint256 withdrawReviewThreshold;
     string assetAlias; // Common name of the asset
 }
 

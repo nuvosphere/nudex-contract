@@ -244,6 +244,9 @@ contract EntryPointUpgradeable is IEntryPoint, Initializable, ReentrancyGuardUpg
                 delete taskExtraData[taskIds[i]];
                 states[i] = State.Pending;
             }
+            else {
+                revert("Invalid task state");
+            }
         }
         taskManager.updateTask(taskIds, states);
     }

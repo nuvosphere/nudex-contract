@@ -23,7 +23,8 @@ contract Deploy is Script {
     address tssSigner;
     address submitter;
     address tracker;
-    address participantTaskSubmitter;
+    address transferRole;
+    // address participantTaskSubmitter;
 
     address[] initialParticipants;
     address[] handlers;
@@ -46,7 +47,8 @@ contract Deploy is Script {
         tssSigner = vm.envAddress("TSS_SIGNER_ADDR");
         submitter = vm.envAddress("SUBMITTER_ADDR");
         tracker = vm.envAddress("TRACKER_ADDR");
-        participantTaskSubmitter = vm.envAddress("PARTICIPANT_TASK_SUBMITTER");
+        transferRole = vm.envAddress("TRANSFER_ADDR");
+        // participantTaskSubmitter = vm.envAddress("PARTICIPANT_TASK_SUBMITTER");
 
         initialParticipants.push(vm.envAddress("PARTICIPANT_1"));
         initialParticipants.push(vm.envAddress("PARTICIPANT_2"));
@@ -59,7 +61,8 @@ contract Deploy is Script {
         console.log("TSS signer addr: ", tssSigner);
         console.log("Submitter", submitter);
         console.log("Tracker", tracker);
-        console.log("Participant task submitter", participantTaskSubmitter);
+        console.log("Transfer role", transferRole);
+        // console.log("Participant task submitter", participantTaskSubmitter);
         for (uint8 i; i < initialParticipants.length; ++i) {
             console.log("participant", i, " address: ", initialParticipants[i]);
         }
@@ -144,12 +147,7 @@ contract Deploy is Script {
         ParticipantHandlerUpgradeable participantHandler = ParticipantHandlerUpgradeable(
             participantHandlerProxy
         );
-        participantHandler.initialize(
-            daoContract,
-            entryPointProxy,
-            participantTaskSubmitter,
-            initialParticipants
-        );
+        participantHandler.initialize(daoContract, entryPointProxy, submitter, initialParticipants);
         handlers.push(participantHandlerProxy);
         handlers.push(address(participantHandler));
         console.log("|ParticipantHandler|", participantHandlerProxy);
@@ -172,7 +170,14 @@ contract Deploy is Script {
             )
         );
         FundsHandlerUpgradeable fundsHandler = FundsHandlerUpgradeable(fundsHandlerProxy);
-        fundsHandler.initialize(daoContract, entryPointProxy, submitter, tracker, feeReceiver);
+        fundsHandler.initialize(
+            daoContract,
+            entryPointProxy,
+            submitter,
+            tracker,
+            transferRole,
+            feeReceiver
+        );
         handlers.push(fundsHandlerProxy);
         console.log("|FundsHandler|", fundsHandlerProxy);
 
