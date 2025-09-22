@@ -109,7 +109,7 @@ contract DeployTest is Script {
 
         // deploy assetManager
         AssetManagerUpgradeable assetManager = new AssetManagerUpgradeable();
-        assetManager.initialize(daoContract, daoContract);
+        assetManager.initialize(daoContract, submitter);
         handlers.push(address(assetManager));
         console.log("|AssetManager|", address(assetManager));
 
